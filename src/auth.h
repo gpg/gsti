@@ -24,6 +24,7 @@ struct gsti_auth_s
 {
   int method;
   gsti_key_t key;
+  gsti_bstr_t blob;
   char *user;
 };
 

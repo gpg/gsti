@@ -352,7 +352,10 @@ _gsti_auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth, int trypk)
   if (trypk == 1)
     {
       auth->user = _gsti_xstrdup (gsti_bstr_data (ath.user));
-      err = _gsti_key_fromblob (ath.key, &auth->key);
+      err = gsti_bstr_make (&auth->blob, gsti_bstr_data (ath.key),
+                            gsti_bstr_length (ath.key));
+      if (!err)
+        err = _gsti_key_fromblob (ath.key, &auth->key);
     }
   else
     {
@@ -564,6 +567,7 @@ gsti_auth_free (gsti_auth_t ath)
     {
       _gsti_free (ath->user);
       gsti_key_free (ath->key);
+      gsti_bstr_free (ath->blob);
     }
 }
 

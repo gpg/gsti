@@ -1,5 +1,17 @@
 2004-07-10  Timo Schulz  <twoaday@g10code.de>
 
+	* gsti.h (gsti_auth_cb_t): New.
+	* api.h (gsti_context): Added auth callback.
+	* main.c (gsti_set_auth_callback): New.
+	* fsm.c (fsm_server_loop): Add auth callback to allow external
+	checking of the authentication values.
+	(fsm_client_loop): Add SSH_MSG_USERAUTH_FAILURE.
+	(handle_auth_cb): New.
+	* auth.c (gsti_auth_free): Free key blob.
+	(_gsti_auth_proc_init_packet): Store keyblob.
+	
+2004-07-10  Timo Schulz  <twoaday@g10code.de>
+
 	* pubkey.c (gsti_key_fingerprint): Use _gsti_xmalloc.
 	* packet.c (_gsti_packet_free): Release pktbuf.
 	* kex.c (free_msg_kexdh_reply): New.

@@ -196,6 +196,27 @@ request_packet (gsti_ctx_t ctx)
 
 
 static gsti_error_t
+handle_auth_cb (gsti_ctx_t ctx)
+{
+  gsti_error_t err;
+  
+  err = ctx->auth_cb (ctx->auth_cb_val,
+                      GSTI_AUTHID_USER,
+                      ctx->auth->user,
+                      strlen (ctx->auth->user));
+  if (!err)
+    err = ctx->auth_cb (ctx->auth_cb_val,
+                        GSTI_AUTHID_PUBKEY, gsti_bstr_data (ctx->auth->blob),
+                        gsti_bstr_length (ctx->auth->blob));
+
+  if (err)
+    _gsti_auth_send_failure_packet (ctx);
+
+  return err;
+}
+
+
+static gsti_error_t
 fsm_server_loop (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
@@ -360,7 +381,12 @@ fsm_server_loop (gsti_ctx_t ctx)
 		case SSH_MSG_USERAUTH_REQUEST:
 		  err = _gsti_auth_proc_init_packet (ctx, ctx->auth, 1);
 		  if (!err)
-		    ctx->state = FSM_auth_send_pkok;
+                    {
+                      if (ctx->auth_cb)
+                        err = handle_auth_cb (ctx);
+                      if (!err)
+                        ctx->state = FSM_auth_send_pkok;
+                    }
                   else
                     err = _gsti_auth_send_failure_packet (ctx);
 		  break;
@@ -606,6 +632,12 @@ fsm_client_loop (gsti_ctx_t ctx)
 		  if (!err)
 		    ctx->state = FSM_auth_send_request;
 		  break;
+
+                case SSH_MSG_USERAUTH_FAILURE:
+                  _gsti_log_info (ctx, "user authentication failure\n");
+                  ctx->state = FSM_auth_failed;
+                  err = gsti_error (GPG_ERR_INV_NAME);
+                  break;
 
 		default:
 		  log_error (ctx);

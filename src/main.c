@@ -444,6 +444,19 @@ gsti_get_auth_key (gsti_ctx_t ctx)
 
 
 gsti_error_t
+gsti_set_auth_callback (gsti_ctx_t ctx, gsti_auth_cb_t fnc,
+                        void * fnc_value)
+{
+  if (!ctx)
+    return gsti_error (GPG_ERR_INV_ARG);
+  ctx->auth_cb = fnc;
+  ctx->auth_cb_val = fnc_value;
+  
+  return 0;
+}
+
+
+gsti_error_t
 gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
                     const unsigned short * prefs, size_t n)
 {

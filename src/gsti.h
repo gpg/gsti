@@ -199,6 +199,12 @@ enum gsti_prefs
   GSTI_PREFS_COMPR = 3
 };
 
+enum gsti_auth_ids
+{
+  GSTI_AUTHID_USER   = 1,
+  GSTI_AUTHID_PUBKEY = 2
+};
+
 /* The context type.  */
 struct gsti_context;
 typedef struct gsti_context *gsti_ctx_t;
@@ -231,6 +237,9 @@ typedef gsti_error_t (*gsti_sign_fnc_t) (void *, gcry_sexp_t *result,
                                          gcry_sexp_t data, gcry_sexp_t skey);
 
 
+typedef gsti_error_t (*gsti_auth_cb_t) (void *, int statcode,
+                                        const void * buf, size_t buflen);
+
 /*-- main.c --*/
 /* general */
 const char *gsti_check_version (const char *req_version);
@@ -257,6 +266,8 @@ gsti_error_t gsti_set_client_key_blob (gsti_ctx_t ctx,
                                        void *sign_fnc_value);
 gsti_error_t gsti_set_client_user (gsti_ctx_t ctx, const char *user);
 gsti_error_t gsti_set_auth_method (gsti_ctx_t ctx, int methd);
+gsti_error_t gsti_set_auth_callback (gsti_ctx_t ctx, gsti_auth_cb_t fnc,
+                                     void * fnc_value);
 gsti_error_t gsti_set_compression (gsti_ctx_t ctx, int val);
 gsti_error_t gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
 			     unsigned int max);

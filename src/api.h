@@ -142,7 +142,9 @@ struct gsti_context
 
   gsti_key_t hostkey;
 
-  gsti_auth_t auth;
+  gsti_auth_t    auth;
+  gsti_auth_cb_t auth_cb;
+  void          *auth_cb_val;
 
   struct
   {
