@@ -139,11 +139,12 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 int
 main (int argc, char **argv)
 {
-  gpg_error_t err;
-  int i;
   struct sock_ctx_s fd;
+  gpg_error_t err;
   gsti_ctx_t ctx;
   struct gsti_pktdesc_s pkt;
+  unsigned short c_prefs[8] = {0}, h_prefs[3] = {0};
+  int i;
 
   if (argc)
     {
@@ -160,13 +161,29 @@ main (int argc, char **argv)
   /* We are single-threaded, thus no locking is required. */
   gsti_control (GSTI_DISABLE_LOCKING);
 
-
   /* Initialize a GSTI context. */
   err = gsti_init (&ctx);
   log_rc (err, "init");
 
   /* This context should be logged at debug level. */
   gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
+
+  /* Enable DH group exchange */
+  /*gsti_set_dhgex (ctx, 1024, 1024, 4096);*/
+
+  /* Set personal kex preferences */
+  c_prefs[0] = GSTI_CIPHER_CAST128;
+  c_prefs[1] = GSTI_CIPHER_SERPENT128;
+  c_prefs[2] = 0;
+  err = gsti_set_kex_prefs (ctx, GSTI_PREFS_ENCR, c_prefs, 2);
+  log_rc (err, "set_kex_prefs (encr)");
+
+  h_prefs[0] = GSTI_HMAC_SHA1;
+  h_prefs[1] = GSTI_HMAC_RMD160;
+  h_prefs[2] = GSTI_HMAC_MD5;
+  h_prefs[3] = 0;
+  err = gsti_set_kex_prefs (ctx, GSTI_PREFS_HMAC, h_prefs, 3);
+  log_rc (err, "set_kex_prefs (hmac)");
 
   /* Register our read/write functions. */
   gsti_set_readfnc (ctx, myread, &fd);

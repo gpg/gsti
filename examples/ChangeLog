@@ -1,3 +1,7 @@
+2004-07-08  Timo Schulz  <ts@g10code.de>
+
+	* client.c (main): Show how to use the preference API.
+	
 2004-07-01  Werner Koch  <wk@gnupg.org>
 
 	* server.c (PUBKEY): Not used; removed.
