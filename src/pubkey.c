@@ -547,7 +547,7 @@ _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
   BUFFER buf;
   GSTI_KEY pk;
   gcry_mpi_t _sig[2];
-  byte *p = NULL;
+  byte *p = NULL, tmpbuf[20];
   size_t n;
 
   pk = _gsti_key_fromblob (key);
@@ -571,11 +571,17 @@ _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
 
   /* There is no separation for the both mpis so we say the first
      has a maximum of 160 bits (20 bytes). */
-  err = gcry_mpi_scan (&_sig[0], GCRYMPI_FMT_USG, p, 20, &n);
+  memcpy (tmpbuf, p, 20);
+  err = gcry_mpi_scan (&_sig[0], GCRYMPI_FMT_USG, tmpbuf, 20, NULL);
   if (!err)
-    err = gcry_mpi_scan (&_sig[1], GCRYMPI_FMT_USG, p + n, n, NULL);
+    {
+      memcpy (tmpbuf, p+20, 20);
+      err = gcry_mpi_scan (&_sig[1], GCRYMPI_FMT_USG, tmpbuf, 20, NULL);
+    }
   if (!err)
     err = _gsti_dss_verify (pk, hash, _sig);
+  _gsti_log_info (0, "dss_verify=%d (%d %d)\n", err,
+                  gcry_mpi_get_nbits (_sig[0]), gcry_mpi_get_nbits (_sig[1]));
   free_mpi_array (_sig, 2);
 
 leave:
