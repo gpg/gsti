@@ -411,9 +411,10 @@ ssh_msg_channel_open_confirmation_S (gsti_ctx_t ctx)
     {
       /* Inform the user about the initial window size.  */
 
-      (*channel->win_adj_cb) (ctx, channel->sender_channel,
-			      channel->win_adj_cb_value,
-			      channel->rec_window_size);
+      if (channel->win_adj_cb)
+	(*channel->win_adj_cb) (ctx, channel->sender_channel,
+				channel->win_adj_cb_value,
+				channel->rec_window_size);
     }
 
   return 0;
@@ -765,9 +766,10 @@ ssh_msg_channel_window_adjust_S (gsti_ctx_t ctx)
   channel->rec_window_size += chan_win_adjust.bytes_to_add;
 
   /* Inform the user about it.  */
-  (*channel->win_adj_cb) (ctx, channel->sender_channel,
-			  channel->win_adj_cb_value,
-			  channel->rec_window_size);
+  if (channel->win_adj_cb)
+    (*channel->win_adj_cb) (ctx, channel->sender_channel,
+			    channel->win_adj_cb_value,
+			    channel->rec_window_size);
   
   return 0;
 }
@@ -1028,7 +1030,9 @@ ssh_msg_channel_close_S (gsti_ctx_t ctx)
     }
 
   /* Inform the user about it.  */
-  (*channel->close_cb) (ctx, channel->sender_channel, channel->close_cb_value);
+  if (channel->close_cb)
+    (*channel->close_cb) (ctx, channel->sender_channel,
+			  channel->close_cb_value);
 
   /* Now we are free to destroy the channel object.  */
   channel_dealloc (ctx, channel);
