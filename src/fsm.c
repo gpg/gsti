@@ -48,12 +48,12 @@ enum fsm_states {
     FSM_service_start        = 13,
     FSM_auth_start           = 14,
     FSM_auth_wait            = 15,
-    FSM_auth_send_accept     = 16,
-    FSM_auth_wait_accept     = 17,
+    FSM_auth_send_pkok       = 16,
+    FSM_auth_wait_pkok       = 17,
     FSM_auth_send_request    = 18,
     FSM_auth_wait_request    = 19,
-    FSM_auth_send_accept2    = 20,
-    FSM_auth_wait_accept2    = 21,
+    FSM_auth_send_accept     = 20,
+    FSM_auth_wait_accept     = 21,
     FSM_auth_done            = 22,
     FSM_idle                 = 23,
     FSM_kex_failed           = 24,
@@ -262,14 +262,13 @@ fsm_server_loop( GSTIHD hd )
 
 
         case FSM_auth_wait:
-            _gsti_log_debug( "request packet... \n" );
             rc = request_packet( hd );
             if( !rc ) {
                 switch( hd->pkt.type ) {
                 case SSH_MSG_USERAUTH_REQUEST:
                     rc = auth_proc_init_packet( hd );
                     if( !rc )
-                        hd->state = FSM_auth_send_accept;
+                        hd->state = FSM_auth_send_pkok;
                     break;
 
                 default:
@@ -279,8 +278,8 @@ fsm_server_loop( GSTIHD hd )
             }
             break;
 
-        case FSM_auth_send_accept:
-            rc = auth_send_accept_packet( hd );
+        case FSM_auth_send_pkok:
+            rc = auth_send_pkok_packet( hd );
             if( !rc )
                 hd->state = FSM_auth_wait_request;
             break;
@@ -292,13 +291,13 @@ fsm_server_loop( GSTIHD hd )
                 case SSH_MSG_USERAUTH_REQUEST:
                     rc = auth_proc_second_packet( hd );
                     if( !rc )
-                        hd->state = FSM_auth_send_accept2;
+                        hd->state = FSM_auth_send_accept;
                     break;
                 }
             }
             break;
 
-        case FSM_auth_send_accept2:
+        case FSM_auth_send_accept:
             rc = auth_send_accept_packet( hd );
             if( !rc )
                 hd->state = FSM_auth_done;
@@ -448,15 +447,15 @@ fsm_client_loop( GSTIHD hd )
         case FSM_auth_start:
             rc = auth_send_init_packet( hd );
             if( !rc )
-                hd->state = FSM_auth_wait_accept;
+                hd->state = FSM_auth_wait_pkok;
             break;
 
-        case FSM_auth_wait_accept:
+        case FSM_auth_wait_pkok:
             rc = request_packet( hd );
             if( !rc ) {
                 switch( hd->pkt.type ) {
-                case SSH_MSG_USERAUTH_SUCCESS:
-                    rc = auth_proc_accept_packet( hd );
+                case SSH_MSG_USERAUTH_PK_OK:
+                    rc = auth_proc_pkok_packet( hd );
                     if( !rc )
                         hd->state = FSM_auth_send_request;
                     break;
@@ -471,10 +470,10 @@ fsm_client_loop( GSTIHD hd )
         case FSM_auth_send_request:
             rc = auth_send_second_packet( hd );
             if( !rc )
-                hd->state = FSM_auth_wait_accept2;
+                hd->state = FSM_auth_wait_accept;
             break;
 
-        case FSM_auth_wait_accept2:
+        case FSM_auth_wait_accept:
             rc = request_packet( hd );
             if( !rc ) {
                 switch( hd->pkt.type ) {

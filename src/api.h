@@ -119,6 +119,9 @@ int fsm_user_write( GSTIHD hd );
 int auth_send_accept_packet( GSTIHD hd );
 int auth_proc_accept_packet( GSTIHD hd );
 
+int auth_send_pkok_packet( GSTIHD hd );
+int auth_proc_pkok_packet( GSTIHD hd );
+
 int auth_send_init_packet( GSTIHD hd );
 int auth_proc_init_packet( GSTIHD hd );
 

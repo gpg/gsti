@@ -127,6 +127,12 @@ typedef struct {
 } MSG_auth_request;
 
 
+typedef struct {
+    BSTRING pkalgo;
+    BSTRING key;
+} MSG_auth_pkok;
+
+
 void _gsti_packet_init( GSTIHD hd );
 void _gsti_packet_free( GSTIHD hd );
 int  _gsti_packet_read( GSTIHD hd );

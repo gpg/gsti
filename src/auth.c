@@ -1,4 +1,4 @@
-/* auth.c
+/* auth.c - Public key authentication
  *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
@@ -264,7 +264,76 @@ calc_sig_hash( BSTRING sessid, MSG_auth_request *ath, BSTRING *r_digest )
     
     return 0;
 }
+
+
+static void
+free_auth_pkok( MSG_auth_pkok *ok )
+{
+    if( ok ) {
+        _gsti_bstring_free( ok->pkalgo );
+        _gsti_bstring_free( ok->key );
+    }
+}
+
+
+static int
+build_pkok_packet( MSG_auth_pkok *ok, struct packet_buffer_s *pkt )
+{
+    BUFFER buf;
+    size_t len;
     
+    _gsti_buf_init( &buf );
+    _gsti_buf_putc( buf, 0 );
+    _gsti_buf_putstr( buf, ok->pkalgo->d, ok->pkalgo->len );
+    _gsti_buf_putstr( buf, ok->key->d, ok->key->len );
+
+    len = _gsti_buf_getlen( buf );
+    pkt->type = SSH_MSG_USERAUTH_PK_OK;
+    pkt->payload_len = len;
+    memcpy( pkt->payload, _gsti_buf_getptr( buf ), len );
+
+    _gsti_buf_free( buf );
+    return 0;
+}
+
+
+int
+auth_send_pkok_packet( GSTIHD hd )
+{
+    MSG_auth_pkok ok;
+    GSTI_KEY pk;
+    byte *p;
+    size_t n;
+    int rc;
+    
+    memset( &ok, 0, sizeof ok );
+    pk = hd->auth.key;
+    p = _gsti_ssh_get_pkname( pk->type, 0, &n );
+    ok.pkalgo = _gsti_bstring_make( p, n );
+    ok.key = _gsti_key_getblob( pk );
+    rc = build_pkok_packet( &ok, &hd->pkt );
+    if( !rc )
+        rc = _gsti_packet_write( hd );
+    if( !rc )
+        rc = _gsti_packet_flush( hd );
+
+    _gsti_free( p );
+    free_auth_pkok( &ok );
+    return rc;
+}
+
+
+int
+auth_proc_pkok_packet( GSTIHD hd )
+{
+    struct packet_buffer_s *pkt = &hd->pkt;
+
+    if( pkt->type != SSH_MSG_USERAUTH_PK_OK )
+        return GSTI_BUG;
+    /* fixme: check returned data? */
+    return 0;
+}
+
 
 int
 auth_send_second_packet( GSTIHD hd )

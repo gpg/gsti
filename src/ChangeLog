@@ -25,6 +25,15 @@
 	* auth.c (auth_send_accept_packet): Flush the packet.
 	(auth_send_init_packet): Ditto.
 	(auth_send_second_packet): Ditto.
+
+2002-10-06  Timo Schulz  (ts@winpt.org)
+	* auth.c (auth_send_pkok_packet): New.
+	(auth_proc_pkok_packet): New.
+	* fsm.c (fsm_server_loop): Send the SSH_MSG_USERAUTH_PK_OK and
+	not the SSH_MSG_USERAUTH_SUCCESS twice.
+	(fsm_client_loop): Proc the new packets.
+	
+	
 	
 	
 	
