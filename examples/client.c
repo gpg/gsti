@@ -33,9 +33,14 @@
 #include <gsti.h>
 
 #define PGMNAME "ex-client: "
-#define SECKEY "dsa.sec"
+/*#define SECKEY "dsa.sec"*/
+#define SECKEY "rsa.sec"
 
-static int conn_fd = -1;
+struct sock_ctx_s 
+{
+  int conn_fd;
+};
+
 
 static void
 log_rc (int rc, const char *text)
@@ -48,11 +53,13 @@ log_rc (int rc, const char *text)
 }
 
 static void
-make_connection (const char *host)
+make_connection (int *r_conn_fd, const char *host)
 {
   struct sockaddr_in name;
   struct hostent *hostinfo;
+  int conn_fd;
 
+  *r_conn_fd = -1;
   conn_fd = socket (PF_INET, SOCK_STREAM, 0);
   if (conn_fd == -1)
     {
@@ -74,24 +81,25 @@ make_connection (const char *host)
       fprintf (stderr, PGMNAME "connect() failed: %s\n", strerror (errno));
       exit (2);
     }
-
+  *r_conn_fd = conn_fd;
 }
 
 
-static int
-myread (gsti_ctx_t ctx, void *buffer, size_t * nbytes)
+static gsti_error_t
+myread (void * ctx, void *buffer, size_t to_read, size_t * nbytes)
 {
+  struct sock_ctx_s * c = ctx;
   int n;
 
   do
     {
-      n = read (conn_fd, buffer, *nbytes);
+      n = read (c->conn_fd, buffer, to_read);
     }
   while (n == -1 && errno == EINTR);
   if (n == -1)
     {
       fprintf (stderr, PGMNAME "myread: error: %s\n", strerror (errno));
-      return -1;
+      return gsti_error_from_errno (errno);
     }
   /*dump_hexbuf( stderr, "myread: ", buffer, n ); */
   *nbytes = n;
@@ -99,10 +107,11 @@ myread (gsti_ctx_t ctx, void *buffer, size_t * nbytes)
 }
 
 
-static int
-mywrite (gsti_ctx_t ctx, const void *buffer, size_t nbytes)
+static gsti_error_t
+mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 {
-  int n;
+  struct sock_ctx_s * c = ctx;
+  int n, nn=0;
   const char *p = buffer;
 
   if (!buffer)
@@ -110,16 +119,18 @@ mywrite (gsti_ctx_t ctx, const void *buffer, size_t nbytes)
   do
     {
       /*dump_hexbuf( stderr, "mywrite: ", p, nbytes ); */
-      n = write (conn_fd, p, nbytes);
+      n = write (c->conn_fd, p, to_write);
       if (n == -1)
 	{
 	  fprintf (stderr, PGMNAME "mywrite: error: %s\n", strerror (errno));
-	  return -1;
+	  return gsti_error_from_errno (errno);
 	}
-      nbytes -= n;
+      to_write -= n;
       p += n;
+      nn += n;
     }
-  while (nbytes);
+  while (to_write);
+  *nbytes = nn;
   return 0;
 }
 
@@ -129,6 +140,7 @@ int
 main (int argc, char **argv)
 {
   int rc, i;
+  struct sock_ctx_s fd;
   gsti_ctx_t ctx;
   GSTI_PKTDESC pkt;
 
@@ -138,12 +150,13 @@ main (int argc, char **argv)
       argv++;
     }
 
+  memset (&fd, 0, sizeof fd);
   gsti_control (GSTI_SECMEM_INIT);
   gsti_control (GSTI_DISABLE_LOCKING);
   ctx = gsti_init ();
   gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
-  gsti_set_readfnc (ctx, myread);
-  gsti_set_writefnc (ctx, mywrite);
+  gsti_set_readfnc (ctx, myread, &fd);
+  gsti_set_writefnc (ctx, mywrite, &fd);
   gsti_set_client_key (ctx, SECKEY);
   gsti_set_client_user (ctx, "twoaday");
 
@@ -152,7 +165,7 @@ main (int argc, char **argv)
   log_rc (rc, "set-service");
 #endif
 
-  make_connection (argc ? *argv : "localhost");
+  make_connection (&fd.conn_fd, argc ? *argv : "localhost");
 
   for (i = 0; i < 2; i++)
     {
