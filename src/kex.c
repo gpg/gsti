@@ -38,8 +38,16 @@
 #include "pubkey.h"
 #include "moduli.h"
 
+#define PUT32_BIT(buf, val) do { \
+  *(buf)++ = (val) >> 24; \
+  *(buf)++ = (val) >> 16; \
+  *(buf)++ = (val) >>  8; \
+  *(buf)++ = (val) >>  0; \
+} while (0)
+
+
 static const char host_version_string[] =
-  SSH_IDENT_PREFIX SSH_VERSION_2 "-GSTI_0.2 GNU Transport Library";
+  SSH_IDENT_PREFIX SSH_VERSION_2 "-GSTI_"VERSION "GNU Transport Library";
 
 static const byte diffie_hellman_group1_prime[130] = { 0x04, 0x00,
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
@@ -355,10 +363,7 @@ build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
   length--;
   if (length < 4)
     return gsti_error (GPG_ERR_TOO_SHORT);
-  *p++ = 0;			/* a reserved u32 */
-  *p++ = 0;
-  *p++ = 0;
-  *p++ = 0;
+  PUT32_BIT (p, 0); /* a reserved u32 */
   length -= 4;
   pkt->payload_len = p - pkt->payload;
 
@@ -846,10 +851,8 @@ build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 static void
 build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 {
-  /* FIXME: Where is this defined?  */
-  *lst = _gsti_strlist_insert (NULL, "diffie-hellman-group-exchange-sha1");
+  *lst = _gsti_strlist_insert (NULL, SSH_GEX_DHG_SHA1);
   *lst = _gsti_strlist_insert (*lst, SSH_KEX_DHG1_SHA1);
-
   ctx->kex.type = SSH_KEX_GROUP_EXCHANGE;
 }
 
@@ -857,7 +860,8 @@ build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 static void
 build_pkalgo_list (STRLIST * lst)
 {
-  *lst = _gsti_strlist_insert (NULL, SSH_PKA_SSH_DSS);
+  *lst = _gsti_strlist_insert (NULL, SSH_PKA_SSH_RSA);
+  *lst = _gsti_strlist_insert (*lst, SSH_PKA_SSH_DSS);
 }
 
 
@@ -1497,30 +1501,15 @@ build_gex_request (MSG_gexdh_request * gex, packet_buffer_t pkt)
   size_t length = pkt->size;
 
   p++;
-  *p++ = gex->min >> 24;
-  length--;
-  *p++ = gex->min >> 16;
-  length--;
-  *p++ = gex->min >> 8;
-  length--;
-  *p++ = gex->min;
-  length--;
+  PUT32_BIT (p, gex->min);
+  length -= 4;
   if (length < 8)
     return gsti_error (GPG_ERR_TOO_SHORT);
-  *p++ = gex->n >> 24;
-  length--;
-  *p++ = gex->n >> 16;
-  length--;
-  *p++ = gex->n >> 8;
-  length--;
-  *p++ = gex->n;
-  length--;
+  PUT32_BIT (p, gex->n);
+  length -= 4;
   if (length < 4)
     return gsti_error (GPG_ERR_TOO_SHORT);
-  *p++ = gex->max >> 24;
-  *p++ = gex->max >> 16;
-  *p++ = gex->max >> 8;
-  *p++ = gex->max;
+  PUT32_BIT (p, gex->max);
   pkt->type = SSH_MSG_KEX_DH_GEX_REQUEST;
   pkt->payload_len = p - pkt->payload;
   return 0;

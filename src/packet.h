@@ -30,6 +30,7 @@
 #define MAX_PKTLEN 40000	/* sanity limit */
 #define PKTBUFSIZE 50000	/* somewhat large size of a packet buffer */
 
+#define MAX_SEQNO 2147483647
 
 enum
 {

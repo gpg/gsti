@@ -79,6 +79,9 @@
 /* Required.  */
 #define SSH_KEX_DHG1_SHA1	"diffie-hellman-group1-sha1"
 
+/* Group Exchange Methods (dh-group-exchange-04.txt) */
+#define SSH_GEX_DHG_SHA1        "diffie-hellman-group-exchange-sha1"
+
 
 /* Transport Layer 5.6 Public Key Algorithms.  */
 /* Required.  */

@@ -288,6 +288,8 @@ fsm_server_loop (gsti_ctx_t ctx)
 		  err = auth_proc_init_packet (ctx, ctx->auth);
 		  if (!err)
 		    ctx->state = FSM_auth_send_pkok;
+                  else
+                    err = auth_send_failure_packet (ctx);
 		  break;
 
 		default:

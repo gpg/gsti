@@ -367,6 +367,10 @@ _gsti_packet_write (gsti_ctx_t ctx)
   byte *p;
   int blksize;
 
+  /* We exceeded our sequence number limit, start re-keying. */
+  if (seqno > (MAX_SEQNO-1))
+    ctx->req_newkeys = 1;
+  
   blksize = ctx->ciph_blksize ? ctx->ciph_blksize : 8;
   ctx->pkt.padding_len = blksize - ((4 + 1 + ctx->pkt.payload_len) % blksize);
   if (ctx->pkt.padding_len < 4)

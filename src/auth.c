@@ -33,13 +33,28 @@
 #include "memory.h"
 #include "pubkey.h"
 
+struct valid_auth_method_s {
+  const char * name;
+  int id;
+}
+valid_auth_methods[] = {
+  {SSH_AUTH_PUBLICKEY, GSTI_AUTH_PUBLICKEY},
+  {NULL},
+};
+
 
 static int
 check_auth_id (const char *buf)
 {
-  if (!strncmp (buf, SSH_AUTH_PUBLICKEY, 9))
-    return GSTI_AUTH_PUBLICKEY;
-  return -1;			/* not supported */
+  const char * s;
+  int i;
+
+  for (i=0; (s = valid_auth_methods[i].name); i++)
+    {
+      if (!strncmp (buf, s, strlen (buf)))
+        return valid_auth_methods[i].id;
+    }
+  return -1; /* not supported */
 }
 
 
@@ -179,6 +194,7 @@ gsti_error_t
 auth_send_failure_packet (gsti_ctx_t ctx)
 {
   packet_buffer_t pkt = &ctx->pkt;
+  gsti_error_t err;
   unsigned char tmp[4] = {0};
 
   /* FIXME send packet with empty string */
@@ -187,7 +203,10 @@ auth_send_failure_packet (gsti_ctx_t ctx)
   memcpy (pkt->payload, tmp, 4);
   pkt->payload[5] = 0;
 
-  return 0;
+  err = _gsti_packet_write (ctx);
+  if (!err)
+      err = _gsti_packet_flush (ctx);
+  return err;
 }
 
   

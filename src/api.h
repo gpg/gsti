@@ -25,7 +25,7 @@
 #include "types.h"
 #include "stream.h"
 #include "utils.h"
-
+#include "auth.h"
 
 struct packet_buffer_s
 {
@@ -102,6 +102,7 @@ struct gsti_context
 
   byte cookie[16];
   int sent_newkeys;
+  int req_newkeys;
 
   gcry_mpi_t secret_x;		/* temporary use only */
   gcry_mpi_t kexdh_e;		/* ditto */
@@ -145,31 +146,9 @@ struct gsti_context
   size_t max_channels;
 };
 
-
-struct gsti_auth_s 
-{
-  int method;
-  gsti_key_t key;
-  char *user;
-};
-
-
 /*-- fsm.c --*/
 gsti_error_t fsm_user_read (gsti_ctx_t ctx);
 gsti_error_t fsm_user_write (gsti_ctx_t ctx);
-
-/*-- auth.c --*/
-gsti_error_t auth_send_accept_packet (gsti_ctx_t ctx);
-gsti_error_t auth_proc_accept_packet (gsti_ctx_t ctx);
-
-gsti_error_t auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-gsti_error_t auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-
-gsti_error_t auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-gsti_error_t auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-
-gsti_error_t auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-gsti_error_t auth_proc_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
 /*-- channel.c --*/
 gsti_error_t _gsti_handle_channel_packet (gsti_ctx_t ctx);

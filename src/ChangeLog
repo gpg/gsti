@@ -1,3 +1,17 @@
+2004-06-21  Timo Schulz  <twoaday@g10code.de>
+
+	* ssh.h: Add SSH Group Exchange constants.
+	* kex.c (build_kex_list): Use new SSH constants.
+	(build_pkalgo_list): Add SSH_RSA.
+	* auth.h: New file.
+	* api.h: Move _auth prototypes to ...
+	* auth.h: ... this file.
+	Global table to store valid auth methods.
+	(check_auth_id): Iterate over the auth table.
+	* fsm.c (fsm_server_loop): Send SSH auth failure packet.
+	* packet.c (_gsti_packet_write): Make sure the seq-no does
+	not cause an overflow.
+	
 2004-06-14  Timo Schulz  <twoaday@g10code.de>
 
         * stream.c (_gsti_read_new_stream): Return error code
