@@ -142,8 +142,8 @@ init_gex_default (gsti_ctx_t ctx)
 }
 
 
-gsti_ctx_t
-gsti_init (void)
+gsti_error_t
+gsti_init (gsti_ctx_t * r_ctx)
 {
   gsti_ctx_t ctx;
 
@@ -151,7 +151,8 @@ gsti_init (void)
   _gsti_packet_init (ctx);
   init_gex_default (ctx);
   gsti_auth_new (&ctx->auth);
-  return ctx;
+  *r_ctx = ctx;
+  return 0;
 }
 
 

@@ -207,7 +207,6 @@ typedef struct gsti_pktdesc_s * gsti_pktdesc_t;
 
 struct gsti_key_s;
 typedef struct gsti_key_s *gsti_key_t;
-typedef struct gsti_key_s *GSTI_KEY;
 
 
 /*-- main.c --*/
@@ -216,7 +215,7 @@ const char *gsti_check_version (const char *req_version);
 void gsti_control (enum gsti_ctl_cmds ctl);
 
 /* api */
-gsti_ctx_t gsti_init (void);
+gsti_error_t gsti_init (gsti_ctx_t * r_ctx);
 void gsti_deinit (gsti_ctx_t ctx);
 gsti_error_t gsti_set_readfnc (gsti_ctx_t ctx, gsti_read_fnc_t readfnc,
                                void * opaque);
@@ -263,7 +262,8 @@ gsti_error_t gsti_put_packet (gsti_ctx_t ctx, gsti_pktdesc_t pkt);
 /*-- pubkey.c --*/
 gsti_error_t gsti_key_load (const char *file, int keytype, gsti_key_t * r_ctx);
 gsti_error_t gsti_key_save (const char *file, int secpart, gsti_key_t ctx);
-unsigned char *gsti_key_fingerprint (gsti_key_t ctx, int mdalgo);
+gsti_error_t gsti_key_fingerprint (gsti_key_t ctx, int mdalgo,
+                                   unsigned char ** r_fprbuf);
 gsti_error_t gsti_key_from_sexp (void * ctx_key, gsti_key_t * r_key);
 void gsti_key_free (gsti_key_t ctx);
 

@@ -37,10 +37,11 @@ struct gsti_key_s
   unsigned int secret:1;
 };
 
-gsti_bstr_t _gsti_key_getblob (gsti_key_t pk);
-gsti_key_t _gsti_key_fromblob (gsti_bstr_t blob);
+gsti_error_t _gsti_key_getblob (gsti_key_t pk, gsti_bstr_t * r_blob);
+gsti_error_t _gsti_key_fromblob (gsti_bstr_t blob, gsti_key_t * r_key);
 
-gsti_bstr_t _gsti_sig_encode (gsti_key_t sk, const byte * hash);
+gsti_error_t _gsti_sig_encode (gsti_key_t sk, const byte * hash,
+                               gsti_bstr_t * r_sig);
 gsti_error_t _gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig,
 			       const byte * hash, gsti_key_t * r_pk);
 

@@ -1056,7 +1056,9 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
   gcry_mpi_t y;
 
   memset (&dhr, 0, sizeof dhr);
-  dhr.k_s = _gsti_key_getblob (ctx->hostkey);
+  err = _gsti_key_getblob (ctx->hostkey, &dhr.k_s);
+  if (err)
+      return err;
 
   /* Generate our secret and the public value for it.  */
   dhr.f = calc_dh_secret (&y);
@@ -1070,9 +1072,10 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
   gcry_mpi_release (ctx->kexdh_e);
   if (err)
     return err;
-  dhr.sig_h = _gsti_sig_encode (ctx->hostkey, gsti_bstr_data (ctx->kex.h));
-
-  err = build_msg_kexdh_reply (&dhr, &ctx->pkt);
+  err = _gsti_sig_encode (ctx->hostkey, gsti_bstr_data (ctx->kex.h),
+                          &dhr.sig_h);
+  if (!err)
+      err = build_msg_kexdh_reply (&dhr, &ctx->pkt);
   if (!err)
     dump_msg_kexdh_reply (ctx, &dhr);
   if (!err)

@@ -105,6 +105,7 @@ static gsti_error_t
 init_auth_request (MSG_auth_request * ath, const char *user, int false,
 		   gsti_key_t pk)
 {
+  gsti_error_t err;
   const char *svc = "ssh-userauth", *mthd = SSH_AUTH_PUBLICKEY;
   byte *p;
   size_t n;
@@ -112,23 +113,38 @@ init_auth_request (MSG_auth_request * ath, const char *user, int false,
   if (!user || !pk)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  /* FIXME: Handle errors.  */
-  gsti_bstr_make (&ath->user, user, strlen (user));
-  gsti_bstr_make (&ath->svcname, svc, strlen (svc));
-  gsti_bstr_make (&ath->method, mthd, strlen (mthd));
+
+  err = gsti_bstr_make (&ath->user, user, strlen (user));
+  if (err)
+    return err;
+  err = gsti_bstr_make (&ath->svcname, svc, strlen (svc));
+  if (err)
+    {
+      free_auth_request (ath);
+      return err;
+    }
+  err = gsti_bstr_make (&ath->method, mthd, strlen (mthd));
+  if (err)
+    {
+      free_auth_request (ath);
+      return err;
+    }
 
   ath->false = false;
   p = _gsti_ssh_get_pkname (pk->type, 0, &n);
-
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ath->pkalgo, p, n);
+  err = gsti_bstr_make (&ath->pkalgo, p, n);
   _gsti_free (p);
-  ath->key = _gsti_key_getblob (pk);
+  if (err)
+    {
+      free_auth_request (ath);
+      return err;
+    }
+  err = _gsti_key_getblob (pk, &ath->key);
 
   /* Due to the fact we need to hash the packet first before we
      can sign, we always add the signature later and not here. */
 
-  return 0;
+  return err;
 }
 
 
@@ -281,7 +297,7 @@ auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth)
       return gsti_error (GPG_ERR_NOT_IMPLEMENTED);
     }
   auth->user = _gsti_xstrdup (gsti_bstr_data (ath.user));
-  auth->key = _gsti_key_fromblob (ath.key);
+  err = _gsti_key_fromblob (ath.key, &auth->key);
 
   dump_auth_request (ctx, &ath);
   free_auth_request (&ath);
@@ -372,10 +388,15 @@ auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   if (!pk)
     return gsti_error (GPG_ERR_INV_OBJ);
   p = _gsti_ssh_get_pkname (pk->type, 0, &n);
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ok.pkalgo, p, n);
-  ok.key = _gsti_key_getblob (pk);
-  err = build_pkok_packet (&ok, &ctx->pkt);
+  err = gsti_bstr_make (&ok.pkalgo, p, n);
+  if (err)
+    {
+      _gsti_free (p);
+      return err;
+    }
+  err = _gsti_key_getblob (pk, &ok.key);
+  if (!err)
+    err = build_pkok_packet (&ok, &ctx->pkt);
   if (!err)
     err = _gsti_packet_write (ctx);
   if (!err)
@@ -429,9 +450,10 @@ parse_pkok_packet (MSG_auth_pkok * ok, const gsti_buffer_t buf)
 gsti_error_t
 auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 {
-  gsti_error_t err;
   MSG_auth_pkok ok;
+  gsti_error_t err;
   gsti_bstr_t alg;
+  gsti_key_t a;
 
   if (ctx->pkt.type != SSH_MSG_USERAUTH_PK_OK)
     return gsti_error (GPG_ERR_BUG);
@@ -444,8 +466,8 @@ auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 			      gsti_bstr_length (alg));
   if (!err)
     {
-      gsti_key_t a = _gsti_key_fromblob (ok.key);
-      if (a)
+      err = _gsti_key_fromblob (ok.key, &a);
+      if (!err)
 	{
 	  err = _gsti_ssh_cmp_keys (a, auth->key);
 	  gsti_key_free (a);
@@ -461,18 +483,14 @@ auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 {
   gsti_error_t err;
   MSG_auth_request ath;
-  gsti_bstr_t sig = NULL, hash;
+  gsti_bstr_t hash;
 
   memset (&ath, 0, sizeof ath);
   err = init_auth_request (&ath, auth->user, 1, auth->key);
   if (!err)
     err = calc_sig_hash (ctx->session_id, &ath, &hash);
   if (!err)
-    sig = _gsti_sig_encode (auth->key, gsti_bstr_data (hash));
-  if (sig)
-    ath.sig = sig;
-  else
-    goto leave;
+    err = _gsti_sig_encode (auth->key, gsti_bstr_data (hash), &ath.sig);
   if (!err)
     err = build_auth_request (&ath, &ctx->pkt);
   if (!err)
@@ -480,7 +498,6 @@ auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   if (!err)
     err = _gsti_packet_flush (ctx);
 
-leave:
   free_auth_request (&ath);
   gsti_bstr_free (hash);
 
