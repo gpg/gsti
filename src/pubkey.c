@@ -40,7 +40,7 @@ static struct
 {
   const char *algname;
   const char *key_elements;
-  size_t nkey;
+  size_t npkey;
   const char *sig_elements;
   size_t nsig;
   const char *sec_elements;
@@ -410,7 +410,7 @@ read_rsa_key (FILE * fp, int keytype, gsti_key_t ctx)
   gsti_bstr_t a;
   size_t n;
   
-  n = pk_table[SSH_PK_RSA].nkey;
+  n = pk_table[SSH_PK_RSA].npkey;
   if (keytype)
     n += pk_table[SSH_PK_RSA].nskey;
   err = read_bstring (fp, 0, &a);
@@ -436,7 +436,7 @@ read_dss_key (FILE * fp, int keytype, gsti_key_t ctx)
   gsti_bstr_t a;
   size_t n;
 
-  n = pk_table[SSH_PK_DSS].nkey;
+  n = pk_table[SSH_PK_DSS].npkey;
   if (keytype)
     n += pk_table[SSH_PK_DSS].nskey; /* secret key */
   err = read_bstring (fp, 0, &a);
@@ -593,15 +593,15 @@ _gsti_ssh_cmp_keys (gsti_key_t a, gsti_key_t b)
 }
 
 
-byte *
-_gsti_ssh_get_pkname (int pktype, int asbstr, size_t * r_n)
+gsti_error_t
+_gsti_ssh_get_pkname (int pktype, int asbstr, byte ** r_namebuf, size_t * r_n)
 {
   const char *s;
   size_t len, n = 0;
   byte *p;
 
   if (pktype > SSH_PK_LAST)
-    return NULL;
+    return gsti_error (GPG_ERR_PUBKEY_ALGO);
   s = pk_table[pktype].algname;
   len = strlen (s);
   if (asbstr)
@@ -617,24 +617,25 @@ _gsti_ssh_get_pkname (int pktype, int asbstr, size_t * r_n)
   memcpy (p + n, s, len);
   p[n + len] = 0;
   *r_n = n + len;
-  return p;
+  *r_namebuf = p;
+  return 0;
 }
 
 
 static int
-pkalgo_get_nkey (int algid, const char *name)
+pkalgo_get_npkey (int algid, const char *name)
 {
   const char *s;
   int i;
 
   if (algid != 0 && algid < SSH_PK_LAST)
-    return pk_table[algid].nkey;
+    return pk_table[algid].npkey;
   else if (name)
     {
       for (i = 0; (s = pk_table[i].algname); i++)
 	{
 	  if (!strncmp (s, name, strlen (s)))
-	    return pk_table[i].nkey;
+	    return pk_table[i].npkey;
 	}
     }
   return -1;
@@ -696,14 +697,14 @@ _gsti_key_fromblob (gsti_bstr_t blob, gsti_key_t * r_key)
   pk = _gsti_xcalloc (1, sizeof *pk);
   pk->secret = 0;
   
-  for (i = 0; i < pkalgo_get_nkey (0, p); i++)
+  for (i = 0; i < pkalgo_get_npkey (0, p); i++)
     {
       err = gsti_buf_getmpi (buf, &pk->key[i]);
       if (err)
 	goto leave;
     }
   pk->type = algid;
-  pk->nkey = pk_table[pk->type].nkey;
+  pk->nkey = pk_table[pk->type].npkey;
   
  leave:
   _gsti_free (p);
@@ -732,14 +733,15 @@ _gsti_key_getblob (gsti_key_t pk, gsti_bstr_t * r_blob)
   err = gsti_buf_alloc (&buf);
   if (err)
     return err;
-  p = _gsti_ssh_get_pkname (pk->type, 0, &n);
-  err = gsti_buf_putstr (buf, p, n);
+  err = _gsti_ssh_get_pkname (pk->type, 0, &p, &n);
+  if (!err)
+    err = gsti_buf_putstr (buf, p, n);
   if (err)
     {
       gsti_buf_free (buf);
       return err;
     } 
-  for (n = 0; n < pk_table[pk->type].nkey; n++)
+  for (n = 0; n < pk_table[pk->type].npkey; n++)
     {
       err = gsti_buf_putmpi (buf, pk->key[n]);
       if (err)
@@ -769,15 +771,18 @@ gsti_key_fingerprint (gsti_key_t ctx, int mdalgo, byte ** r_fprbuf)
   *r_fprbuf = NULL;
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
-  name = _gsti_ssh_get_pkname (ctx->type, 1, &n);
-  if (!name)
-    return gsti_error (GPG_ERR_BUG);
+  err = _gsti_ssh_get_pkname (ctx->type, 1, &name, &n);
+  if (err)
+    return err;
   dlen = gcry_md_get_algo_dlen (mdalgo);
   err = gcry_md_open (&hd, mdalgo, 0);
   if (err)
-    return err;
+    {
+      _gsti_free (name);
+      return err;
+    }
   gcry_md_write (hd, name, n);
-  for (i = 0; i < pkalgo_get_nkey (ctx->type, NULL); i++)
+  for (i = 0; i < pkalgo_get_npkey (ctx->type, NULL); i++)
     {
       if (!gcry_mpi_print (GCRYMPI_FMT_SSH, buf, sizeof buf - 1, &n,
 			   ctx->key[i]))
@@ -838,6 +843,7 @@ _gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte * hash,
       goto leave;
     }
   _gsti_free (p);
+  p = NULL;
 
   err = gsti_buf_getstr (buf, &p, &n);
   if (err)
@@ -870,7 +876,6 @@ _gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte * hash,
   free_mpi_array (_sig, 2);
 
  leave:
-  /* FIXME: Double free!  */
   _gsti_free (p);
   gsti_buf_free (buf);
   if (!err && r_pk)
@@ -886,7 +891,7 @@ _gsti_sig_encode (gsti_key_t sk, const byte * hash, gsti_bstr_t * r_sig)
   gcry_mpi_t sig[2];
   gsti_buffer_t buf;
   gsti_bstr_t a;
-  byte *p, buffer[256];
+  byte *p = NULL, buffer[256];
   size_t n, n2;
 
   *r_sig = NULL;
@@ -901,15 +906,17 @@ _gsti_sig_encode (gsti_key_t sk, const byte * hash, gsti_bstr_t * r_sig)
       _gsti_log_info (0, "signing failed err=%d\n", err);
       return err;
     }
-  p = _gsti_ssh_get_pkname (sk->type, 0, &n);
-
-  err = gsti_buf_alloc (&buf);
+  err = _gsti_ssh_get_pkname (sk->type, 0, &p, &n);
+  if (!err)
+    err = gsti_buf_alloc (&buf);
   if (err)
     {
       free_mpi_array (sig, 2);
       return err;
     }
   err = gsti_buf_putstr (buf, p, n);
+  _gsti_free (p);
+  p = NULL;
   if (err)
     {
       free_mpi_array (sig, 2);
@@ -940,7 +947,6 @@ _gsti_sig_encode (gsti_key_t sk, const byte * hash, gsti_bstr_t * r_sig)
   if (!err)
     err = gsti_bstr_make (&a, gsti_buf_getptr (buf), gsti_buf_readable (buf));
 
-  _gsti_free (p);
   gsti_buf_free (buf);
   
   if (err)
@@ -971,16 +977,24 @@ read_one_mpi (gcry_sexp_t s_key, const char * val)
 static int
 read_pk_algo (gcry_sexp_t s_key)
 {
-  gcry_sexp_t lst;
+  gcry_sexp_t lst = NULL;
+  const char * s;
   int algo = SSH_PK_NONE;
+  int i;
   
   if (!s_key)
     return SSH_PK_NONE;
-  /* XXX iterate over the pubkey table */
-  if ((lst = gcry_sexp_find_token (s_key, "rsa", 0)))
-    algo = SSH_PK_RSA;
-  else if ((lst = gcry_sexp_find_token (s_key, "dss", 0)))
-    algo = SSH_PK_DSS;
+  for (i=0; (s = pk_table[i].algname); i++)
+    {
+      lst = gcry_sexp_find_token (s_key, s+4, 0); /* skip 'ssh-' */
+      if (lst)
+        {
+          algo = pk_table[i].algid;
+          break;
+        }
+      gcry_sexp_release (lst);
+      lst = NULL;
+    }
   gcry_sexp_release (lst);
   return algo;
 }
@@ -1004,7 +1018,7 @@ gsti_key_from_sexp (void * ctx_key, gsti_key_t * r_key)
   sec = gcry_sexp_find_token (s_key, "private-key", 0);
   *r_key = key = _gsti_xcalloc (1, sizeof * key);
   key->type = algo;
-  key->nkey = pk_table[algo].nkey;
+  key->nkey = pk_table[algo].npkey;
   key->secret = sec? 1 : 0;
   gcry_sexp_release (sec);
   s = pk_table[algo].key_elements;

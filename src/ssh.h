@@ -143,7 +143,7 @@ typedef enum
     SSH_MSG_KEXDH_INIT = 30,
     SSH_MSG_KEXDH_REPLY = 31,
 
-    /* FIXME: Where is this defined?  */
+    /* Group Exchange Methods (dh-group-exchange-04.txt) */
     SSH_MSG_KEX_DH_GEX_GROUP = 31,
     SSH_MSG_KEX_DH_GEX_INIT = 32,
     SSH_MSG_KEX_DH_GEX_REPLY = 33,

@@ -1,3 +1,14 @@
+2004-06-30  Timo Schulz  <twoaday@g10code.de>
+
+	* pubkey.c: s/nkey/npkey for the pubkey table.
+	(read_pk_algo): Iterate over the pubkey table.
+	(pkalgo_get_nkey): Renamed to...
+	(pkalgo_get_npkey): ... this. Changed all callers.
+	(_gsti_sig_decode): Set p to NULL to avoid double free.
+	(_gsti_sig_encode): Release p in case of an error.
+	(_gsti_ssh_get_pkname): Return error code and not the buffer.
+	* main.c (gsti_get_auth_key): Return NULL for an invalid ctx.
+	
 2004-06-30  Marcus Brinkmann  <marcus@g10code.de>
 
 	* gsti.h (gsti_get_auth_key): Add prototype.

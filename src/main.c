@@ -378,5 +378,7 @@ gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
 gsti_key_t
 gsti_get_auth_key (gsti_ctx_t ctx)
 {
+  if (!ctx)
+    return NULL;
   return ctx->auth->key;
 }

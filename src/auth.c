@@ -146,8 +146,9 @@ init_auth_request (MSG_auth_request * ath, const char *user, int false,
     }
 
   ath->false = false;
-  p = _gsti_ssh_get_pkname (pk->type, 0, &n);
-  err = gsti_bstr_make (&ath->pkalgo, p, n);
+  err= _gsti_ssh_get_pkname (pk->type, 0, &p, &n);
+  if (!err)
+    err = gsti_bstr_make (&ath->pkalgo, p, n);
   _gsti_free (p);
   if (err)
     {
@@ -423,8 +424,9 @@ auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   pk = auth->key;
   if (!pk)
     return gsti_error (GPG_ERR_INV_OBJ);
-  p = _gsti_ssh_get_pkname (pk->type, 0, &n);
-  err = gsti_bstr_make (&ok.pkalgo, p, n);
+  err = _gsti_ssh_get_pkname (pk->type, 0, &p, &n);
+  if (!err)
+    err = gsti_bstr_make (&ok.pkalgo, p, n);
   if (err)
     {
       _gsti_free (p);
