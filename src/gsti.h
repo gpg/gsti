@@ -1,3 +1,6 @@
+#define GPG_ERR_PROT_VIOL 1
+#define GPG_ERR_INV_MAC 2
+
 /* gsti.h -  GNU Secure Transport Initiative (gsti)
    Copyright (C) 1999, 2000 Werner Koch
    Copyright (C) 2002 Timo Schulz
@@ -21,6 +24,20 @@
 
 #ifndef _GSTI_H
 #define _GSTI_H
+
+#include <stdarg.h>
+
+#include <gpg-error.h>
+
+
+#ifdef __GNUC__
+#define _GSTI_INLINE __inline__
+#elif __STDC_VERSION__ >= 199901L
+#define _GSTI_INLINE inline
+#else
+#define _GSTI_INLINE
+#endif
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -29,17 +46,15 @@ extern "C"
 #endif
 #endif
 
-#include <stdarg.h>
+
+/* The version of this header should match the one of the library It
+   should not be used by a program because gcry_check_version() should
+   reurn the same version.  The purpose of this macro is to let
+   autoconf (using the AM_PATH_GSTI macro) check that this header
+   matches the installed library.
 
-/*
- * The version of this header should match the one of the library
- * It should not be used by a program because gcry_check_version()
- * should reurn the same version.  The purpose of this macro is to
- * let autoconf (using the AM_PATH_GSTI macro) check that this
- * header matches the installed library.
- * NOTE: Please do not chnange the formatting of this line;
- *	 configure may set it to the correct version.
- */
+   NOTE: Please do not chnange the formatting of this line; configure
+   may set it to the correct version.  */
 #define GSTI_VERSION "0.3.0-cvs"
 
 
@@ -47,6 +62,86 @@ extern "C"
 #include <stdio.h>
 
 typedef FILE *gio_stream_t;
+
+
+/* Error management.  */
+typedef gpg_error_t gsti_error_t;
+typedef gpg_err_code_t gsti_err_code_t;
+typedef gpg_err_source_t gsti_err_source_t;
+
+
+static _GSTI_INLINE gsti_error_t
+gsti_err_make (gsti_err_source_t source, gsti_err_code_t code)
+{
+  return gpg_err_make (source, code);
+}
+
+
+/* The user can define GSTI_ERR_SOURCE_DEFAULT before including this
+   file to specify a default source for gsti_error.  */
+#ifndef GSTI_ERR_SOURCE_DEFAULT
+#define GSTI_ERR_SOURCE_DEFAULT  GPG_ERR_SOURCE_USER_1
+#endif
+
+
+static _GSTI_INLINE gsti_error_t
+gsti_error (gsti_err_code_t code)
+{
+  return gsti_err_make (GSTI_ERR_SOURCE_DEFAULT, code);
+}
+
+
+static _GSTI_INLINE gsti_err_code_t
+gsti_err_code (gsti_error_t err)
+{
+  return gpg_err_code (err);
+}
+
+
+static _GSTI_INLINE gsti_err_source_t
+gsti_err_source (gsti_error_t err)
+{
+  return gpg_err_source (err);
+}
+
+
+/* Return a pointer to a string containing a description of the error
+   code in the error value ERR.  This function is not thread safe.  */
+const char *gsti_strerror (gsti_error_t err);
+
+/* Return the error string for ERR in the user-supplied buffer BUF of
+   size BUFLEN.  This function is, in contrast to gpg_strerror,
+   thread-safe if a thread-safe strerror_r() function is provided by
+   the system.  If the function succeeds, 0 is returned and BUF
+   contains the string describing the error.  If the buffer was not
+   large enough, ERANGE is returned and BUF contains as much of the
+   beginning of the error string as fits into the buffer.  */
+int gsti_strerror_r (gpg_error_t err, char *buf, size_t buflen);
+
+
+/* Return a pointer to a string containing a description of the error
+   source in the error value ERR.  */
+const char *gsti_strsource (gsti_error_t err);
+
+
+/* Retrieve the error code for the system error ERR.  This returns
+   GPG_ERR_UNKNOWN_ERRNO if the system error is not mapped (report
+   this).  */
+gsti_err_code_t gsti_err_code_from_errno (int err);
+
+
+/* Retrieve the system error for the error code CODE.  This returns 0
+   if CODE is not a system error code.  */
+int gsti_err_code_to_errno (gsti_err_code_t code);
+
+  
+/* Return an error value with the error source SOURCE and the system
+   error ERR.  */
+gsti_error_t gsti_err_make_from_errno (gsti_err_source_t source, int err);
+
+
+/* Return an error value with the system error ERR.  */
+gsti_err_code_t gsti_error_from_errno (int err);
 
 
 enum
@@ -137,23 +232,22 @@ typedef struct gsti_key_s *GSTI_KEY;
 /* general */
 const char *gsti_check_version (const char *req_version);
 void gsti_control (enum gsti_ctl_cmds ctl);
-const char *gsti_strerror (int ec);
 
 /* api */
 GSTIHD gsti_init (void);
-int gsti_deinit (GSTIHD hd);
-int gsti_set_readfnc (GSTIHD hd, GSTI_READ_FNC readfnc);
-int gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc);
-int gsti_set_service (GSTIHD hd, const char *svcname);
-int gsti_read (GSTIHD hd, void *buffer, size_t * length);
-int gsti_write (GSTIHD hd, const void *buffer, size_t length);
-int gsti_set_hostkey (GSTIHD hd, const char *file);
-int gsti_set_client_key (GSTIHD hd, const char *file);
-int gsti_set_client_user (GSTIHD hd, const char *user);
-int gsti_set_auth_method (GSTIHD hd, int methd);
-int gsti_set_compression (GSTIHD hd, int val);
-int gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n,
-		    unsigned int max);
+void gsti_deinit (GSTIHD hd);
+gsti_error_t gsti_set_readfnc (GSTIHD hd, GSTI_READ_FNC readfnc);
+gsti_error_t gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc);
+gsti_error_t gsti_set_service (GSTIHD hd, const char *svcname);
+gsti_error_t gsti_read (GSTIHD hd, void *buffer, size_t * length);
+gsti_error_t gsti_write (GSTIHD hd, const void *buffer, size_t length);
+gsti_error_t gsti_set_hostkey (GSTIHD hd, const char *file);
+gsti_error_t gsti_set_client_key (GSTIHD hd, const char *file);
+gsti_error_t gsti_set_client_user (GSTIHD hd, const char *user);
+gsti_error_t gsti_set_auth_method (GSTIHD hd, int methd);
+gsti_error_t gsti_set_compression (GSTIHD hd, int val);
+gsti_error_t gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n,
+			     unsigned int max);
 
 
 /* Logging interface.  */
@@ -170,28 +264,29 @@ typedef enum
 gsti_log_level_t;
 
 /* Set the log stream for the context CTX to STREAM.  */
-void gsti_set_log_stream (GSTIHD ctx, gio_stream_t stream);
+gsti_error_t gsti_set_log_stream (GSTIHD ctx, gio_stream_t stream);
 
 /* Set the maximum level up to which messages are passed to the log
    handler for the context CTX.  */
-void gsti_set_log_level (GSTIHD ctx, int level);
+void gsti_set_log_level (GSTIHD ctx, gsti_log_level_t level);
 
 
 /*-- fsm.c --*/
-int gsti_get_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
-int gsti_put_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
+gsti_error_t gsti_get_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
+gsti_error_t gsti_put_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
 
 
 /*-- pubkey.c --*/
-int gsti_key_load (const char *file, int keytype, GSTI_KEY * r_ctx);
+gsti_error_t gsti_key_load (const char *file, int keytype, GSTI_KEY * r_ctx);
 unsigned char *gsti_key_fingerprint (GSTI_KEY ctx, int mdalgo);
 void gsti_key_free (GSTI_KEY ctx);
 
-
+
 #ifdef __cplusplus
 #if 0
 {				/*(keep Emacs' auto-indent happy) */
 #endif
 }
 #endif
-#endif /* _GSTI_H */
+
+#endif	/* _GSTI_H */

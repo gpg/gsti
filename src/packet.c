@@ -175,21 +175,21 @@ generate_mac (GSTIHD hd, u32 seqno)
   return hd->mac_len;
 }
 
-/****************
- * Verify a HMAC from the packet.
- */
-static int
+
+/* Verify a HMAC from the packet.  */
+static gsti_error_t
 verify_mac (GSTIHD hd, u32 seqno)
 {
+  gsti_error_t err;
   gcry_md_hd_t md;
   byte buf[4];
   byte *p = hd->pkt.packet_buffer;
   size_t n = 5 + hd->pkt.payload_len + hd->pkt.padding_len;
-  int rc;
+  int res;
 
-  rc = gcry_md_copy (&md, hd->recv_mac);
-  if (rc)
-    return rc;
+  err = gcry_md_copy (&md, hd->recv_mac);
+  if (err)
+    return err;
   buf[0] = seqno >> 24;
   buf[1] = seqno >> 16;
   buf[2] = seqno >> 8;
@@ -197,57 +197,55 @@ verify_mac (GSTIHD hd, u32 seqno)
   gcry_md_write (md, buf, 4);
   gcry_md_write (md, p, n);
   gcry_md_final (md);
-  rc = !memcmp (p + n, gcry_md_read (md, 0), hd->mac_len);
+  res = !memcmp (p + n, gcry_md_read (md, 0), hd->mac_len);
   gcry_md_close (md);
-  return rc;
+  return res;
 }
 
 
-/****************
- * Read a new packet from the input and store it in the packet buffer
- * Decompression and decryption is handled too.
- */
-int
+/* Read a new packet from the input and store it in the packet buffer
+   Decompression and decryption is handled too.  */
+gsti_error_t
 _gsti_packet_read (GSTIHD hd)
 {
+  gsti_error_t err;
   READ_STREAM rst = hd->read_stream;
   u32 pktlen, seqno;
   size_t blksize, n, paylen, padlen, maclen;
   byte *p;
-  int rc;
 
   blksize = hd->ciph_blksize ? hd->ciph_blksize : 8;
   maclen = hd->recv_mac ? hd->mac_len : 0;
 again:
   seqno = hd->recv_seqno++;
   /* read the first block so we can decipher the packet length */
-  rc = _gsti_stream_readn (rst, hd->pkt.packet_buffer, blksize);
-  if (rc)
-    return _gsti_log_err (hd, rc, "error reading packet header\n");
+  err = _gsti_stream_readn (rst, hd->pkt.packet_buffer, blksize);
+  if (err)
+    return _gsti_log_err (hd, err, "error reading packet header\n");
 
   if (hd->decrypt_hd)
     {
       p = hd->pkt.packet_buffer;
-      rc = gcry_cipher_decrypt (hd->decrypt_hd, p, blksize, NULL, 0);
-      if (rc)
-	return _gsti_log_err (hd, rc, "error decrypting first block\n");
+      err = gcry_cipher_decrypt (hd->decrypt_hd, p, blksize, NULL, 0);
+      if (err)
+	return _gsti_log_err (hd, err, "error decrypting first block\n");
     }
 
   _gsti_dump_hexbuf ("begin of packet: ", hd->pkt.packet_buffer, blksize);
 
   pktlen = buftou32 (hd->pkt.packet_buffer);
-  /* FIXME: It should be 16 but NEWKEYS has 12 for some reason */
+  /* FIXME: It should be 16 but NEWKEYS has 12 for some reason.  */
   if (pktlen < 12)		/* minimum packet size as per secsh draft */
-    return _gsti_log_err (hd, GSTI_TOO_SHORT, "received pktlen %lu \n",
-			 (u32) pktlen);
+    return _gsti_log_err (hd, gsti_error (GPG_ERR_TOO_SHORT),
+			  "received pktlen %lu \n", (u32) pktlen);
   if (pktlen > MAX_PKTLEN)
-    return _gsti_log_err (hd, GSTI_TOO_LARGE, "received pktlen %lu\n",
-			 (u32) pktlen);
+    return _gsti_log_err (hd, gsti_error (GPG_ERR_TOO_LARGE),
+			  "received pktlen %lu\n", (u32) pktlen);
 
   padlen = hd->pkt.packet_buffer[4];
   if (padlen < 4)
-    return _gsti_log_err (hd, GSTI_TOO_SHORT, "received padding is %lu\n",
-			 (u32) padlen);
+    return _gsti_log_err (hd, gsti_error (GPG_ERR_TOO_SHORT),
+			  "received padding is %lu\n", (u32) padlen);
 
   hd->pkt.packet_len = pktlen;
   hd->pkt.padding_len = padlen;
@@ -255,10 +253,10 @@ again:
 
   n = 5 + paylen + padlen;
   if ((n % blksize))
-    _gsti_log_err (hd, GSTI_INV_PKT, "length packet is not a "
-		  "multiple of the blksize\n");
+    _gsti_log_err (hd, gsti_error (GPG_ERR_INV_PACKET),
+		   "length packet is not a multiple of the blksize\n");
 
-  /* read the rest of the packet */
+  /* Read the rest of the packet.  */
   n = 4 + pktlen + maclen;
   if (n >= blksize)
     n -= blksize;
@@ -270,31 +268,31 @@ again:
 		   (u32) hd->pkt.packet_len, (u32) hd->pkt.padding_len,
 		   (u32) hd->pkt.payload_len, (u32) maclen, (u32) n);
 
-  rc = _gsti_stream_readn (rst, hd->pkt.packet_buffer + blksize, n);
-  if (rc)
-    return _gsti_log_err (hd, rc, "error reading rest of packet\n");
+  err = _gsti_stream_readn (rst, hd->pkt.packet_buffer + blksize, n);
+  if (err)
+    return _gsti_log_err (hd, err, "error reading rest of packet\n");
   n -= maclen;			/* don't want the maclen anymore */
   if (hd->decrypt_hd)
     {
       p = hd->pkt.packet_buffer + blksize;
-      rc = gcry_cipher_decrypt (hd->decrypt_hd, p, n, NULL, 0);
-      if (rc)
-	return _gsti_log_err (hd, rc, "decrypt failed\n");
-      /* note: there is no reason to decrypt the padding, but we do
-         it anyway becuase this is easier */
+      err = gcry_cipher_decrypt (hd->decrypt_hd, p, n, NULL, 0);
+      if (err)
+	return _gsti_log_err (hd, err, "decrypt failed\n");
+      /* Note: There is no reason to decrypt the padding, but we do it
+         anyway because this is easier.  */
       _gsti_dump_hexbuf ("rest of packet: ", hd->pkt.packet_buffer + blksize,
 			 n);
     }
 
   if (hd->recv_mac && !verify_mac (hd, seqno))
-    return _gsti_log_err (hd, GSTI_INV_MAC, "wrong MAC\n");
+    return _gsti_log_err (hd, gsti_error (GPG_ERR_INV_MAC), "wrong MAC\n");
 
   if (hd->zlib.use && !hd->zlib.init)
     {
       _gsti_decompress_init ();
       hd->zlib.init = 1;
     }
-  /* todo: do the uncompressions */
+  /* TODO: Do the uncompressions.  */
 
   hd->pkt.type = *hd->pkt.payload;
   _gsti_log_info (hd, "received packet %lu of type %d\n",
@@ -322,20 +320,18 @@ again:
 
 
 
-/****************
- * write a new packet from the packet buffer
- * Compression and encryption is handled here.
- * FIXME: make sure that the padding does not cause a buffer overflow!!!
- */
-int
+/* Write a new packet from the packet buffer.  Compression and
+   encryption is handled here.  FIXME: make sure that the padding does
+   not cause a buffer overflow!!!  */
+gsti_error_t
 _gsti_packet_write (GSTIHD hd)
 {
+  gsti_error_t err;
   WRITE_STREAM wst = hd->write_stream;
   size_t n, padlen, paylen, maclen;
   u32 seqno = hd->send_seqno++;
   byte *p;
   int blksize;
-  int rc;
 
   blksize = hd->ciph_blksize ? hd->ciph_blksize : 8;
   hd->pkt.padding_len = blksize - ((4 + 1 + hd->pkt.payload_len) % blksize);
@@ -343,7 +339,7 @@ _gsti_packet_write (GSTIHD hd)
     hd->pkt.padding_len += blksize;
 
   if (hd->pkt.type == 0)
-    return GSTI_INV_PKT;	/* make sure the type is set */
+    return gsti_error (GPG_ERR_INV_PACKET);	/* make sure the type is set */
   hd->pkt.payload[0] = hd->pkt.type;
   hd->pkt.packet_len = 1 + hd->pkt.payload_len + hd->pkt.padding_len;
 
@@ -355,10 +351,10 @@ _gsti_packet_write (GSTIHD hd)
       _gsti_compress_init ();
       hd->zlib.init = 1;
     }
-  /* fixme: do the compression */
+  /* FIXME: Do the compression.  */
 
-  /* construct header.  This must be a complete block, so
-     the the encrypt function can handle it */
+  /* Construct header.  This must be a complete block, so the the
+     encrypt function can handle it.  */
   n = hd->pkt.packet_len;
   hd->pkt.packet_buffer[0] = n >> 24;
   hd->pkt.packet_buffer[1] = n >> 16;
@@ -371,33 +367,29 @@ _gsti_packet_write (GSTIHD hd)
 
   maclen = generate_mac (hd, seqno);
 
-  /* write the payload */
+  /* Write the payload */
   n = 5 + paylen + padlen;
   assert (!(n % blksize));
   if (hd->encrypt_hd)
     {
       p = hd->pkt.packet_buffer;
-      rc = gcry_cipher_encrypt (hd->encrypt_hd, p, n, NULL, 0);
-      if (rc)
-	return rc;
+      err = gcry_cipher_encrypt (hd->encrypt_hd, p, n, NULL, 0);
+      if (err)
+	return err;
     }
   n = 5 + paylen + padlen + maclen;
-  rc = _gsti_stream_writen (wst, hd->pkt.packet_buffer, n);
-  if (rc)
-    return rc;
+  err = _gsti_stream_writen (wst, hd->pkt.packet_buffer, n);
+  if (err)
+    return err;
 
   return 0;
 }
 
 
-int
+gsti_error_t
 _gsti_packet_flush (GSTIHD hd)
 {
   WRITE_STREAM wst = hd->write_stream;
-  int rc;
 
-  rc = _gsti_stream_flush (wst);
-  if (rc)
-    return GSTI_WRITE_ERROR;
-  return 0;
+  return _gsti_stream_flush (wst);
 }

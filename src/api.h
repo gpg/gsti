@@ -131,24 +131,21 @@ struct gsti_context
 };
 
 
-/*-- main.c --*/
-int map_gcry_rc (int rc);
-
 /*-- fsm.c --*/
-int fsm_user_read (GSTIHD hd);
-int fsm_user_write (GSTIHD hd);
+gsti_error_t fsm_user_read (GSTIHD hd);
+gsti_error_t fsm_user_write (GSTIHD hd);
 
 /*-- auth.c --*/
-int auth_send_accept_packet (GSTIHD hd);
-int auth_proc_accept_packet (GSTIHD hd);
+gsti_error_t auth_send_accept_packet (GSTIHD hd);
+gsti_error_t auth_proc_accept_packet (GSTIHD hd);
 
-int auth_send_pkok_packet (GSTIHD hd);
-int auth_proc_pkok_packet (GSTIHD hd);
+gsti_error_t auth_send_pkok_packet (GSTIHD hd);
+gsti_error_t auth_proc_pkok_packet (GSTIHD hd);
 
-int auth_send_init_packet (GSTIHD hd);
-int auth_proc_init_packet (GSTIHD hd);
+gsti_error_t auth_send_init_packet (GSTIHD hd);
+gsti_error_t auth_proc_init_packet (GSTIHD hd);
 
-int auth_send_second_packet (GSTIHD hd);
-int auth_proc_second_packet (GSTIHD hd);
+gsti_error_t auth_send_second_packet (GSTIHD hd);
+gsti_error_t auth_proc_second_packet (GSTIHD hd);
 
 #endif /* GSTI_API_H */

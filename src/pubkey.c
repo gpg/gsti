@@ -24,6 +24,8 @@
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include <errno.h>
+
 #include <gcrypt.h>
 
 #include "types.h"
@@ -42,12 +44,11 @@ static struct
   size_t nsig;
 } pk_table[] =
 {
-  {
-  "none", "dummy", 0, "dummy", 0},
-  {
-  "ssh-dss", "pqgy", 4, "rs", 2},
-  {
-0},};
+  { "none", "dummy", 0, "dummy", 0 },
+  { "ssh-dss", "pqgy", 4, "rs", 2 },
+  { 0 }
+};
+
 
 gcry_mpi_t
 get_mpissh (gcry_mpi_t dat)
@@ -65,7 +66,8 @@ get_mpissh (gcry_mpi_t dat)
   return a;
 }
 
-static int
+
+static gsti_error_t
 sexp_get_sshmpi (gcry_sexp_t s_sig, int pktype, gcry_mpi_t sig[2])
 {
   gcry_sexp_t list;
@@ -75,7 +77,8 @@ sexp_get_sshmpi (gcry_sexp_t s_sig, int pktype, gcry_mpi_t sig[2])
   char name[2];
 
   if (pktype > 1)
-    return GSTI_BUG;
+    return gsti_error (GPG_ERR_BUG);
+
   s = pk_table[pktype].sig_elements;
   while (s && n < pk_table[pktype].nsig)
     {
@@ -83,7 +86,8 @@ sexp_get_sshmpi (gcry_sexp_t s_sig, int pktype, gcry_mpi_t sig[2])
       name[1] = 0;
       list = gcry_sexp_find_token (s_sig, name, 0);
       if (!list)
-	return GSTI_INV_OBJ;
+	return gsti_error (GPG_ERR_INV_OBJ);
+
       tmp = gcry_sexp_nth_mpi (list, 1, 0);
       sig[n++] = get_mpissh (tmp);
       gcry_sexp_release (list);
@@ -93,21 +97,24 @@ sexp_get_sshmpi (gcry_sexp_t s_sig, int pktype, gcry_mpi_t sig[2])
   return 0;
 }
 
-static int
+
+static gsti_error_t
 sexp_from_buffer (gcry_sexp_t * r_a, const byte * buf, size_t buflen)
 {
+  gsti_error_t err;
   gcry_sexp_t s_a;
   gcry_mpi_t a;
-  int rc;
 
-  rc = gcry_mpi_scan (&a, GCRYMPI_FMT_USG, buf, buflen, NULL);
-  if (!rc)
-    rc = gcry_sexp_build (&s_a, NULL, "%m", a);
-  if (!rc)
+  err = gcry_mpi_scan (&a, GCRYMPI_FMT_USG, buf, buflen, NULL);
+  if (!err)
+    err = gcry_sexp_build (&s_a, NULL, "%m", a);
+  if (!err)
     gcry_mpi_release (a);
   *r_a = s_a;
-  return map_gcry_rc (rc);
+
+  return err;
 }
+
 
 static void
 free_mpi_array (gcry_mpi_t * a, size_t na)
@@ -116,6 +123,7 @@ free_mpi_array (gcry_mpi_t * a, size_t na)
 
   if (!a)
     return;
+
   for (i = 0; i < na; i++)
     {
       gcry_mpi_release (a[i]);
@@ -123,69 +131,71 @@ free_mpi_array (gcry_mpi_t * a, size_t na)
     }
 }
 
-int
+
+gsti_error_t
 _gsti_dss_sign (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
 {
+  gsti_error_t err;
   gcry_sexp_t s_hash = NULL, s_key = NULL, s_sig = NULL;
   int dlen = gcry_md_get_algo_dlen (GCRY_MD_SHA1);
-  int rc;
 
   if (ctx->type != SSH_PK_DSS)
-    return GSTI_BUG;
+    return gsti_error (GPG_ERR_BUG);
   if (!ctx->secret)
-    return GSTI_INV_OBJ;
+    return gsti_error (GPG_ERR_INV_OBJ);
 
-  rc = sexp_from_buffer (&s_hash, hash, dlen);
-  if (!rc)
-    rc = gcry_sexp_build (&s_key, NULL, "(private-key(dsa(p%m)(q%m)(g%m)(y%m)(x%m)))", ctx->key[0],	/* p */
+  err = sexp_from_buffer (&s_hash, hash, dlen);
+  if (!err)
+    err = gcry_sexp_build (&s_key, NULL, "(private-key(dsa(p%m)(q%m)(g%m)(y%m)(x%m)))", ctx->key[0],	/* p */
 			  ctx->key[1],	/* q */
 			  ctx->key[2],	/* g */
 			  ctx->key[3],	/* y */
 			  ctx->key[4] /* x */ );
 
-  if (!rc)
-    rc = gcry_pk_sign (&s_sig, s_hash, s_key);
-  if (!rc)
-    rc = sexp_get_sshmpi (s_sig, SSH_PK_DSS, sig);
+  if (!err)
+    err = gcry_pk_sign (&s_sig, s_hash, s_key);
+  if (!err)
+    err = sexp_get_sshmpi (s_sig, SSH_PK_DSS, sig);
 
   gcry_sexp_release (s_key);
   gcry_sexp_release (s_hash);
   gcry_sexp_release (s_sig);
 
-  return map_gcry_rc (rc);
+  return err;
 }
 
 
-int
+gsti_error_t
 _gsti_dss_verify (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
 {
+  gsti_error_t err;
   gcry_sexp_t s_key, s_md, s_sig;
   int dlen = gcry_md_get_algo_dlen (GCRY_MD_SHA1);
-  int rc;
 
   if (ctx->type != SSH_PK_DSS)
-    return GSTI_BUG;
+    return gsti_error (GPG_ERR_BUG);
 
-  rc = sexp_from_buffer (&s_md, hash, dlen);
-  if (!rc)
-    rc = gcry_sexp_build (&s_key, NULL, "(public-key(dsa(p%m)(q%m)(g%m)(y%m)))", ctx->key[0],	/* p */
+  err = sexp_from_buffer (&s_md, hash, dlen);
+  if (!err)
+    err = gcry_sexp_build (&s_key, NULL, "(public-key(dsa(p%m)(q%m)(g%m)(y%m)))", ctx->key[0],	/* p */
 			  ctx->key[1],	/* q */
 			  ctx->key[2],	/* g */
 			  ctx->key[3] /* y */ );
-  if (!rc)
-    rc = gcry_sexp_build (&s_sig, NULL, "(sig-val(dsa(r%m)(s%m)))", sig[0],	/* r */
+  if (!err)
+    err = gcry_sexp_build (&s_sig, NULL, "(sig-val(dsa(r%m)(s%m)))", sig[0],	/* r */
 			  sig[1] /* s */ );
-  if (!rc)
-    rc = gcry_pk_verify (s_sig, s_md, s_key);
+  if (!err)
+    err = gcry_pk_verify (s_sig, s_md, s_key);
 
   gcry_sexp_release (s_key);
   gcry_sexp_release (s_md);
   gcry_sexp_release (s_sig);
 
-  return map_gcry_rc (rc);
+  return err;
 }
 
-static int
+
+static gsti_error_t
 read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
 {
   struct stat statbuf;
@@ -194,14 +204,14 @@ read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
   u32 len = 0, n;
 
   if (fstat (fileno (fp), &statbuf))
-    return GSTI_FILE;
+    return gsti_error_from_errno (errno);
   for (n = 0; n < 4; n++)
     buf[n] = fgetc (fp);
   len = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
   if (len > statbuf.st_size)
     {
       _gsti_log_info (0, "read_bstring: %d: string larger than file.\n", len);
-      return GSTI_INV_OBJ;
+      return gsti_error (GPG_ERR_INV_OBJ);
     }
   a = _gsti_bstring_make (NULL, ismpi ? len + 4 : len);
   if (ismpi)
@@ -221,6 +231,7 @@ read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
   return 0;
 }
 
+
 static gcry_mpi_t
 bstring_to_sshmpi (BSTRING bstr)
 {
@@ -230,35 +241,37 @@ bstring_to_sshmpi (BSTRING bstr)
     return NULL;
   if (gcry_mpi_scan (&a, GCRYMPI_FMT_SSH, bstr->d, bstr->len, NULL))
     return NULL;
+
   return a;
 }
 
 
-static int
+static gsti_error_t
 read_dss_key (FILE * fp, int keytype, GSTI_KEY ctx)
 {
+  gsti_error_t err;
   BSTRING a;
   size_t n;
-  int rc, i;
+  int i;
 
   n = pk_table[SSH_PK_DSS].nkey;
   if (keytype)
     n++;			/* secret key */
-  rc = read_bstring (fp, 0, &a);
-  if (rc)
-    return rc;
+  err = read_bstring (fp, 0, &a);
+  if (err)
+    return err;
   if (a->len != 7 || strncmp (a->d, "ssh-dss", 7))
     {
       _gsti_log_info (0, "read_dss_key: %s: not a dss key blob\n", a->d);
       _gsti_bstring_free (a);
-      return GSTI_INV_OBJ;
+      return gsti_error (GPG_ERR_INV_OBJ);
     }
   _gsti_bstring_free (a);
   for (i = 0; i < n; i++)
     {
-      rc = read_bstring (fp, 1, &a);
-      if (rc)
-	return rc;
+      err = read_bstring (fp, 1, &a);
+      if (err)
+	return err;
       ctx->key[i] = bstring_to_sshmpi (a);
       _gsti_bstring_free (a);
     }
@@ -272,38 +285,39 @@ read_dss_key (FILE * fp, int keytype, GSTI_KEY ctx)
 }
 
 
-static int
+static gsti_error_t
 parse_key_entry (FILE * fp, int pktype, int keytype, GSTI_KEY * r_ctx)
 {
+  gsti_error_t err;
   GSTI_KEY ctx;
-  int rc;
 
   ctx = _gsti_xcalloc (1, sizeof *ctx);
   ctx->type = SSH_PK_NONE;
   switch (pktype)
     {
     case SSH_PK_DSS:
-      rc = read_dss_key (fp, keytype, ctx);
+      err = read_dss_key (fp, keytype, ctx);
       break;
     default:
-      rc = GSTI_GENERAL;
+      err = gsti_error (GPG_ERR_GENERAL);
       break;
     }
   *r_ctx = ctx;
 
-  return rc;
+  return err;
 }
 
 
 static int
 pktype_from_file (FILE * fp)
 {
+  gsti_error_t err;
   BSTRING a;
-  int rc, type;
+  int type;
 
-  rc = read_bstring (fp, 0, &a);
+  err = read_bstring (fp, 0, &a);
   fseek (fp, 0, SEEK_SET);
-  if (rc)
+  if (err)
     return 0;
   if (a->len == 7 || !strcmp (a->d, "ssh-dss"))
     type = SSH_PK_DSS;
@@ -314,55 +328,56 @@ pktype_from_file (FILE * fp)
 }
 
 
-/****************
- * Read a public key from the given file.
- * The file only expect that the file contains one key and as a result,
- * only the first record will be read!
- */
-int
-gsti_key_load (const char *file, int keytype, GSTI_KEY * r_ctx)
+/* Read a public key from the given file.  It is expected that the
+   file contains one key and as a result, only the first record will
+   be read!  */
+gsti_error_t
+gsti_key_load (const char *file, int keytype, GSTI_KEY *r_ctx)
 {
+  gsti_error_t err;
   FILE *inp;
-  int rc, pktype;
+  int pktype;
 
   inp = fopen (file, "r");
   if (!inp)
-    return GSTI_FILE;
+    return gsti_error_from_errno (errno);
   pktype = pktype_from_file (inp);
-  rc = parse_key_entry (inp, pktype, keytype, r_ctx);
+  err = parse_key_entry (inp, pktype, keytype, r_ctx);
   fclose (inp);
-  return rc;
+  return err;
 }
 
 
-int
+gsti_error_t
 _gsti_ssh_cmp_pkname (int pktype, const char *name, size_t len)
 {
   const char *s;
 
   if (pktype > SSH_PK_DSS)
-    return GSTI_INV_OBJ;
+    return gsti_error (GPG_ERR_INV_OBJ);
   s = pk_table[pktype].algname;
   if (strlen (s) != len)
-    return GSTI_INV_OBJ;
+    return gsti_error (GPG_ERR_INV_OBJ);
   if (strncmp (pk_table[pktype].algname, name, strlen (s)))
-    return GSTI_INV_OBJ;
+    return gsti_error (GPG_ERR_INV_OBJ);
+
   return 0;
 }
 
 
-int
+gsti_error_t
 _gsti_ssh_cmp_keys (GSTI_KEY a, GSTI_KEY b)
 {
   size_t n;
 
   if (a->type != b->type)
-    return GSTI_INV_OBJ;
+    return gsti_error (GPG_ERR_INV_OBJ);
   for (n = 0; n < a->nkey; n++)
     {
       if (gcry_mpi_cmp (a->key[n], b->key[n]))
-	return GSTI_INV_OBJ;
+	return gsti_error (GPG_ERR_INV_OBJ);
     }
+
   return 0;
 }
 
@@ -393,6 +408,7 @@ _gsti_ssh_get_pkname (int pktype, int asbstr, size_t * r_n)
   *r_n = n + len;
   return p;
 }
+
 
 static int
 pkalgo_get_nkey (int algid, const char *name)
@@ -516,74 +532,76 @@ gsti_key_free (GSTI_KEY ctx)
 {
   if (!ctx)
     return;
+
   free_mpi_array (ctx->key, ctx->nkey);
   _gsti_free (ctx);
 }
 
 
-int
+gsti_error_t
 _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
 		  GSTI_KEY * r_pk)
 {
+  gsti_error_t err;
   BUFFER buf;
   GSTI_KEY pk;
   gcry_mpi_t _sig[2];
   byte *p = NULL;
   size_t n;
-  int rc;
 
   pk = _gsti_key_fromblob (key);
   if (!pk)
-    return GSTI_INV_OBJ;
+    return gsti_error (GPG_ERR_INV_OBJ);
   _gsti_buf_init (&buf);
   _gsti_buf_putraw (buf, sig->d, sig->len);
   p = _gsti_buf_getstr (buf, &n);
   if (n != 7 || strcmp (p, "ssh-dss"))
     {
-      rc = GSTI_INV_OBJ;
+      err = gsti_error (GPG_ERR_INV_OBJ);
       goto leave;
     }
   _gsti_free (p);
   p = _gsti_buf_getstr (buf, &n);
   if (n != 40)
     {
-      rc = GSTI_BUG;
+      err = gsti_error (GPG_ERR_BUG);
       goto leave;
     }
+
   /* There is no separation for the both mpis so we say the first
      has a maximum of 160 bits (20 bytes). */
-  rc = gcry_mpi_scan (&_sig[0], GCRYMPI_FMT_USG, p, 20, &n);
-  if (!rc)
-    rc = gcry_mpi_scan (&_sig[1], GCRYMPI_FMT_USG, p + n, n, NULL);
-  if (!rc)
-    rc = _gsti_dss_verify (pk, hash, _sig);
+  err = gcry_mpi_scan (&_sig[0], GCRYMPI_FMT_USG, p, 20, &n);
+  if (!err)
+    err = gcry_mpi_scan (&_sig[1], GCRYMPI_FMT_USG, p + n, n, NULL);
+  if (!err)
+    err = _gsti_dss_verify (pk, hash, _sig);
   free_mpi_array (_sig, 2);
 
 leave:
   _gsti_free (p);
   _gsti_buf_free (buf);
-  if (!rc && r_pk)
+  if (!err && r_pk)
     *r_pk = pk;
-  return rc;
-}				/* _gsti_sig_decode */
+  return err;
+}
 
 
 BSTRING
 _gsti_sig_encode (GSTI_KEY sk, const byte * hash)
 {
+  gsti_error_t err;
   gcry_mpi_t sig[2];
   BUFFER buf;
   BSTRING a;
   byte *p, buffer[128];
   size_t n, n2;
-  int rc;
 
   if (!sk)
     return _gsti_bstring_make (NULL, 4);
-  rc = _gsti_dss_sign (sk, hash, sig);
-  if (rc)
+  err = _gsti_dss_sign (sk, hash, sig);
+  if (err)
     {
-      _gsti_log_info (0, "signing failed rc=%d\n", rc);
+      _gsti_log_info (0, "signing failed rc=%d\n", err);
       return NULL;
     }
   p = _gsti_ssh_get_pkname (sk->type, 0, &n);
@@ -591,12 +609,12 @@ _gsti_sig_encode (GSTI_KEY sk, const byte * hash)
   _gsti_buf_putstr (buf, p, n);
   n = sizeof buffer - 1;
   n2 = sizeof buffer - 1;
-  rc = gcry_mpi_print (GCRYMPI_FMT_USG, buffer, sizeof buffer - 1, &n,
-		       sig[0]);
-  if (!rc)
-    rc = gcry_mpi_print (GCRYMPI_FMT_USG, buffer + n, sizeof buffer - 1,
-			 &n2, sig[1]);
-  if (!rc)
+  err = gcry_mpi_print (GCRYMPI_FMT_USG, buffer, sizeof buffer - 1, &n,
+			sig[0]);
+  if (!err)
+    err = gcry_mpi_print (GCRYMPI_FMT_USG, buffer + n, sizeof buffer - 1,
+			  &n2, sig[1]);
+  if (!err)
     _gsti_buf_putstr (buf, buffer, n + n2);
   free_mpi_array (sig, 2);
 

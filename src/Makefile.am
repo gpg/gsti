@@ -34,6 +34,7 @@ libgsti_la_LDFLAGS = -version-info \
 
 libgsti_la_SOURCES = \
 	gsti.h \
+	error.c \
 	auth.c \
 	api.h \
 	types.h \

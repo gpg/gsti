@@ -1,24 +1,27 @@
-/* buffer.c - Buffer handling
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with GSTI; if not, write to the Free Software Foundation,
- * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
+/* buffer.c - Buffer handling for GSTI.
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with GSTI; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <unistd.h>
 #include <stdio.h>
 #include <gcrypt.h>
@@ -154,32 +157,32 @@ _gsti_buf_getstr (BUFFER ctx, size_t * r_n)
 }
 
 
-int
+gsti_error_t
 _gsti_buf_putmpi (BUFFER ctx, gcry_mpi_t a)
 {
+  gsti_error_t err;
   byte buf[512];
   size_t buflen;
-  int rc;
 
-  rc = gcry_mpi_print (GCRYMPI_FMT_SSH, buf, sizeof buf - 1, &buflen, a);
-  if (rc)
-    return map_gcry_rc (rc);
+  err = gcry_mpi_print (GCRYMPI_FMT_SSH, buf, sizeof buf - 1, &buflen, a);
+  if (err)
+    return err;
   _gsti_buf_putraw (ctx, buf, buflen);
 
   return 0;
 }
 
 
-int
+gsti_error_t
 _gsti_buf_getmpi (BUFFER ctx, gcry_mpi_t * ret_a, size_t * r_n)
 {
   byte buf[512 + 4];
   size_t buflen;
-  int rc;
 
   buflen = _gsti_buf_getint (ctx);
   if (!buflen || buflen > 512)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
+
   buf[0] = buflen >> 24;
   buf[1] = buflen >> 16;
   buf[2] = buflen >> 8;
@@ -187,11 +190,8 @@ _gsti_buf_getmpi (BUFFER ctx, gcry_mpi_t * ret_a, size_t * r_n)
   buflen += 4;
   *r_n = buflen;
   _gsti_buf_getraw (ctx, buf + 4, buflen - 4);
-  rc = gcry_mpi_scan (ret_a, GCRYMPI_FMT_SSH, buf, buflen, NULL);
-  if (rc)
-    return map_gcry_rc (rc);
 
-  return 0;
+  return gcry_mpi_scan (ret_a, GCRYMPI_FMT_SSH, buf, buflen, NULL);
 }
 
 

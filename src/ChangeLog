@@ -1,5 +1,100 @@
-2004-05-24  Marcus Brinkmann  <marcus@g10code.de>
+2004-05-25  Marcus Brinkmann  <marcus@g10code.de>
 
+	Everywhere: Change various "int rc" variables to "gsti_error_t err",
+	and related changes.
+
+	* gsti.h: Include <gpg-error.h>.
+	(_GSTI_INLINE): New macro.
+	(gsti_error_t, gsti_err_code_t, gsti_err_source_t): New types.
+	(GSTI_ERR_SOURCE_DEFAULT): New macro.
+	(gsti_err_make, gsti_error, gsti_err_code, gsti_err_source): New
+	inline functions.
+	(gsti_strerror, gsti_strerror_r, gsti_strsource,
+	gsti_err_code_from_errno, gsti_err_code_to_errno,
+	gsti_err_make_from_errno, gsti_error_from_errno): New prototypes.
+	* error.c: New file.
+	* Makefile.am (libgsti_la_SOURCES): Add error.c.
+	* main.c (gsti_strerror): Removed.
+	* auth.h (auth_send_accept_packet, auth_proc_accept_packet,
+	auth_send_init_packet, auth_proc_init_packet,
+	auth_send_pkok_packet, parse_pkok_packet, auth_proc_pkok_packet,
+	auth_send_second_packet, auth_proc_second_packet): Change return
+	type to gsti_error_t.
+	* auth.c (auth_send_accept_packet, auth_proc_accept_packet,
+	auth_send_init_packet, calc_sig_hash, auth_proc_init_packet,
+	parse_auth_request, build_auth_request, init_auth_request,
+	build_pkok_packet, auth_send_pkok_packet, parse_pkok_packet,
+	auth_proc_pkok_packet, auth_send_second_packet,
+	auth_proc_second_packet): Change return type to gsti_error_t.
+	* buffer.h (_gsti_buf_putmpi, _gsti_buf_getmpi): Change return
+	type to gsti_error_t in prototype.
+	* buffer.c (_gsti_buf_putmpi, _gsti_buf_getmpi): Change return
+	type to gsti_error_t.
+	* api.h (map_gcry_rc): Removed prototype.
+	(fsm_user_read, fsm_user_write): Change return type to
+	gsti_error_t in prototype.
+	* fsm.c (fsm_user_read, fsm_user_write, gsti_get_packet, fsm_loop,
+	fsm_server_loop, fsm_client_loop, request_packet, handle_quit,
+	handle_init): Change return type to gsti_error_t.
+	* gsti.h (gsti_set_log_stream): Change return type to gsti_error_t
+	in prototype.
+	(gsti_deinit): Change return type to void in prototype.
+	(gsti_set_readfnc, gsti_set_writefnc, gsti_set_service,
+	gsti_set_hostkey, gsti_set_client_key, gsti_set_client_user,
+	gsti_set_auth_method, gsti_set_compression, gsti_set_dhgex,
+	gsti_read, gsti_write, gsti_key_load, gsti_get_packet,
+	gsti_put_packet): Change return type to gsti_error_t in prototype.
+	* main.c (gsti_deinit): Change return type to void.
+	(gsti_set_readfnc, gsti_set_writefnc, gsti_set_service,
+	gsti_set_hostkey, gsti_set_client_key, gsti_set_client_user,
+	gsti_set_auth_method, gsti_set_compression, gsti_set_dhgex,
+	gsti_read, gsti_write): Change return type to gsti_error_t.
+	(map_gcry_rc): Removed.
+	* logging.c (gsti_set_log_stream): Change return type to
+	gsti_error_t.
+	* pubkey.h (_gsti_dss_sign, _gsti_dss_verify,
+	_gsti_ssh_cmp_pkname, _gsti_ssh_cmp_keys, _gsti_sig_decode):
+	Change return type to gsti_error_t in prototype.
+	* pubkey.c: Include <errno.h>.
+	(gsti_key_load, parse_key_entry, read_dss_key, read_bstring,
+	sexp_get_sshmpi, sexp_from_buffer, _gsti_dss_sign,
+	_gsti_dss_verify, _gsti_ssh_cmp_pkname, _gsti_ssh_cmp_keys,
+	_gsti_sig_decode): Change return type to gsti_error_t.
+	* stream.h (_gsti_stream_readn, _gsti_stream_writen,
+	_gsti_stream_flush): Change return type to gsti_error_t in
+	prototype.
+	* stream.c (_gsti_stream_readn, _gsti_stream_writen,
+	_gsti_stream_flush): Change return type to gsti_error_t.
+	* kex.h (kex_send_version, kex_wait_on_version,
+	kex_send_init_packet, kex_proc_init_packet, kex_send_kexdh_init,
+	kex_proc_kexdh_init, kex_send_kexdh_reply, kex_proc_kexdh_reply,
+	kex_send_newkeys, kex_proc_newkeys, kex_send_disconnect,
+	kex_send_service_request, kex_proc_service_request,
+	kex_send_service_accept, kex_proc_service_accept,
+	kex_send_gex_request, kex_proc_gex_request, kex_send_gex_group,
+	kex_proc_gex_group): Change return type to gsti_error_t in
+	prototype.
+	* kex.c (kex_send_version, kex_wait_on_version, parse_msg_kexinit,
+	build_msg_kexinit, parse_msg_kexdh_init, build_msg_kexdh_init,
+	parse_msg_kexdh_reply, build_msg_kexdh_reply, calc_exchange_hash,
+	construct_keys, kex_send_init_packet, choose_mac_algo,
+	choose_cipher_algo, choose_kex_algo, kex_proc_init_packet,
+	kex_send_kexdh_init, kex_proc_kexdh_init, kex_send_kexdh_reply,
+	kex_proc_kexdh_reply, kex_send_newkeys, kex_proc_newkeys,
+	kex_send_disconnect, parse_msg_service, build_msg_service,
+	kex_send_service_request, kex_proc_service_request,
+	kex_send_service_accept, kex_proc_service_accept,
+	build_gex_request, kex_send_gex_request, parse_gex_request,
+	kex_proc_gex_request, build_gex_group, kex_send_gex_group,
+	parse_gex_group, kex_proc_gex_group): Change return type to
+	gsti_error_t.
+	* packet.h (_gsti_packet_read, _gsti_packet_write,
+	_gsti_packet_flush): Change return type to gsti_error_t in
+	prototype.
+	* packet.c (verify_mac, _gsti_packet_read, _gsti_packet_write,
+	_gsti_packet_flush): Change return type to gsti_error_t.
+
+2004-05-24  Marcus Brinkmann  <marcus@g10code.de>
 
 	Everywhere: Pass context to invocation of _gsti_log_info and friends.
 	Change _gsti_log_rc to _gsti_log_err.

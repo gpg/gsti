@@ -19,7 +19,10 @@
    along with this program; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
 
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -68,13 +71,6 @@ parse_version_string (const char *s, int *major, int *minor, int *micro)
   if (!s)
     return NULL;
   return s;			/* patchlevel */
-}
-
-
-int
-map_gcry_rc (int rc)
-{
-  return rc;
 }
 
 
@@ -169,11 +165,11 @@ _gsti_free_auth (GSTIHD hd)
 }
 
 
-int
+void
 gsti_deinit (GSTIHD hd)
 {
   if (!hd)
-    return GSTI_INV_ARG;
+    return;
 
   _gsti_free_auth (hd);
   _gsti_read_stream_free (hd->read_stream);
@@ -196,46 +192,46 @@ gsti_deinit (GSTIHD hd)
   gsti_key_free (hd->hostkey);
   _gsti_packet_free (hd);
   _gsti_free (hd);
-  return 0;
 }
 
 
-int
+gsti_error_t
 gsti_set_readfnc (GSTIHD hd, GSTI_READ_FNC readfnc)
 {
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
+
   hd->readfnc = readfnc;
+
   return 0;
 }
 
 
-int
+gsti_error_t
 gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc)
 {
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
+
   hd->writefnc = writefnc;
+
   return 0;
 }
 
 
-/****************
- * A client can request a special service using this function.
- * A servicename must have a @ in it, so that it does not conflict
- * with any standard service. Comma and colons should be avoided in
- * a service name.
- * If this is not used, a standard SSH service is used.
- * A server must use this function to set acceptable services.
- * A client uses the first service from the list.
- */
-int
+/* A client can request a special service using this function.  A
+   servicename must have a @ in it, so that it does not conflict with
+   any standard service.  Comma and colons should be avoided in a
+   service name.  If this is not used, a standard SSH service is used.
+   A server must use this function to set acceptable services.  A
+   client uses the first service from the list.  */
+gsti_error_t
 gsti_set_service (GSTIHD hd, const char *svcname)
 {
   STRLIST s;
 
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);  
   if (!svcname || !*svcname)
     return 0;
   hd->local_services = _gsti_algolist_parse (svcname, strlen (svcname));
@@ -249,190 +245,146 @@ gsti_set_service (GSTIHD hd, const char *svcname)
 }
 
 
-/****************
- * Read data from the GSTI stream.  This automagically initializes the
- * the system and decides whether we are client or server.  We are the
- * server side when this function is called before the first gsti_write
- * and vice versa.  Everything to setup the secure transport is handled
- * here.
- *
- * length must point to a variable having the size of the provided buffer
- * and will receive the actuall number of bytes read, which may be less
- * than the buffer. EOF is indicated by returning a zero length.
- * Returns: errocode.
- */
-int
+/* Read data from the GSTI stream.  This automagically initializes the
+   the system and decides whether we are client or server.  We are the
+   server side when this function is called before the first
+   gsti_write and vice versa.  Everything to setup the secure
+   transport is handled here.
+
+   LENGTH must point to a variable having the size of the provided
+   buffer and will receive the actuall number of bytes read, which may
+   be less than the buffer. EOF is indicated by returning a zero
+   length.  */
+gsti_error_t
 gsti_read (GSTIHD hd, void *buffer, size_t * length)
 {
-  int rc;
+  gsti_error_t err;
 
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
+
   hd->user_read_buffer = buffer;
   hd->user_read_bufsize = *length;
   hd->user_read_nbytes = 0;
-  rc = fsm_user_read (hd);
-  if (rc)
-    return rc;
+
+  err = fsm_user_read (hd);
+  if (err)
+    return err;
 
   *length = hd->user_read_nbytes;
-  return rc;
-}
-
-/****************
- * The counterpart to gsti_read.
- */
-int
-gsti_write (GSTIHD hd, const void *buffer, size_t length)
-{
-  if (!hd)
-    return GSTI_INV_ARG;
-  if (hd->local_services)
-    {
-      const byte *p = buffer;
-      /* check that the buffer contains valid packet types */
-      if (!length || *p < 192)
-	return GSTI_INV_ARG;
-    }
-  hd->user_write_buffer = buffer;
-  hd->user_write_bufsize = length;
-  return fsm_user_write (hd);
-}
-
-
-int
-gsti_set_hostkey (GSTIHD hd, const char *file)
-{
-  struct stat statbuf;
-  int rc;
-
-  if (!hd)
-    return GSTI_INV_ARG;
-  if (stat (file, &statbuf))
-    return GSTI_FILE;
-  rc = gsti_key_load (file, 1, &hd->hostkey);
-
-  return rc;
-}
-
-
-int
-gsti_set_client_key (GSTIHD hd, const char *file)
-{
-  struct stat statbuf;
-  int rc;
-
-  if (!hd)
-    return GSTI_INV_ARG;
-  if (stat (file, &statbuf))
-    return GSTI_FILE;
-  rc = gsti_key_load (file, 1, &hd->auth.key);
-
-  return rc;
-}
-
-
-int
-gsti_set_client_user (GSTIHD hd, const char *user)
-{
-  if (!hd)
-    return GSTI_INV_ARG;
-  _gsti_free (hd->auth.user);
-  hd->auth.user = _gsti_xstrdup (user);
   return 0;
 }
 
 
-int
+/* The counterpart to gsti_read.  */
+gsti_error_t
+gsti_write (GSTIHD hd, const void *buffer, size_t length)
+{
+  if (!hd)
+    return gsti_error (GPG_ERR_INV_ARG);
+
+  if (hd->local_services)
+    {
+      const byte *p = buffer;
+      /* Check that the buffer contains valid packet types.  */
+      if (!length || *p < 192)
+	return gsti_error (GPG_ERR_INV_ARG);
+    }
+
+  hd->user_write_buffer = buffer;
+  hd->user_write_bufsize = length;
+
+  return fsm_user_write (hd);
+}
+
+
+gsti_error_t
+gsti_set_hostkey (GSTIHD hd, const char *file)
+{
+  struct stat statbuf;
+
+  if (!hd)
+    return gsti_error (GPG_ERR_INV_ARG);
+  if (stat (file, &statbuf))
+    return gsti_error_from_errno (errno);
+
+  return gsti_key_load (file, 1, &hd->hostkey);
+}
+
+
+gsti_error_t
+gsti_set_client_key (GSTIHD hd, const char *file)
+{
+  struct stat statbuf;
+
+  if (!hd)
+    return gsti_error (GPG_ERR_INV_ARG);
+  if (stat (file, &statbuf))
+    return gsti_error_from_errno (errno);
+
+  return gsti_key_load (file, 1, &hd->auth.key);
+}
+
+
+gsti_error_t
+gsti_set_client_user (GSTIHD hd, const char *user)
+{
+  if (!hd)
+    return gsti_error (GPG_ERR_INV_ARG);
+
+  _gsti_free (hd->auth.user);
+  hd->auth.user = _gsti_xstrdup (user);
+
+  return 0;
+}
+
+
+gsti_error_t
 gsti_set_auth_method (GSTIHD hd, int methd)
 {
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
+
   switch (methd)
     {
     case GSTI_AUTH_PUBLICKEY:
       hd->auth.method = methd;
       break;
     default:
-      return GSTI_PROT_VIOL;
+      return gsti_error (GPG_ERR_PROT_VIOL);
     }
+
   return 0;
 }
 
 
-int
+gsti_error_t
 gsti_set_compression (GSTIHD hd, int val)
 {
 #ifndef USE_ZLIB
   hd->zlib.use = 0;
-  return GSTI_NOT_IMPL;
+  return gsti_error (GPG_ERR_NOT_IMPLEMENTED);
 #else
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
   hd->zlib.use = val;
   return 0;
 #endif
 }
 
-int
+
+gsti_error_t
 gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n, unsigned int max)
 {
   if (!hd)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
+
   if (n < min || n > max)
-    return GSTI_INV_ARG;
+    return gsti_error (GPG_ERR_INV_ARG);
 
   hd->gex.min = min;
   hd->gex.n = n;
   hd->gex.max = max;
 
   return 0;
-}
-
-
-const char *
-gsti_strerror (int ec)
-{
-  static char buf[32];
-
-  switch (ec)
-    {
-    case GSTI_SUCCESS:
-      return "success";
-    case GSTI_GENERAL:
-      return "general error";
-    case GSTI_BUG:
-      return "internal error";
-    case GSTI_INV_ARG:
-      return "invalid argument";
-    case GSTI_NO_DATA:
-      return "no data to process (eof)";
-    case GSTI_NOT_SSH:
-      return "not connected to a SSH protocol stream";
-    case GSTI_PRE_EOF:
-      return "premature end-of-file";
-    case GSTI_TOO_SHORT:
-      return "an entity is too short";
-    case GSTI_TOO_LARGE:
-      return "an entity is too large";
-    case GSTI_READ_ERROR:
-      return "read error";
-    case GSTI_WRITE_ERROR:
-      return "write error";
-    case GSTI_INV_PKT:
-      return "invalid packet";
-    case GSTI_INV_OBJ:
-      return "invalid object";
-    case GSTI_PROT_VIOL:
-      return "protocol violation";
-    case GSTI_BAD_SIGNATURE:
-      return "bad signature";
-    case GSTI_FILE:
-      return strerror (errno);
-    case GSTI_NOT_IMPL:
-      return "not implemented";
-    default:
-      sprintf (buf, "code=%d", ec);
-      return buf;
-    }
 }
