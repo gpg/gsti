@@ -101,7 +101,7 @@ _gsti_stream_readn (read_stream_t a, byte * buffer, size_t nbytes)
     {
       c = _gsti_stream_get (a);
       if (c == -1)
-        return a->error;
+        return a->error ? a->error : gsti_error (GPG_ERR_EOF);
       if (buffer)
 	{
 	  *buffer = c;
