@@ -256,7 +256,9 @@ gsti_error_t gsti_put_packet (gsti_ctx_t ctx, GSTI_PKTDESC * pkt);
 
 /*-- pubkey.c --*/
 gsti_error_t gsti_key_load (const char *file, int keytype, gsti_key_t * r_ctx);
+gsti_error_t gsti_key_save (const char *file, int secpart, gsti_key_t ctx);
 unsigned char *gsti_key_fingerprint (gsti_key_t ctx, int mdalgo);
+gsti_error_t gsti_key_from_sexp (void * ctx_key, gsti_key_t * r_key);
 void gsti_key_free (gsti_key_t ctx);
 
 

@@ -37,6 +37,7 @@ struct packet_buffer_s
   byte *payload;		/* = packet_buffer+5 */
   int type;
 };
+typedef struct packet_buffer_s * packet_buffer_t;
 
 struct gsti_context
 {
@@ -112,12 +113,12 @@ struct gsti_context
   const byte *user_write_buffer;
   size_t user_write_bufsize;
 
-  GSTI_KEY hostkey;
+  gsti_key_t hostkey;
 
   struct
   {
     int method;
-    GSTI_KEY key;
+    gsti_key_t key;
     char *user;
   } auth;
 

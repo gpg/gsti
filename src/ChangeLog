@@ -1,3 +1,24 @@
+2004-06-02  Timo Schulz  <twoaday@g10code.de>
+
+	* pubkey.c (gsti_key_save): New.
+	(_gsti_key_fromblob): RSA support.
+
+	* Finished RSA support.
+	
+	
+2004-06-01  Timo Schulz  <twoaday@g10code.de>
+
+	* pubkey.c (sexp_from_buffer): PKCS#1 support.
+	Changed all callers.
+
+	(sexp_get_sshmpi): Use SSH_PK_LAST to check for invalid
+	pubkey algorithm ids.
+
+	(gsti_key_from_sexp): New. Create a gsti key handle based
+	on a s-exp struct created by Libgcrypt.
+
+	* Add nskey to the pubkey table structure.
+	
 2004-05-28  Timo Schulz  <twoaday@freakmail.de>
 
 	* pubkey.c (gsti_key_load): Open file in binary mode.

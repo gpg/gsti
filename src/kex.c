@@ -268,7 +268,7 @@ leave:
 
 /* Build a KEX packet.  */
 static gsti_error_t
-build_msg_kexinit (MSG_kexinit * kex, struct packet_buffer_s *pkt)
+build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
 {
   STRLIST algolist[10];
   byte *p = pkt->payload;
@@ -376,7 +376,7 @@ leave:
 
 /* Build a KEXDH packet.  */
 static gsti_error_t
-build_msg_kexdh_init (MSG_kexdh_init * kexdh, struct packet_buffer_s *pkt)
+build_msg_kexdh_init (MSG_kexdh_init * kexdh, packet_buffer_t pkt)
 {
   gsti_error_t err;
   BUFFER buf = NULL;
@@ -459,7 +459,7 @@ leave:
 
 /* Build a KEXDH_REPLY packet.  */
 static gsti_error_t
-build_msg_kexdh_reply (MSG_kexdh_reply * dhr, struct packet_buffer_s *pkt)
+build_msg_kexdh_reply (MSG_kexdh_reply * dhr, packet_buffer_t pkt)
 {
   gsti_error_t err;
   BUFFER buf = NULL;
@@ -1152,7 +1152,7 @@ gsti_error_t
 kex_send_disconnect (gsti_ctx_t ctx, u32 reason)
 {
   gsti_error_t err = 0;
-  struct packet_buffer_s *pkt = &ctx->pkt;
+  packet_buffer_t pkt = &ctx->pkt;
   BUFFER buf = NULL;
   size_t len;
 
@@ -1209,7 +1209,7 @@ leave:
 
 /* Build a SERVICE_{Accept,REQUEST} packet.  */
 static gsti_error_t
-build_msg_service (BSTRING svcname, struct packet_buffer_s *pkt, int type)
+build_msg_service (BSTRING svcname, packet_buffer_t pkt, int type)
 {
   gsti_error_t err = 0;
   BUFFER buf = NULL;
@@ -1333,7 +1333,7 @@ kex_proc_service_accept (gsti_ctx_t ctx)
 
 
 static gsti_error_t
-build_gex_request (MSG_gexdh_request * gex, struct packet_buffer_s *pkt)
+build_gex_request (MSG_gexdh_request * gex, packet_buffer_t pkt)
 {
   byte *p = pkt->payload;
   size_t length = pkt->size;
@@ -1494,7 +1494,7 @@ free_gex_group (MSG_gexdh_group * gex)
 
 
 static gsti_error_t
-build_gex_group (MSG_gexdh_group * gex, struct packet_buffer_s *pkt)
+build_gex_group (MSG_gexdh_group * gex, packet_buffer_t pkt)
 {
   gsti_error_t err;
   BUFFER buf;

@@ -26,6 +26,7 @@ enum
   SSH_PK_NONE = 0,
   SSH_PK_DSS = 1,
   SSH_PK_RSA = 2,
+  SSH_PK_LAST = 3,
 };
 
 struct gsti_key_s
@@ -36,15 +37,15 @@ struct gsti_key_s
   unsigned int secret:1;
 };
 
-BSTRING _gsti_key_getblob (GSTI_KEY pk);
-GSTI_KEY _gsti_key_fromblob (BSTRING blob);
+BSTRING _gsti_key_getblob (gsti_key_t pk);
+gsti_key_t _gsti_key_fromblob (BSTRING blob);
 
-BSTRING _gsti_sig_encode (GSTI_KEY sk, const byte * hash);
+BSTRING _gsti_sig_encode (gsti_key_t sk, const byte * hash);
 gsti_error_t _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
-			       GSTI_KEY * r_pk);
+			       gsti_key_t * r_pk);
 
 byte *_gsti_ssh_get_pkname (int pktype, int asbstr, size_t * r_n);
 gsti_error_t _gsti_ssh_cmp_pkname (int pktype, const char *name, size_t len);
-gsti_error_t _gsti_ssh_cmp_keys (GSTI_KEY a, GSTI_KEY b);
+gsti_error_t _gsti_ssh_cmp_keys (gsti_key_t a, gsti_key_t b);
 
 #endif /*GSTI_PUBKEY_H */
