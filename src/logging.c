@@ -62,6 +62,7 @@ _gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
     case GSTI_LOG_CONT:
       break;
 
+    case GSTI_LOG_ERROR:
     case GSTI_LOG_INFO:
       break;
 
@@ -80,16 +81,14 @@ _gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
 
 
 /* Log the error ERR, which occured in context CTX, and return it.  */
-int
-_gsti_log_err (gsti_ctx_t ctx, int err, const char *fmt, ...)
+void
+_gsti_log_err (gsti_ctx_t ctx, const char *fmt, ...)
 {
   va_list arg;
 
   va_start (arg, fmt);
-  _gsti_logv (ctx, GSTI_LOG_DEBUG, fmt, arg);
+  _gsti_logv (ctx, GSTI_LOG_ERROR, fmt, arg);
   va_end (arg);
-
-  return err;
 }
 
 

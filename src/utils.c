@@ -135,7 +135,7 @@ _gsti_algolist_find (gsti_strlist_t list, const char *algo)
 
 
 void
-_gsti_print_string (const char *string, size_t n)
+_gsti_print_string (gsti_ctx_t ctx, const char *string, size_t n)
 {
   const byte *p = string;
 
@@ -143,33 +143,38 @@ _gsti_print_string (const char *string, size_t n)
     {
       if (*p < 32 || *p > 126 || *p == '\\')
 	{
-	  _gsti_log_cont (0, "%c", '\\');
+	  _gsti_log_cont (ctx, "%c", '\\');
 	  if (*p == '\n')
-	    _gsti_log_cont (0, "%c", 'n');
+	    _gsti_log_cont (ctx, "%c", 'n');
 	  else if (*p == '\r')
-	    _gsti_log_cont (0, "%c", 'r');
+	    _gsti_log_cont (ctx, "%c", 'r');
 	  else if (*p == '\f')
-	    _gsti_log_cont (0, "%c", 'f');
+	    _gsti_log_cont (ctx, "%c", 'f');
 	  else if (*p == '\v')
-	    _gsti_log_cont (0, "%c", 'v');
+	    _gsti_log_cont (ctx, "%c", 'v');
 	  else if (*p == '\b')
-	    _gsti_log_cont (0, "%c", 'b');
+	    _gsti_log_cont (ctx, "%c", 'b');
 	  else if (*p == '\\')
-	    _gsti_log_cont (0, "%c", '\\');
+	    _gsti_log_cont (ctx, "%c", '\\');
 	  else if (!*p)
-	    _gsti_log_cont (0, "%c", '0');
+	    _gsti_log_cont (ctx, "%c", '0');
 	  else
-	    _gsti_log_cont (0, "x%02x", *p);
+	    _gsti_log_cont (ctx, "x%02x", *p);
 	}
       else
-	_gsti_log_cont (0, "%c", *p);
+	_gsti_log_cont (ctx, "%c", *p);
     }
 }
 
 
 void
-_gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
+_gsti_dump_object (gsti_ctx_t ctx,
+                   const char *prefix, int type, void *opaque, size_t len)
 {
+
+  /* FIXME: check whether debugging is enabled and shortcut this
+     function otherwise. */
+
   if (!opaque)
     return;
   switch (type)
@@ -177,10 +182,10 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
     case TYPE_HEXBUF:
       {
 	byte *buf = opaque;
-	_gsti_log_info (0, "%s", prefix);
+	_gsti_log_debug (ctx, "%s", prefix);
 	for (; len; len--, buf++)
-	  _gsti_log_cont (0, "%02X ", *buf);
-	_gsti_log_cont (0, "\n");
+	  _gsti_log_cont (ctx, "%02X ", *buf);
+	_gsti_log_cont (ctx, "\n");
 	break;
       }
     case TYPE_STRLIST:
@@ -188,7 +193,7 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	gsti_strlist_t list = opaque;
 	int i;
 	for (i = 0; list; list = list->next, i++)
-	  _gsti_log_info (0, "%s[%d]: `%s'\n", prefix, i, list->d);
+	  _gsti_log_debug (ctx, "%s[%d]: `%s'\n", prefix, i, list->d);
 	break;
       }
     case TYPE_MPI:
@@ -199,16 +204,16 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 
 	if (gcry_mpi_print (GCRYMPI_FMT_HEX, buf, sizeof buf, &n, a))
 	  strcpy (buf, "[can't print value]");
-	_gsti_log_info (0, "%s%s\n", prefix, buf);
+	_gsti_log_debug (ctx, "%s%s\n", prefix, buf);
 	break;
       }
     case TYPE_BSTRING:
       {
 	gsti_bstr_t a = opaque;
-	_gsti_log_info (0, "%s", prefix);
+	_gsti_log_debug (ctx, "%s", prefix);
 	if (a)
-	  _gsti_print_string (gsti_bstr_data (a), gsti_bstr_length (a));
-	_gsti_log_cont (0, "\n");
+	  _gsti_print_string (ctx, gsti_bstr_data (a), gsti_bstr_length (a));
+	_gsti_log_cont (ctx, "\n");
 	break;
       }
     case TYPE_BUFFER:
@@ -217,9 +222,14 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	int amount = gsti_buf_readable (buf);
 	unsigned char *data = gsti_buf_getptr (buf);
 	
-	while (amount--)
-	  _gsti_log_info (0, "%4x", *(data++));
-	_gsti_log_cont (0, "\n");
+        if (!amount)
+          _gsti_log_debug (ctx, "[empty]\n");
+        else
+          {
+            while (amount--)
+              _gsti_log_debug (ctx, "%4x", *(data++));
+            _gsti_log_cont (ctx, "\n");
+          }
 	break;
       }
 

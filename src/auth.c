@@ -67,8 +67,8 @@ static void
 dump_auth_banner (gsti_ctx_t ctx, MSG_auth_banner * ban)
 {
   _gsti_log_debug (ctx, "MSG_auth_banner:\n");
-  _gsti_dump_bstring ("msg: ", ban->msg);
-  _gsti_dump_bstring ("lang: ", ban->lang);
+  _gsti_dump_bstring (ctx, "msg: ", ban->msg);
+  _gsti_dump_bstring (ctx, "lang: ", ban->lang);
 }
   
 
@@ -327,12 +327,12 @@ dump_auth_request (gsti_ctx_t ctx, MSG_auth_request * ath)
   _gsti_log_debug (ctx, "signature: %B", ath->sig);
 #else
   _gsti_log_debug (ctx, "MSG_auth_request:\n");
-  _gsti_dump_bstring ("user: ", ath->user);
-  _gsti_dump_bstring ("service: ", ath->svcname);
-  _gsti_dump_bstring ("method: ", ath->method);
+  _gsti_dump_bstring (ctx, "user: ", ath->user);
+  _gsti_dump_bstring (ctx, "service: ", ath->svcname);
+  _gsti_dump_bstring (ctx, "method: ", ath->method);
   _gsti_log_info (ctx, "false=%d\n", ath->chk_key);
-  _gsti_dump_bstring ("key: ", ath->key);
-  _gsti_dump_bstring ("signature: ", ath->sig);
+  _gsti_dump_bstring (ctx, "key: ", ath->key);
+  _gsti_dump_bstring (ctx, "signature: ", ath->sig);
   _gsti_log_debug (ctx, "[end MSG_auth_request]\n");
 #endif
 }

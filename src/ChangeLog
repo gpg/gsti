@@ -1,3 +1,21 @@
+2004-07-19  Werner Koch  <wk@gnupg.org>
+
+	Some logging cleanups.
+
+	* utils.h: Include gsti.h.  Pass context to _gsti_dump_object.
+	* utils.c (_gsti_dump_object): Use log_debug and not log_info. Add
+	new CTX arg.  Changed all caller to apss a context.
+	(_gsti_print_string): Add arg CTX.  Changed all callers.
+	* packet.c (_gsti_packet_read, _gsti_packet_write) 
+	(print_disconnect_msg): Reformat messages.  Add new arg CTX.
+	(print_debug_msg): Ditto.
+	* gsti.h: New log level GSTI_LOG_ERROR.
+	* logging.c (_gsti_logv): Implement it.
+	(_gsti_log_err): Use it here.  Removed ERR arg and changed all
+	callers o ise strerror directly.  This is more straightforward
+	than to pass ERR.
+	* fsm.c (logrc): Removed and repalced by straight logging calls.
+
 2004-07-15  Werner Koch  <wk@gnupg.org>
 
 	* packet.c (msg_id_to_str): New.

@@ -437,15 +437,15 @@ static void
 dump_msg_kexinit (gsti_ctx_t ctx, MSG_kexinit * kex)
 {
   _gsti_log_debug (ctx, "MSG_kexinit:\n");
-  _gsti_dump_hexbuf ("cookie: ", kex->cookie, SSH_COOKIESIZE);
-  _gsti_dump_strlist ("kex_algorithm", kex->kex_algo);
-  _gsti_dump_strlist ("server_host_key_algos", kex->server_host_key_algos);
-  _gsti_dump_strlist ("encr_algos_c2s", kex->encr_algos_c2s);
-  _gsti_dump_strlist ("encr_algos_s2c", kex->encr_algos_s2c);
-  _gsti_dump_strlist ("mac_algos_c2s", kex->mac_algos_c2s);
-  _gsti_dump_strlist ("mac_algos_s2c", kex->mac_algos_s2c);
-  _gsti_dump_strlist ("compr_algos_c2s", kex->compr_algos_c2s);
-  _gsti_dump_strlist ("compr_algos_s2c", kex->compr_algos_s2c);
+  _gsti_dump_hexbuf  (ctx, "cookie: ", kex->cookie, SSH_COOKIESIZE);
+  _gsti_dump_strlist (ctx, "kex_algorithm", kex->kex_algo);
+  _gsti_dump_strlist (ctx, "server_host_key_algos",kex->server_host_key_algos);
+  _gsti_dump_strlist (ctx, "encr_algos_c2s", kex->encr_algos_c2s);
+  _gsti_dump_strlist (ctx, "encr_algos_s2c", kex->encr_algos_s2c);
+  _gsti_dump_strlist (ctx, "mac_algos_c2s", kex->mac_algos_c2s);
+  _gsti_dump_strlist (ctx, "mac_algos_s2c", kex->mac_algos_s2c);
+  _gsti_dump_strlist (ctx, "compr_algos_c2s", kex->compr_algos_c2s);
+  _gsti_dump_strlist (ctx, "compr_algos_s2c", kex->compr_algos_s2c);
   if (kex->first_kex_packet_follows)
     _gsti_log_debug (ctx, "fist_kex_packet_follows\n");
   _gsti_log_debug (ctx, "\n");
@@ -552,7 +552,7 @@ static void
 dump_msg_kexdh_init (gsti_ctx_t ctx, MSG_kexdh_init * kexdh)
 {
   _gsti_log_debug (ctx, "MSG_kexdh_init:\n");
-  _gsti_dump_mpi ("e=", kexdh->e);
+  _gsti_dump_mpi (ctx, "e=", kexdh->e);
   _gsti_log_debug (ctx, "\n");
 }
 
@@ -656,9 +656,9 @@ static void
 dump_msg_kexdh_reply (gsti_ctx_t ctx, MSG_kexdh_reply * dhr)
 {
   _gsti_log_debug (ctx, "MSG_kexdh_reply:\n");
-  _gsti_dump_bstring ("k_s=", dhr->k_s);
-  _gsti_dump_mpi ("f=", dhr->f);
-  _gsti_dump_bstring ("sig_h=", dhr->sig_h);
+  _gsti_dump_bstring (ctx, "k_s=", dhr->k_s);
+  _gsti_dump_mpi (ctx, "f=", dhr->f);
+  _gsti_dump_bstring (ctx, "sig_h=", dhr->sig_h);
   _gsti_log_debug (ctx, "\n");
 }
 
@@ -774,10 +774,10 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   if (err)
     return err;
 
-  _gsti_dump_hexbuf ("client kex data: ", gsti_bstr_data (i_c),
-                     gsti_bstr_length (i_c));
-  _gsti_dump_hexbuf ("server kex data: ", gsti_bstr_data (i_s),
-                     gsti_bstr_length (i_s));
+/*   _gsti_dump_hexbuf (ctx, "client kex data: ", gsti_bstr_data (i_c), */
+/*                      gsti_bstr_length (i_c)); */
+/*   _gsti_dump_hexbuf (ctx, "server kex data: ", gsti_bstr_data (i_s), */
+/*                      gsti_bstr_length (i_s)); */
   
   if (ctx->we_are_server)
     {
@@ -822,7 +822,7 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   if (!ctx->session_id)		/* initialize the session id the first time */
     err = gsti_bstr_make (&ctx->session_id, gcry_md_read (md, algo), dlen);
   gcry_md_close (md);
-  _gsti_dump_hexbuf ("SesID=", gsti_bstr_data (ctx->session_id),
+  _gsti_dump_hexbuf (ctx, "SesID=", gsti_bstr_data (ctx->session_id),
 		     gsti_bstr_length (ctx->session_id));
   return err;
 }
@@ -904,17 +904,17 @@ construct_keys (gsti_ctx_t ctx)
   ctx->kex.mac_f = construct_one_key (ctx, md, algo, "\x46", maclen);
   gcry_md_close (md);
 
-  _gsti_dump_hexbuf ("key A=", gsti_bstr_data (ctx->kex.iv_a),
+  _gsti_dump_hexbuf (ctx, "key A=", gsti_bstr_data (ctx->kex.iv_a),
 		     gsti_bstr_length (ctx->kex.iv_a));
-  _gsti_dump_hexbuf ("key B=", gsti_bstr_data (ctx->kex.iv_b),
+  _gsti_dump_hexbuf (ctx, "key B=", gsti_bstr_data (ctx->kex.iv_b),
 		     gsti_bstr_length (ctx->kex.iv_b));
-  _gsti_dump_hexbuf ("key C=", gsti_bstr_data (ctx->kex.key_c),
+  _gsti_dump_hexbuf (ctx, "key C=", gsti_bstr_data (ctx->kex.key_c),
 		     gsti_bstr_length (ctx->kex.key_c));
-  _gsti_dump_hexbuf ("key D=", gsti_bstr_data (ctx->kex.key_d),
+  _gsti_dump_hexbuf (ctx, "key D=", gsti_bstr_data (ctx->kex.key_d),
 		     gsti_bstr_length (ctx->kex.key_d));
-  _gsti_dump_hexbuf ("key E=", gsti_bstr_data (ctx->kex.mac_e),
+  _gsti_dump_hexbuf (ctx, "key E=", gsti_bstr_data (ctx->kex.mac_e),
 		     gsti_bstr_length (ctx->kex.mac_e));
-  _gsti_dump_hexbuf ("key F=", gsti_bstr_data (ctx->kex.mac_f),
+  _gsti_dump_hexbuf (ctx, "key F=", gsti_bstr_data (ctx->kex.mac_f),
 		     gsti_bstr_length (ctx->kex.mac_f));
 
   return 0;
@@ -1157,8 +1157,8 @@ _gsti_kex_proc_init_packet (gsti_ctx_t ctx)
   if (err)
     return err;
   
-  _gsti_dump_strlist ("kex1 ", kex.encr_algos_c2s);
-  _gsti_dump_strlist ("kex2 ", kex2->encr_algos_c2s);
+  _gsti_dump_strlist (ctx, "kex1 ", kex.encr_algos_c2s);
+  _gsti_dump_strlist (ctx, "kex2 ", kex2->encr_algos_c2s);
   
   err = choose_cipher_algo (ctx, kex.encr_algos_c2s, kex2->encr_algos_c2s);
   if (err)
@@ -1382,7 +1382,9 @@ kex_send_newkeys (gsti_ctx_t ctx)
 	}
     }
   if (err)
-    return _gsti_log_err (ctx, err, "setup encryption keys failed\n");
+    _gsti_log_err (ctx, "setup encryption keys failed: %s\n",
+                   gsti_strerror (err));
+
   return err;
 }
 
@@ -1448,7 +1450,8 @@ kex_proc_newkeys (gsti_ctx_t ctx)
     }
 
   if (err)
-    return _gsti_log_err (ctx, err, "setup decryption keys failed\n");
+    _gsti_log_err (ctx, "setup decryption keys failed: %s\n",
+                   gsti_strerror (err));
   return err;
 }
 
@@ -1622,8 +1625,10 @@ kex_proc_service_request (gsti_ctx_t ctx)
 
   /* Store the servicename, so that it can later be answered.  */
   if (ctx->service_name)
-    return _gsti_log_err (ctx, gsti_error (GPG_ERR_BUG),
-			  "a service is already in use\n");
+    {
+      _gsti_log_err (ctx, "error: a service is already in use\n");
+      return gsti_error (GPG_ERR_BUG);
+    }
 
   ctx->service_name = svcname;
   return err;
@@ -1660,13 +1665,20 @@ kex_proc_service_accept (gsti_ctx_t ctx)
     return err;
 
   if (!ctx->service_name)
-    return _gsti_log_err (ctx, gsti_error (GPG_ERR_BUG),
-			  "no service request sent\n");
+    {
+      _gsti_log_err (ctx, "error: no service request sent\n");
+      /* Fixme:  Isn't this a protocol error and not a bug? */
+      return gsti_error (GPG_ERR_BUG);
+    }
+
   res = cmp_bstring (ctx->service_name, svcname);
   _gsti_free (svcname);
   if (res)
-    return _gsti_log_err (ctx, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
-			 "service name does not match requested one\n");
+    {
+      _gsti_log_err (ctx,
+                     "error: service name does not match requested one\n");
+      return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
+    }
   return 0;
 }
 

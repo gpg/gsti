@@ -283,6 +283,7 @@ gsti_error_t gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
 typedef enum
   {
     GSTI_LOG_NONE = 0,
+    GSTI_LOG_ERROR = 64,
     GSTI_LOG_INFO = 128,
     GSTI_LOG_DEBUG = 256,
 

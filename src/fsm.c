@@ -36,7 +36,6 @@
 #include "packet.h"
 #include "kex.h"
 
-#define logrc _gsti_log_err
 
 enum fsm_states
 {
@@ -162,16 +161,16 @@ handle_quit (gsti_ctx_t ctx)
 static void
 log_error (gsti_ctx_t ctx)
 {
-  _gsti_log_info (ctx, "FSM: at new_state: state=%d, packet=%d\n",
-		  ctx->state, ctx->pkt.type);
+  _gsti_log_err (ctx, "FSM: at new_state: state=%d, packet=%d\n",
+                 ctx->state, ctx->pkt.type);
 }
 
 
 static void
 log_state_error (gsti_ctx_t ctx)
 {
-  _gsti_log_info (ctx, "FSM: at fsm_loop: invalid state %d (pkt %d)\n",
-                  ctx->state, ctx->pkt.type);
+  _gsti_log_err (ctx, "FSM: at fsm_loop: invalid state %d (pkt %d)\n",
+                 ctx->state, ctx->pkt.type);
 }
   
 
@@ -185,8 +184,8 @@ request_packet (gsti_ctx_t ctx)
     {
       err = _gsti_packet_read (ctx);
       if (err)
-	_gsti_log_info (ctx, "FSM: read packet at state %d failed: %s\n",
-			ctx->state, gsti_strerror (err));
+	_gsti_log_err (ctx, "FSM: read packet at state %d failed: %s\n",
+                       ctx->state, gsti_strerror (err));
       else
 	pkttype = ctx->pkt.type;
     }
@@ -238,16 +237,16 @@ fsm_server_loop (gsti_ctx_t ctx)
       ctx->state = FSM_read;
       break;
     default:
-      _gsti_log_info (ctx, "FSM: start fsm_loop: invalid state %s\n",
-		      state_to_string (ctx->state));
+      _gsti_log_err (ctx, "FSM: start fsm_loop: invalid state %s\n",
+                     state_to_string (ctx->state));
       err = gsti_error (GPG_ERR_BUG);
       break;
     }
 
   while (!err && ctx->state != FSM_quit && ctx->state != FSM_idle)
     {
-      _gsti_log_info (ctx, "** FSM (server) state=%s\n",
-                      state_to_string (ctx->state));
+      _gsti_log_debug (ctx, "** FSM (server) state=%s\n",
+                       state_to_string (ctx->state));
       switch (ctx->state)
 	{
 	case FSM_wait_on_version:
@@ -291,8 +290,8 @@ fsm_server_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_KEXDH_REPLY:
-		  err = logrc (ctx, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
-			       "server got KEXDH_REPLY\n");
+		  _gsti_log_err (ctx, "server got unexpected KEXDH_REPLY\n");
+                  err = gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
 		  break;
                   
                 case SSH_MSG_KEX_DH_GEX_REQUEST:
@@ -374,7 +373,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 
 	case FSM_service_start:
 	  _gsti_log_info (ctx, "service `");
-	  _gsti_print_string (gsti_bstr_data (ctx->service_name),
+	  _gsti_print_string (ctx, gsti_bstr_data (ctx->service_name),
 			      gsti_bstr_length (ctx->service_name));
 	  _gsti_log_cont (ctx, "' has been started (server)\n");
 	  ctx->state = FSM_auth_wait;
@@ -453,8 +452,8 @@ fsm_server_loop (gsti_ctx_t ctx)
 
 	case FSM_quit:
 	  err = handle_quit (ctx);
-	  _gsti_log_info (ctx, "FSM: returning from quit state: %s\n",
-			  gsti_strerror (err));
+	  _gsti_log_err (ctx, "FSM: returning from quit state: %s\n",
+                         gsti_strerror (err));
 	  break;
 
 	default:
@@ -480,16 +479,16 @@ fsm_client_loop (gsti_ctx_t ctx)
       ctx->state = FSM_write;
       break;
     default:
-      _gsti_log_info (ctx, "FSM: start fsm_loop: invalid state %s\n",
-		      state_to_string (ctx->state));
+      _gsti_log_err (ctx, "FSM: start fsm_loop: invalid state %s\n",
+                     state_to_string (ctx->state));
       err = gsti_error (GPG_ERR_BUG);
       break;
     }
 
   while (!err && ctx->state != FSM_quit && ctx->state != FSM_idle)
     {
-      _gsti_log_info (ctx, "** FSM (client) state=%s\n",
-                      state_to_string (ctx->state));
+      _gsti_log_debug (ctx, "** FSM (client) state=%s\n",
+                       state_to_string (ctx->state));
       switch (ctx->state)
 	{
 	case FSM_send_version:
@@ -526,10 +525,10 @@ fsm_client_loop (gsti_ctx_t ctx)
                           break;
                           
                         default:
-                          err = logrc (ctx, gsti_error
-                                       (GPG_ERR_PROTOCOL_VIOLATION), "client "
-                                       "got wrong packet (pkttype=%d)\n",
-                                       ctx->pkt.type);
+                          _gsti_log_err (ctx,  "client got wrong packet "
+                                         "(pkttype=%d)\n",
+                                         ctx->pkt.type);
+                          err = gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
                           break; 
                         }
                     }
@@ -548,8 +547,8 @@ fsm_client_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_KEXDH_INIT:
-		  err = logrc (ctx, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
-			       "client got KEXDH_INIT\n");
+		  _gsti_log_err (ctx, "client got unexpected KEXDH_INIT\n");
+                  err = gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
 		  break;
 
 		case SSH_MSG_KEXDH_REPLY:
@@ -619,7 +618,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 
 	case FSM_service_start:
 	  _gsti_log_info (ctx, "service `");
-	  _gsti_print_string (gsti_bstr_data (ctx->service_name),
+	  _gsti_print_string (ctx, gsti_bstr_data (ctx->service_name),
 			      gsti_bstr_length (ctx->service_name));
 	  _gsti_log_cont (ctx, "' has been started (client)\n");
 	  ctx->state = FSM_auth_start;
@@ -654,7 +653,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 		  break;
 
                 case SSH_MSG_USERAUTH_FAILURE:
-                  _gsti_log_info (ctx, "user authentication failure\n");
+                  _gsti_log_err (ctx, "user authentication failure\n");
                   ctx->state = FSM_auth_failed;
                   err = gsti_error (GPG_ERR_INV_NAME);
                   break;

@@ -21,7 +21,7 @@
 #ifndef GSTI_UTILS_H
 #define GSTI_UTILS_H	1
 
-#include <gcrypt.h>
+#include <gsti.h>
 
 enum
 {
@@ -38,28 +38,28 @@ gsti_strlist_t _gsti_algolist_parse (const byte * string, size_t length);
 size_t _gsti_algolist_build (byte * buffer, size_t length,
                              gsti_strlist_t list);
 int _gsti_algolist_find (gsti_strlist_t list, const char *algo);
-void _gsti_dump_object (const char *prefix, int type, void *opaque,
-			size_t len);
+void _gsti_dump_object (gsti_ctx_t ctx, const char *prefix, int type,
+                        void *opaque, size_t len);
 
-#define _gsti_dump_bstring( prefix, str ) \
-_gsti_dump_object( (prefix), TYPE_BSTRING, (str), 0 )
+#define _gsti_dump_bstring(c, prefix, str ) \
+_gsti_dump_object( (c), (prefix), TYPE_BSTRING, (str), 0 )
 
-#define _gsti_dump_hexbuf( prefix, buf, len ) \
-_gsti_dump_object( (prefix), TYPE_HEXBUF, (buf), (len) )
+#define _gsti_dump_hexbuf(c, prefix, buf, len ) \
+_gsti_dump_object( (c), (prefix), TYPE_HEXBUF, (buf), (len) )
 
-#define _gsti_dump_mpi( prefix, mpi ) \
-_gsti_dump_object( (prefix), TYPE_MPI, (mpi), 0 )
+#define _gsti_dump_mpi(c, prefix, mpi ) \
+_gsti_dump_object( (c), (prefix), TYPE_MPI, (mpi), 0 )
 
-#define _gsti_dump_strlist( prefix, list ) \
-_gsti_dump_object( (prefix), TYPE_STRLIST, (list), 0 )
+#define _gsti_dump_strlist(c, prefix, list ) \
+_gsti_dump_object( (c), (prefix), TYPE_STRLIST, (list), 0 )
 
-#define _gsti_dump_buffer( prefix, buf ) \
-_gsti_dump_object( (prefix), TYPE_BUFFER, (buf), 0 )
+#define _gsti_dump_buffer(c, prefix, buf ) \
+_gsti_dump_object( (c), (prefix), TYPE_BUFFER, (buf), 0 )
 
-void _gsti_print_string (const char *string, size_t n);
+void _gsti_print_string (gsti_ctx_t ctx, const char *string, size_t n);
 
 /*-- logging.c --*/
-int _gsti_log_err (gsti_ctx_t ctx, int rc, const char *fmt, ...);
+void _gsti_log_err (gsti_ctx_t ctx, const char *fmt, ...);
 void _gsti_log_info (gsti_ctx_t ctx, const char *fmt, ...);
 void _gsti_log_cont (gsti_ctx_t ctx, const char *fmt, ...);
 void _gsti_log_debug (gsti_ctx_t ctx, const char *fmt, ...);
