@@ -31,11 +31,13 @@
 
 static struct {
     const char *algname;
-    const char *elements;
-    size_t nelements;
+    const char *key_elements;
+    size_t nkey;
+    const char *sig_elements;
+    size_t nsig;
 } pk_table[] = {
-    { "none", "dummy", 0 },
-    { "ssh-dss", "rs", 2 },
+    { "none",    "dummy", 0 , "dummy", 0 },
+    { "ssh-dss", "pqgy",  4,  "rs",    2 },
     {0},
 };
 
@@ -66,8 +68,8 @@ sexp_get_sshmpi( GCRY_SEXP s_sig, int pktype, GCRY_MPI sig[2] )
 
     if( pktype > 1 )
         return GSTI_BUG;
-    s = pk_table[pktype].elements;
-    while( s && n < 2 ) {
+    s = pk_table[pktype].sig_elements;
+    while( s && n < pk_table[pktype].nsig ) {
         name[0] = *s;
         name[1] = 0;
         list = gcry_sexp_find_token( s_sig, name, 0 );
@@ -231,9 +233,12 @@ static int
 read_dss_key( FILE *fp, int keytype, GSTI_KEY ctx )
 {
     BSTRING a;
-    size_t n = keytype? 5: 4;
+    size_t n;
     int rc, i;
 
+    n = pk_table[SSH_PK_DSS].nkey;
+    if( keytype )
+        n++; /* secret key */
     rc = read_bstring( fp, 0, &a );
     if( rc )
         return rc;
@@ -323,6 +328,24 @@ get_sshkeyname( int pktype, int asbstr, size_t *r_n )
     return p;
 }
 
+static int
+pkalgo_get_nkey( int algid, const char *name )
+{
+    const char *s;
+    int i;
+    
+    if( algid == 1 )
+        return pk_table[algid].nkey;
+    else if( name ) {
+        for( i = 0; (s = pk_table[i].algname); i++ ) {
+            if( !strncmp( s, name, strlen( s ) ) )
+                return pk_table[i].nkey;
+        }
+    }
+    return -1;
+}
+
+
 GSTI_KEY
 _gsti_key_fromblob( BSTRING blob )
 {
@@ -341,14 +364,14 @@ _gsti_key_fromblob( BSTRING blob )
         _gsti_free( p );
         goto leave; /* not supported */
     }
-    _gsti_free( p );
     pk = _gsti_calloc( 1, sizeof *pk );
     pk->secret = 0;
-    for( i = 0; i < 4; i++ ) {
+    for( i = 0; i < pkalgo_get_nkey( 0, p ); i++ ) {
         rc = _gsti_buf_getmpi( buf, &pk->key[i], &n );
         if( rc )
             break;
     }
+    _gsti_free( p );
  leave:
     _gsti_buf_free( buf );
     if( !rc )
@@ -366,15 +389,13 @@ _gsti_key_getblob( GSTI_KEY pk )
     byte *p;
     size_t n;
 
-    if( !pk )
+    if( !pk || pk->type > 1 )
         return _gsti_bstring_make( NULL, 4 );
     _gsti_buf_init( &buf );
     p = get_sshkeyname( pk->type, 0, &n );
     _gsti_buf_putstr( buf, p, n );
-    _gsti_buf_putmpi( buf, pk->key[0] );
-    _gsti_buf_putmpi( buf, pk->key[1] );
-    _gsti_buf_putmpi( buf, pk->key[2] );
-    _gsti_buf_putmpi( buf, pk->key[3] );
+    for( n = 0; n < pk_table[pk->type].nkey; n++ )
+        _gsti_buf_putmpi( buf, pk->key[n] );
 
     a = _gsti_bstring_make( _gsti_buf_getptr( buf ), _gsti_buf_getlen( buf ) );
 
@@ -391,7 +412,7 @@ gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo )
     GCRY_MD_HD hd;
     byte buf[512], *hash, *name;
     size_t n = sizeof buf -1;
-    int i, npkey = 4, dlen; /* fixme: dss=4 */
+    int i, dlen;
 
     hd = gcry_md_open( mdalgo, 0 );
     if( !hd )
@@ -399,7 +420,7 @@ gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo )
     dlen = gcry_md_get_algo_dlen( mdalgo );
     name = get_sshkeyname( ctx->type, 1, &n );
     gcry_md_write( hd, name, n );
-    for( i = 0; i < npkey; i++ ) {
+    for( i = 0; i < pkalgo_get_nkey( ctx->type, NULL ); i++ ) {
         n = sizeof buf -1;
         if( !gcry_mpi_print( GCRYMPI_FMT_SSH, buf, &n, ctx->key[i] ) )
             gcry_md_write( hd, buf, n );
