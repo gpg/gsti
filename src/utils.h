@@ -24,22 +24,19 @@
 #include <gcrypt.h>
 
 STRLIST parse_algorithm_list( const byte *string, size_t length );
-size_t build_algorithm_list( char *buffer, size_t length, STRLIST list );
+size_t build_algorithm_list( byte *buffer, size_t length, STRLIST list );
+int find_algorithm_list( STRLIST list, const char *algo );
 
-BSTRING parse_bstring( const byte *string, size_t *length );
-size_t build_bstring( char *buffer, size_t length, BSTRING bstring );
 int  cmp_bstring( BSTRING a, BSTRING b );
 
 void gsti_print_string( FILE *fp, const char *string, size_t n );
 
 void dump_hexbuf( FILE *fp, const char *prefix, const byte *buf, size_t len );
 void dump_strlist( FILE *fp, const char *prefix, STRLIST list );
-void dump_mpi( FILE *fp, const char *prefix, MPI a );
+void dump_mpi( FILE *fp, const char *prefix, GCRY_MPI a );
 void dump_bstring( FILE *fp, const char *prefix, BSTRING a );
-size_t dump_bstring_msg( FILE *fp, const char *prefix,
-			 const char *buffer, size_t length );
-
 
 int debug_rc( int rc, const char *format, ... );
+void log_info( const char *format, ... );
 
 #endif /* GSTI_UTILS_H */

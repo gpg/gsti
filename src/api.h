@@ -1,5 +1,6 @@
 /* api.h
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -26,14 +27,13 @@
 #include "utils.h"
 
 
-
 struct packet_buffer_s {
-    int  packet_len;
-    int  padding_len;
-    byte  *packet_buffer;	  /* malloced of length SIZE+5 */
+    int packet_len;
+    int padding_len;
+    byte *packet_buffer; /* malloced of length SIZE+5 */
     size_t payload_len;
     size_t size;
-    byte  *payload;		  /* = packet_buffer+5 */
+    byte *payload;       /* = packet_buffer+5 */
     int type;
 };
 
@@ -42,7 +42,7 @@ struct gsti_context {
     GSTI_WRITE_FNC writefnc;
     READ_STREAM   read_stream;
     WRITE_STREAM  write_stream;
-    STRLIST    local_services;
+    STRLIST local_services;
 
     int    state;	  /* current state */
     int    wait_packet;   /* wait for a new packet */
@@ -60,41 +60,54 @@ struct gsti_context {
     u32  send_seqno;
     u32  recv_seqno;
     struct {
-	BSTRING h;	    /* current exchange hash */
-	MPI k;		    /* the shared secret */
-	BSTRING key_a;	    /* IV client to server */
-	BSTRING key_b;	    /* IV server to client */
-	BSTRING key_c;	    /* Enc client to server */
-	BSTRING key_d;	    /* Enc server to client */
-	BSTRING key_e;	    /* Mac client to server */
-	BSTRING key_f;	    /* Mac server to client */
+        BSTRING h;	    /* current exchange hash */
+        GCRY_MPI k;	    /* the shared secret */
+        BSTRING iv_a;	    /* IV client to server */
+        BSTRING iv_b;	    /* IV server to client */
+        BSTRING key_c;	    /* Enc client to server */
+        BSTRING key_d;	    /* Enc server to client */
+        BSTRING mac_e;	    /* Mac client to server */
+        BSTRING mac_f;	    /* Mac server to client */
     } kex;
     int sent_newkeys;
 
-    MPI secret_x;  /* temporary use only */
-    MPI kexdh_e;   /* ditto */
+    GCRY_MPI secret_x;  /* temporary use only */
+    GCRY_MPI kexdh_e;   /* ditto */
 
-    MPI secret_y;  /* fixme: we could reuse secret_x kexdh_e */
-    MPI kexdh_f;   /* ditto */
+    GCRY_MPI secret_y;  /* fixme: we could reuse secret_x kexdh_e */
+    GCRY_MPI kexdh_f;   /* ditto */
 
+    int ciph_blksize;
+    int ciph_algo;
+    int ciph_mode;
     GCRY_CIPHER_HD encrypt_hd;
     GCRY_CIPHER_HD decrypt_hd;
-    GCRY_MD_HD	send_mac_hd;  /* the initial handle for hmac */
-    GCRY_MD_HD	recv_mac_hd;  /* the initial handle for hmac */
 
-    char *user_read_buffer;
+    int mac_algo;
+    int mac_len;
+    GCRY_MD_HD send_mac;
+    GCRY_MD_HD recv_mac;
+
+    byte *user_read_buffer;
     size_t user_read_bufsize;
     size_t user_read_nbytes;
 
-    const char *user_write_buffer;
+    const byte *user_write_buffer;
     size_t user_write_bufsize;
+
+    char *hostkey_file;
+    GSTI_KEY hostkey;
+
+    unsigned long id;
 };
 
 
-
-
-/*-- errors.c --*/
+/*-- main.c --*/
 int map_gcry_rc( int rc );
+
+/*-- fsm.c --*/
+int fsm_user_read( GSTIHD hd );
+int fsm_user_write( GSTIHD hd );
 
 
 #endif /* GSTI_API_H */

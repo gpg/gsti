@@ -1,5 +1,6 @@
 /* utils.c -  some utility functions
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -30,16 +31,6 @@
 #include "memory.h"
 #include "utils.h"
 
-static ulong
-buftou32( const byte *buffer )
-{
-    ulong a;
-    a =  *buffer << 24;
-    a |= buffer[1] << 16;
-    a |= buffer[2] << 8;
-    a |= buffer[3];
-    return a;
-}
 
 /****************
  * Take a comma separated list of algorithm identifiers and
@@ -58,14 +49,14 @@ parse_algorithm_list( const byte *string, size_t length )
 	comma = memchr( string, ',' , length );
 	n = comma? (comma - string) : length;
 	if( n ) {
-	    for( s = string; n && *s && isspace(*s); n--, s++ )
+	    for( s = string; n && *s && isspace( *s ); n--, s++ )
 		;
 	    if( *s && n ) { /* we have at least one non-space charcater*/
-		item = gsti_malloc( sizeof *item + n );
+		item = _gsti_malloc( sizeof *item + n );
 		item->next = NULL;
-		memcpy(item->d, string, n);
+		memcpy( item->d, string, n );
 		/* and trim trailing spaces */
-		for(n--; n && isspace(item->d[n]); n-- )
+		for( n--; n && isspace( item->d[n] ); n-- )
 		    ;
 		item->d[++n] = 0;
 		*listp = item;
@@ -82,7 +73,7 @@ parse_algorithm_list( const byte *string, size_t length )
 }
 
 size_t
-build_algorithm_list( char *buffer, size_t length, STRLIST list )
+build_algorithm_list( byte *buffer, size_t length, STRLIST list )
 {
     size_t n;
     int any=0;
@@ -94,7 +85,7 @@ build_algorithm_list( char *buffer, size_t length, STRLIST list )
     for( ; list; list = list->next ) {
 	n = strlen( list->d );
 	if( n ) {
-	    if( n+any > length )
+	    if( n + any > length )
 		return 0; /* too short */
 	    if( any ) {
 		*p++ = ',';
@@ -107,7 +98,7 @@ build_algorithm_list( char *buffer, size_t length, STRLIST list )
 	    length -= n;
 	}
     }
-    n = ((char*)p - buffer) - 4;
+    n = (p - buffer) - 4;
     p = buffer;
     p[0] = n >> 24;
     p[1] = n >> 16;
@@ -117,57 +108,33 @@ build_algorithm_list( char *buffer, size_t length, STRLIST list )
     return n+4;
 }
 
-
-/****************
- * Parse a SSH string object.  The object is in string which has
- * *length.  The scanned length is return in *length.
- */
-BSTRING
-parse_bstring( const byte *string, size_t *length  )
+int
+find_algorithm_list( STRLIST list, const char *algo )
 {
-    ulong len;
-    BSTRING a;
-
-    if( *length < 4 )
-	return NULL; /* too short */
-
-    len = buftou32( string ); string += 4; *length -= 4;
-    if( len > *length )
-	return NULL; /* too large */
-
-    a = make_bstring( string, len );
-    *length = 4+len;
-    return a;
-}
-
-size_t
-build_bstring( char *buffer, size_t length, BSTRING bstring )
-{
-    size_t n = bstring? bstring->len : 0;
-    byte *p = buffer;
-
-    if( length < 4 )
-	return 0;  /* not event enough space to hold the length */
-    p[0] = n >> 24;
-    p[1] = n >> 16;
-    p[2] = n >> 8;
-    p[3] = n;
-    if( !n )
-	return 4;
-    length -= 4;  p += 4;
-    if( length < n )
-	return 0;  /* does not fit */
-    memcpy( p, bstring->d, n );
-    return 4+n;
+    STRLIST l;
+    
+    for( l = list; l; l = l->next ) {
+        if( !strcmp( l->d, algo ) )
+            return 1;
+    }
+    return 0;
 }
 
 
 int
 cmp_bstring( BSTRING a, BSTRING b )
 {
-    if( a->len == b->len && !memcmp( a->d, b->d, a->len ) )
-	return 0;
-    return -1; /* fixme: return the correct value */
+    int rc = 0;
+
+    /* fixme: do we really need it? maybe it's a good idea to move
+       this function to kex.c because it's the only file it uses it. */
+    if ( a->len < b->len )
+        rc = -1;
+    else if ( a->len > b->len )
+        rc = 1;
+    else if ( a->len == b->len )
+        rc = memcmp( a->d, b->d, a->len );
+    return rc;
 }
 
 
@@ -213,19 +180,19 @@ void
 dump_strlist( FILE *fp, const char *prefix, STRLIST list )
 {
     int i;
-    for(i=0 ; list ; list = list->next, i++ )
-	fprintf(fp, "%s[%d]: `%s'\n", prefix, i, list->d );
+    for( i = 0 ; list ; list = list->next, i++ )
+	fprintf( fp, "%s[%d]: `%s'\n", prefix, i, list->d );
 }
 
 
 void
-dump_mpi( FILE *fp, const char *prefix, MPI a )
+dump_mpi( FILE *fp, const char *prefix, GCRY_MPI a )
 {
-    char buf[400];
+    byte buf[400];
     size_t n = sizeof buf;
 
     if( gcry_mpi_print( GCRYMPI_FMT_HEX, buf, &n, a ) )
-	strcpy(buf,"[can't print value]");
+	strcpy( buf,"[can't print value]" );
     fprintf( fp, "%s%s\n", prefix, buf );
 }
 
@@ -235,43 +202,30 @@ dump_bstring( FILE *fp, const char *prefix, BSTRING a )
     fputs( prefix, fp );
     if( a )
 	gsti_print_string( fp, a->d, a->len );
-    putc('\n', fp );
+    putc( '\n', fp );
 }
-
-size_t
-dump_bstring_msg( FILE *fp, const char *prefix,
-		  const char *buffer, size_t length )
-{
-    size_t n;
-
-    if( prefix )
-	fputs( prefix, fp );
-    if( length < 4 ) {
-	fputs( "[invalid length in bstring]\n", fp );
-	return 0;
-    }
-
-    n = buftou32( buffer ); buffer += 4; length -= 4;
-    if( n > length ) {
-	fputs( "[bstring is too long]\n", fp );
-	return 0;
-    }
-    gsti_print_string( fp, buffer, n );
-    if( prefix )
-	putc('\n', fp );
-    return n+4;
-}
-
 
 int
 debug_rc( int rc, const char *format, ... )
 {
-    va_list arg_ptr ;
+    va_list arg_ptr;
 
     va_start( arg_ptr, format ) ;
     vfprintf( stderr, format, arg_ptr );
     va_end( arg_ptr );
-    fprintf(stderr,": rc=%d\n", rc );
+    fprintf( stderr,": rc=%d\n", rc );
     return rc;
 }
 
+void
+log_info( const char *format, ... )
+{
+    va_list arg_ptr;
+
+    /* fixme: use a logging fd for it */
+    va_start( arg_ptr, format );
+    vfprintf( stderr, format, arg_ptr );
+    va_end( arg_ptr );
+}
+
+    

@@ -1,5 +1,6 @@
 /* memory.h
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -23,17 +24,16 @@
 
 #include "types.h"
 
-void *gsti_malloc( size_t n );
-void *gsti_calloc( size_t n, size_t m );
-void  gsti_free( void * );
-char *gsti_strdup( const char* string );
+void * _gsti_malloc( size_t n );
+void * _gsti_calloc( size_t n, size_t m );
+void * _gsti_realloc( void *p, size_t n );
+char * _gsti_strdup( const char* string );
+void   _gsti_free( void * );
 
-STRLIST insert_strlist( STRLIST head, const char *s );
-void gsti_free_strlist( STRLIST a );
+STRLIST _gsti_strlist_insert( STRLIST head, const char *s );
+void    _gsti_strlist_free( STRLIST a );
 
-#define free_strlist(a) gsti_free_strlist((a))
-
-BSTRING make_bstring( const char *buffer, size_t length );
-#define free_bstring(a)  gsti_free((a))
+BSTRING _gsti_bstring_make( const byte *buffer, size_t length );
+void    _gsti_bstring_free( BSTRING a );
 
 #endif /* GSTI_MEMORY_H */

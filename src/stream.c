@@ -1,5 +1,6 @@
-/* stream.c  -	input output buffering
+/* stream.c - input output buffering
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -37,19 +38,20 @@
  * succeed or die.
  */
 READ_STREAM
-new_read_stream( GSTI_READ_FNC readfnc )
+_gsti_read_stream_new( GSTI_READ_FNC readfnc )
 {
-    READ_STREAM a = gsti_malloc( sizeof *a + STREAM_BUFSIZE-1 );
-    memset( a, 0, sizeof *a );
+    READ_STREAM a;
+    
+    a = _gsti_calloc( 1, sizeof *a + STREAM_BUFSIZE-1 );
     a->readfnc = readfnc;
     a->size = STREAM_BUFSIZE;
     return a;
 }
 
 void
-release_read_stream( READ_STREAM a )
+_gsti_read_stream_free( READ_STREAM a )
 {
-    gsti_free( a );
+    _gsti_free( a );
 }
 
 
@@ -59,27 +61,27 @@ release_read_stream( READ_STREAM a )
  * the function returns -1 on EOF.
  */
 int
-stream_getbyte( READ_STREAM a )
+_gsti_stream_getbyte( READ_STREAM a )
 {
     int rc;
     size_t n;
 
     if( a->start < a->len )
-	return a->buf[a->start++];
+        return a->buf[a->start++];
     if( a->read_eof )
-	return -1;
+        return -1;
 
     a->len = 0;
     a->start = 0;
     n = a->size;
     rc = a->readfnc( NULL, a->buf, &n );
     if( rc ) {
-	a->error = 1;
-	return -1;
+        a->error = 1;
+        return -1;
     }
     if( !n ) {
-	a->read_eof = 1;
-	return -1;
+        a->read_eof = 1;
+        return -1;
     }
     a->len = n;
     return a->buf[a->start++];
@@ -92,19 +94,19 @@ stream_getbyte( READ_STREAM a )
  * Returns 0 on success or an error code.
  */
 int
-stream_readn( READ_STREAM a, char *buffer, size_t nbytes )
+_gsti_stream_readn( READ_STREAM a, byte *buffer, size_t nbytes )
 {
     int c;
 
     while( nbytes ) {
-	c = stream_get(a);
-	if( c == -1 )
-	    return GSTI_READ_ERROR;
-	if( buffer ) {
-	    *(byte *)buffer = c;
-	    buffer++;
-	}
-	nbytes--;
+        c = _gsti_stream_get( a );
+        if( c == -1 )
+            return GSTI_READ_ERROR;
+        if( buffer ) {
+            *buffer = c;
+            buffer++;
+        }
+        nbytes--;
     }
 
     return 0;
@@ -112,19 +114,20 @@ stream_readn( READ_STREAM a, char *buffer, size_t nbytes )
 
 
 WRITE_STREAM
-new_write_stream( GSTI_WRITE_FNC writefnc )
+_gsti_write_stream_new( GSTI_WRITE_FNC writefnc )
 {
-    WRITE_STREAM a = gsti_malloc( sizeof *a + STREAM_BUFSIZE-1 );
-    memset( a, 0, sizeof *a );
+    WRITE_STREAM a;
+
+    a = _gsti_calloc( 1, sizeof *a + STREAM_BUFSIZE-1 );
     a->writefnc = writefnc;
     a->size = STREAM_BUFSIZE;
     return a;
 }
 
 void
-release_write_stream( WRITE_STREAM a )
+_gsti_write_stream_free( WRITE_STREAM a )
 {
-    gsti_free( a );
+    _gsti_free( a );
 }
 
 /****************
@@ -132,37 +135,37 @@ release_write_stream( WRITE_STREAM a )
  * used internally to do the flush handling.  It may be used directly.
  */
 int
-stream_putbyte( WRITE_STREAM a, int c )
+_gsti_stream_putbyte( WRITE_STREAM a, int c )
 {
     int rc;
 
     if( !a->used )
-	return 0;
+        return 0;
 
     rc = a->writefnc( NULL, a->buf, a->used );
     if( rc ) {
-	a->error = 1;
-	return -1;
+        a->error = 1;
+        return -1;
     }
     a->used = 0;
-    return stream_put( a, c);
+    return _gsti_stream_put( a, c );
 }
 
 int
-stream_flush( WRITE_STREAM a )
+_gsti_stream_flush( WRITE_STREAM a )
 {
     int rc;
 
     rc = a->used ? a->writefnc( NULL, a->buf, a->used ) : 0;
     if( rc ) {
-	a->error = 1;
-	return -1;
+        a->error = 1;
+        return -1;
     }
     a->used = 0;
     rc = a->writefnc( NULL, NULL, 0 );
     if( rc ) {
-	a->error = 1;
-	return -1;
+        a->error = 1;
+        return -1;
     }
     return 0;
 }
@@ -174,28 +177,29 @@ stream_flush( WRITE_STREAM a )
  * Returns 0 on success or an error code.
  */
 int
-stream_writen( WRITE_STREAM a, const char *buffer, size_t nbytes )
+_gsti_stream_writen( WRITE_STREAM a, const byte *buffer, size_t nbytes )
 {
     const byte *s = buffer;
     int rc = 0;
 
     if( buffer ) {
-	while( nbytes ) {
-	    if( stream_put(a, *s) ) {
-		rc = GSTI_WRITE_ERROR;
-		break;
-	    }
-	    s++;
-	    nbytes--;
-	}
+        while( nbytes ) {
+            if( _gsti_stream_put( a, *s ) ) {
+                rc = GSTI_WRITE_ERROR;
+                break;
+            }
+            s++;
+            nbytes--;
+        }
     }
     else { /* write random padding */
-	/* I don't think it makes sense to use secure random here */
-	char *pad = gcry_random_bytes( nbytes, GCRY_STRONG_RANDOM );
-	rc = stream_writen( a, pad, nbytes );
-	gcry_free( pad );
+        byte *pad = gcry_random_bytes( nbytes, GCRY_WEAK_RANDOM );
+        rc = _gsti_stream_writen( a, pad, nbytes );
+        gcry_free( pad );
     }
 
     return rc;
 }
+
+
 

@@ -1,5 +1,6 @@
 /* memory.c -  memory allocation wrappers
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -27,63 +28,81 @@
 
 
 void *
-gsti_malloc( size_t n )
+_gsti_malloc( size_t n )
 {
     return gcry_xmalloc( n );
 }
 
+
 void *
-gsti_calloc( size_t n, size_t m )
+_gsti_calloc( size_t n, size_t m )
 {
     return gcry_xcalloc( n, m );
 }
 
 
+void *
+_gsti_realloc( void *p, size_t n )
+{
+    return gcry_realloc( p, n );
+}
+
+
 void
-gsti_free( void *p )
+_gsti_free( void *p )
 {
     gcry_free( p );
 }
 
 
 char *
-gsti_strdup( const char *string )
+_gsti_strdup( const char *string )
 {
     return gcry_xstrdup( string );
 }
 
 
 STRLIST
-insert_strlist( STRLIST head, const char *s )
+_gsti_strlist_insert( STRLIST head, const char *s )
 {
     STRLIST item;
 
-    item = gsti_malloc( sizeof *item + strlen(s) );
+    item = _gsti_malloc( sizeof *item + strlen(s) );
     item->next = head;
-    strcpy(item->d, s);
+    strcpy( item->d, s );
     return item;
 }
 
 
 void
-gsti_free_strlist( STRLIST a )
+_gsti_strlist_free( STRLIST a )
 {
     while( a ) {
 	STRLIST a2 = a->next;
-	gsti_free(a);
+	_gsti_free( a );
 	a = a2;
     }
 }
 
 BSTRING
-make_bstring( const char *buffer, size_t length )
+_gsti_bstring_make( const byte *buffer, size_t length )
 {
     BSTRING a;
 
-    a = gsti_malloc( sizeof *a + length - 1  );
+    a = _gsti_malloc( sizeof *a + length - 1  );
     a->len = length;
     if( buffer )
 	memcpy( a->d, buffer, length );
     return a;
 }
+
+void
+_gsti_bstring_free( BSTRING a )
+{
+    _gsti_free( a );
+}
+
+
+
+
 

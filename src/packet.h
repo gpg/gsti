@@ -1,5 +1,6 @@
 /* packet.h
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -23,6 +24,9 @@
 
 #include <gcrypt.h>
 
+#define MAX_PKTLEN 40000  /* sanity limit */
+#define PKTBUFSIZE 50000  /* somewhat large size of a packet buffer */
+
 enum {
     SSH_MSG_DISCONNECT	    = 1,
     SSH_MSG_IGNORE	    = 2,
@@ -30,45 +34,85 @@ enum {
     SSH_MSG_DEBUG	    = 4,
     SSH_MSG_SERVICE_REQUEST = 5,
     SSH_MSG_SERVICE_ACCEPT  = 6,
-
     SSH_MSG_KEXINIT	    = 20,
     SSH_MSG_NEWKEYS	    = 21,
-
     SSH_MSG_KEXDH_INIT	    = 30,
     SSH_MSG_KEXDH_REPLY     = 31,
 };
+
+enum {
+    SSH_DISCONNECT_HOST_NOT_ALLOWED_TO_CONNECT      = 1,
+    SSH_DISCONNECT_PROTOCOL_ERROR                   = 2,
+    SSH_DISCONNECT_KEY_EXCHANGE_FAILED              = 3,
+    SSH_DISCONNECT_RESERVED                         = 4,
+    SSH_DISCONNECT_MAC_ERROR                        = 5,
+    SSH_DISCONNECT_COMPRESSION_ERROR                = 6,
+    SSH_DISCONNECT_SERVICE_NOT_AVAILABLE            = 7,
+    SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED   = 8,
+    SSH_DISCONNECT_HOST_KEY_NOT_VERIFIABLE          = 9,
+    SSH_DISCONNECT_CONNECTION_LOST                  =10,
+    SSH_DISCONNECT_BY_APPLICATION                   =11,
+    SSH_DISCONNECT_TOO_MANY_CONNECTIONS             =12,
+    SSH_DISCONNECT_AUTH_CANCELLED_BY_USER           =13,
+    SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE   =14,
+    SSH_DISCONNECT_ILLEGAL_USER_NAME                =15
+};  
+
+enum {
+    SSH_HMAC_SHA1   = GCRY_MD_SHA1,
+    SSH_HMAC_MD5    = GCRY_MD_MD5,
+    SSH_HMAC_RMD160 = GCRY_MD_RMD160
+};
+
+enum {
+    SSH_CIPHER_3DES = GCRY_CIPHER_3DES,
+    SSH_CIPHER_BLOWFISH = GCRY_CIPHER_BLOWFISH,
+    SSH_CIPHER_TWOFISH256 = GCRY_CIPHER_TWOFISH,
+    SSH_CIPHER_AES128 = GCRY_CIPHER_AES128,
+    SSH_CIPHER_CAST128 = GCRY_CIPHER_CAST5
+};
+
+
+typedef struct {
+    const char *name;
+    int algid;
+    int blklen; /* for ciphers only */
+    int mode;   /* for ciphers only */
+    int len;
+} algorithm_list;
 
 
 typedef struct {
     byte cookie[16];
     STRLIST kex_algorithm;
     STRLIST server_host_key_algorithms;
-    STRLIST encryption_algorithms_client_to_server;
-    STRLIST encryption_algorithms_server_to_client;
-    STRLIST mac_algorithms_client_to_server;
-    STRLIST mac_algorithms_server_to_client;
-    STRLIST compression_algorithms_client_to_server;
-    STRLIST compression_algorithms_server_to_client;
+    STRLIST encr_algos_c2s;
+    STRLIST encr_algos_s2c;
+    STRLIST mac_algos_c2s;
+    STRLIST mac_algos_s2c;
+    STRLIST compr_algos_c2s;
+    STRLIST compr_algos_s2c;
     int first_kex_packet_follows;
 } MSG_kexinit;
 
 
 typedef struct {
-    MPI e;
+    GCRY_MPI e;
 } MSG_kexdh_init;
 
 
 typedef struct {
     BSTRING k_s;    /* servers public host key */
-    MPI     f;
+    GCRY_MPI f;
     BSTRING sig_h;  /* signature of the hash */
 } MSG_kexdh_reply;
 
 
-void init_packet( GSTIHD hd );
-int read_packet( GSTIHD hd );
-int write_packet( GSTIHD hd );
-int flush_packet( GSTIHD hd );
+void _gsti_packet_init( GSTIHD hd );
+void _gsti_packet_free( GSTIHD hd );
+int  _gsti_packet_read( GSTIHD hd );
+int  _gsti_packet_write( GSTIHD hd );
+int  _gsti_packet_flush( GSTIHD hd );
 
 
 #endif /* GSTI_PACKET_H */

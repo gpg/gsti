@@ -1,5 +1,6 @@
 /* stream.h
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -52,28 +53,28 @@ struct write_stream_s {
 
 
 
-#define stream_get(a)  \
-     (	( (a)->start >= (a)->len )?  stream_getbyte((a)) \
+#define _gsti_stream_get(a)  \
+     ( ( (a)->start >= (a)->len )?  _gsti_stream_getbyte( (a) ) \
 				  : ( (a)->buf[(a)->start++] ) )
-#define stream_put(a,c)  \
-     (	( (a)->used >= (a)->size )?  stream_putbyte((a),(c)) \
+#define _gsti_stream_put(a,c)  \
+     ( ( (a)->used >= (a)->size )?  _gsti_stream_putbyte( (a), (c) ) \
 				  : ( (a)->buf[(a)->used++] = (c), 0 ) )
 
-#define stream_eof(a)	( (a)->start >= a->len && (a)->read_eof )
-#define stream_error(a) ( (a)->error )
+#define _gsti_stream_eof(a)   ( (a)->start >= a->len && (a)->read_eof )
+#define _gsti_stream_error(a) ( (a)->error )
 
-READ_STREAM new_read_stream( GSTI_READ_FNC readfnc );
-void release_read_stream( READ_STREAM a );
-int  stream_getbyte( READ_STREAM a );
-int  stream_readn( READ_STREAM a, char *buffer, size_t nbytes );
+READ_STREAM _gsti_read_stream_new( GSTI_READ_FNC readfnc );
+void _gsti_read_stream_free( READ_STREAM a );
 
+int  _gsti_stream_getbyte( READ_STREAM a );
+int  _gsti_stream_readn( READ_STREAM a, byte *buffer, size_t nbytes );
 
-WRITE_STREAM new_write_stream( GSTI_WRITE_FNC writefnc );
-void release_write_stream( WRITE_STREAM a );
+WRITE_STREAM _gsti_write_stream_new( GSTI_WRITE_FNC writefnc );
+void _gsti_write_stream_free( WRITE_STREAM a );
 
-int stream_putbyte( WRITE_STREAM a, int c );
-int stream_writen( WRITE_STREAM a, const char *buffer, size_t nbytes );
-int stream_flush( WRITE_STREAM a );
+int _gsti_stream_putbyte( WRITE_STREAM a, int c );
+int _gsti_stream_writen( WRITE_STREAM a, const byte *buffer, size_t nbytes );
+int _gsti_stream_flush( WRITE_STREAM a );
 
 
 #endif /* GSTI_STREAM_H */

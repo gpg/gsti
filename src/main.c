@@ -1,5 +1,6 @@
-/* main.c  -  Main APIs
+/* main.c - Main APIs
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -21,12 +22,14 @@
 #include <config.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <ctype.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <gcrypt.h>
 
 #include "api.h"
 #include "memory.h"
-#include "fsm.h"
 #include "packet.h"
 
 static const char*
@@ -34,11 +37,11 @@ parse_version_number( const char *s, int *number )
 {
     int val = 0;
 
-    if( *s == '0' && isdigit(s[1]) )
-	return NULL; /* leading zeros are not allowed */
-    for ( ; isdigit(*s); s++ ) {
-	val *= 10;
-	val += *s - '0';
+    if( *s == '0' && isdigit( s[1] ) )
+        return NULL; /* leading zeros are not allowed */
+    for ( ; isdigit( *s ); s++ ) {
+        val *= 10;
+        val += *s - '0';
     }
     *number = val;
     return val < 0? NULL : s;
@@ -50,17 +53,33 @@ parse_version_string( const char *s, int *major, int *minor, int *micro )
 {
     s = parse_version_number( s, major );
     if( !s || *s != '.' )
-	return NULL;
+        return NULL;
     s++;
     s = parse_version_number( s, minor );
     if( !s || *s != '.' )
-	return NULL;
+        return NULL;
     s++;
     s = parse_version_number( s, micro );
     if( !s )
-	return NULL;
+        return NULL;
     return s; /* patchlevel */
 }
+
+int
+map_gcry_rc( int rc )
+{
+    switch( rc ) {
+    case GCRYERR_SUCCESS:       return GSTI_SUCCESS;
+    case GCRYERR_INV_ARG:       return GSTI_INV_ARG;
+    case GCRYERR_INTERNAL:      return GSTI_BUG;
+    case GCRYERR_TOO_SHORT:     return GSTI_TOO_SHORT;
+    case GCRYERR_TOO_LARGE:     return GSTI_TOO_LARGE;
+    case GCRYERR_INV_OBJ:       return GSTI_INV_OBJ;
+    case GCRYERR_BAD_SIGNATURE: return GSTI_BAD_SIGNATURE;
+    default:                    return GSTI_GENERAL;
+    }
+}
+
 
 /****************
  * Check that the the version of the library is at minimum the requested one
@@ -76,37 +95,57 @@ gsti_check_version( const char *req_version )
     int rq_major, rq_minor, rq_micro;
     const char *my_plvl, *rq_plvl;
 
-    if ( !req_version )
-	return ver;
+    if( !req_version )
+        return ver;
 
     my_plvl = parse_version_string( ver, &my_major, &my_minor, &my_micro );
-    if ( !my_plvl )
-	return NULL;  /* very strange our own version is bogus */
+    if( !my_plvl )
+        return NULL;  /* very strange our own version is bogus */
     rq_plvl = parse_version_string( req_version, &rq_major, &rq_minor,
-								&rq_micro );
-    if ( !rq_plvl )
-	return NULL;  /* req version string is invalid */
+                                    &rq_micro );
+    if( !rq_plvl )
+        return NULL;  /* req version string is invalid */
 
-    if ( my_major > rq_major
-	|| (my_major == rq_major && my_minor > rq_minor)
-	|| (my_major == rq_major && my_minor == rq_minor
-				 && my_micro > rq_micro)
-	|| (my_major == rq_major && my_minor == rq_minor
-				 && my_micro == rq_micro
-				 && strcmp( my_plvl, rq_plvl ) >= 0) ) {
-	return ver;
+    if( my_major > rq_major
+         || (my_major == rq_major && my_minor > rq_minor)
+         || (my_major == rq_major && my_minor == rq_minor
+             && my_micro > rq_micro)
+         || (my_major == rq_major && my_minor == rq_minor
+             && my_micro == rq_micro
+             && strcmp( my_plvl, rq_plvl ) >= 0) ) {
+        return ver;
     }
     return NULL;
 }
 
 
+void
+gsti_control( enum gsti_ctl_cmds ctl )
+{
+    switch( ctl ) {
+    case GSTI_DISABLE_LOCKING:
+        gcry_control( GCRYCTL_DISABLE_INTERNAL_LOCKING );
+        break;
+        
+    case GSTI_SECMEM_INIT:
+        gcry_control( GCRYCTL_INIT_SECMEM, 16384, 0 );
+        gcry_control( GCRYCTL_DISABLE_SECMEM_WARN );
+        break;
+        
+    case GSTI_SECMEM_RELEASE:
+        gcry_control( GCRYCTL_TERM_SECMEM );
+        break;
+    }
+}
+
+
 GSTIHD
-gsti_init()
+gsti_init( void )
 {
     GSTIHD hd;
 
-    hd = gsti_calloc( 1, sizeof *hd );
-    init_packet(hd);
+    hd = _gsti_calloc( 1, sizeof *hd );
+    _gsti_packet_init( hd );
     return hd;
 }
 
@@ -114,9 +153,29 @@ gsti_init()
 int
 gsti_deinit( GSTIHD hd )
 {
-    /* TODO ... */
-    if( hd )
-	gsti_free( hd );
+    if( !hd )
+        return GSTI_INV_ARG;
+    
+    _gsti_read_stream_free( hd->read_stream );
+    _gsti_write_stream_free( hd->write_stream );
+    _gsti_strlist_free( hd->local_services );
+    _gsti_bstring_free( hd->peer_version_string );
+    _gsti_bstring_free( hd->host_kexinit_data );
+    _gsti_bstring_free( hd->peer_kexinit_data );
+    _gsti_free( hd->service_name );
+    _gsti_bstring_free( hd->session_id );
+    _gsti_bstring_free( hd->kex.h );
+    _gsti_bstring_free( hd->kex.iv_a );
+    _gsti_bstring_free( hd->kex.iv_b );
+    _gsti_bstring_free( hd->kex.key_c );
+    _gsti_bstring_free( hd->kex.key_d );
+    _gsti_bstring_free( hd->kex.mac_e );
+    _gsti_bstring_free( hd->kex.mac_f );
+    gcry_cipher_close( hd->encrypt_hd );
+    gcry_cipher_close( hd->decrypt_hd );
+    gsti_key_free( hd->hostkey );
+    _gsti_packet_free( hd );
+    _gsti_free( hd );
     return 0;
 }
 
@@ -124,6 +183,8 @@ gsti_deinit( GSTIHD hd )
 int
 gsti_set_readfnc( GSTIHD hd, GSTI_READ_FNC readfnc )
 {
+    if( !hd )
+        return GSTI_INV_ARG;
     hd->readfnc = readfnc;
     return 0;
 }
@@ -131,6 +192,8 @@ gsti_set_readfnc( GSTIHD hd, GSTI_READ_FNC readfnc )
 int
 gsti_set_writefnc( GSTIHD hd, GSTI_WRITE_FNC writefnc )
 {
+    if( !hd )
+        return GSTI_INV_ARG;
     hd->writefnc = writefnc;
     return 0;
 }
@@ -138,7 +201,7 @@ gsti_set_writefnc( GSTIHD hd, GSTI_WRITE_FNC writefnc )
 
 /****************
  * A client can request a special service using this function.
- * A servicename must habe a @ in it, so that it does not conflict
+ * A servicename must have a @ in it, so that it does not conflict
  * with any standard service. Comma and colons should be avoided in
  * a service name.
  * If this is not used, a standard SSH service is used.
@@ -150,12 +213,15 @@ gsti_set_service( GSTIHD hd, const char *svcname )
 {
     STRLIST s;
 
+    if( !hd )
+        return GSTI_INV_ARG;
     if( !svcname || !*svcname )
-	return 0;
-    hd->local_services = parse_algorithm_list( svcname, strlen(svcname));
-    for(s=hd->local_services; s; s= s->next ) {
-	if( !strchr(s->d,'@') )
-	    ;
+        return 0;
+    hd->local_services = parse_algorithm_list( svcname, strlen( svcname ) );
+    for( s = hd->local_services; s; s = s->next ) {
+        if( !strchr( s->d, '@' ) )
+            ;
+        log_info( "service `%s'\n", s->d );
     }
     return 0;
 }
@@ -175,11 +241,17 @@ gsti_set_service( GSTIHD hd, const char *svcname )
 int
 gsti_read( GSTIHD hd, void *buffer, size_t *length )
 {
-    int rc = 0;
+    int rc;
+
+    if( !hd )
+        return GSTI_INV_ARG;
     hd->user_read_buffer = buffer;
     hd->user_read_bufsize= *length;
     hd->user_read_nbytes = 0;
-    /*rc = fsm_user_read( hd );*/
+    rc = fsm_user_read( hd );
+    if( rc )
+        return rc;
+
     *length = hd->user_read_nbytes;
     return rc;
 }
@@ -190,17 +262,62 @@ gsti_read( GSTIHD hd, void *buffer, size_t *length )
 int
 gsti_write( GSTIHD hd, const void *buffer, size_t length )
 {
+    if( !hd )
+        return GSTI_INV_ARG;
     if( hd->local_services ) {
-	const byte *p = buffer;
-	/* check that the buffer contains valid packet types */
-	if( !length || *p < 192 )
-	    return GSTI_INV_ARG;
+        const byte *p = buffer;
+        /* check that the buffer contains valid packet types */
+        if( !length || *p < 192 )
+            return GSTI_INV_ARG;
     }
 
     hd->user_write_buffer  = buffer;
     hd->user_write_bufsize = length;
-    return -1 /*fsm_user_write( hd )*/;
+    return fsm_user_write( hd );
 }
 
 
+int
+gsti_set_hostkey_file( GSTIHD hd, const char *file )
+{
+    struct stat statbuf;
+
+    if( !hd )
+        return GSTI_INV_ARG;
+    if( stat( file, &statbuf ) )
+        return GSTI_FILE;
+    _gsti_free( hd->hostkey_file );
+    hd->hostkey_file = _gsti_strdup( file );
+    return 0;
+}
+
+
+const char*
+gsti_strerror( int ec )
+{
+    static char buf[32];
+    
+    switch( ec ) {
+    case GSTI_SUCCESS:       return "success";
+    case GSTI_GENERAL:       return "general error";
+    case GSTI_BUG:	     return "internal error";
+    case GSTI_INV_ARG:       return "invalid argument";
+    case GSTI_NO_DATA:       return "no data to process (eof)";
+    case GSTI_NOT_SSH:       return "not connected to a SSH protocol stream";
+    case GSTI_PRE_EOF:       return "premature end-of-file";
+    case GSTI_TOO_SHORT:     return "an entity is too short";
+    case GSTI_TOO_LARGE:     return "an entity is too large";
+    case GSTI_READ_ERROR:    return "read error";
+    case GSTI_WRITE_ERROR:   return "write error";
+    case GSTI_INV_PKT:       return "invalid packet";
+    case GSTI_INV_OBJ:       return "invalid object";
+    case GSTI_PROT_VIOL:     return "protocol violation";
+    case GSTI_BAD_SIGNATURE: return "bad signature";
+    case GSTI_FILE:          return strerror( errno );
+
+    default:
+        sprintf( buf, "code=%d", ec );
+        return buf;
+    }
+}
 

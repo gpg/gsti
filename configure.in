@@ -11,7 +11,7 @@ AM_CONFIG_HEADER(config.h)
 dnl
 dnl The version number goes here
 dnl
-AM_INIT_AUTOMAKE(gsti,0.0.1)
+AM_INIT_AUTOMAKE(gsti,0.2.0)
 
 
 dnl
@@ -20,7 +20,6 @@ dnl
 AC_ARG_PROGRAM
 
 dnl Don't default to build static libs
-AM_DISABLE_STATIC
 AM_PROG_LIBTOOL
 
 if test "$GCC" = yes; then
@@ -49,10 +48,10 @@ dnl
 dnl Checks for library functions
 dnl
 
-AM_PATH_GCRYPT(1.1.0,,
+AM_PATH_LIBGCRYPT(1.1.8,,
    AC_MSG_ERROR([[
 *** Test for gcrypt failed. You may want to download it from
-***        ftp://ftp.gnupg.org/gcrypt/devel/gnupg-1.1.x.tar.gz
+***        ftp://ftp.gnupg.org/gcrypt/devel/libgcrypt-1.1.x.tar.gz
   ]]))
 dnl
 dnl Checks for system services

@@ -1,0 +1,8 @@
+Noteworthy changes in version 0.2.0
+-----------------------------------
+
+* Most of the global functions have unique and prefixed names.
+
+* Basic code to establish a secure channel works.
+
+* The code supports a host key and DSS signature handling.

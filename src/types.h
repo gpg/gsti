@@ -1,5 +1,6 @@
 /* types.h
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -30,11 +31,16 @@
   #define HAVE_BYTE_TYPEDEF
 #endif
 
-/* FIXME: to correct type detection */
 #ifndef HAVE_U32_TYPEDEF
   #undef u32
   typedef unsigned int u32;
   #define HAVE_U32_TYPEDEF
+#endif
+
+#ifndef HAVE_U16_TYPEDEF
+  #undef u16
+  typedef unsigned short u16;
+  #define HAVE_U16_TYPEDEF
 #endif
 
 typedef struct strlist_s {
@@ -51,5 +57,9 @@ typedef struct bstring_s {
     size_t len;
     unsigned char d[1];
 } *BSTRING;
+
+#ifndef DIM
+  #define DIM(v) (sizeof(v)/sizeof((v)[0]))
+#endif
 
 #endif /* GSTI_TYPES_H */

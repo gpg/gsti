@@ -1,12 +1,13 @@
 
-		   GNU Secure Transport Initiative
+		   GNU Secure Transport Initiative (GSTI)
+                  ---------------------------------------
 
 	This is a library which implements a basic part of the
 	protocol used by SSH to create a secure transport channel.
 
+	You may need the Libgcrypt 1.1.8 version from ftp.gnupg.org
 
-		    THIS IS WORK IN PROGRESS !!!!
 
-	You may need the latest GnuPG 1.1 version form CVS and	hack
-	some things.
+        THIS IS WORK IN PROGRESS !!!!
+
 

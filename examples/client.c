@@ -37,13 +37,13 @@
 static int conn_fd = -1;
 
 static void
-log_rc( int rc, const char *text)
+log_rc( int rc, const char *text )
 {
     const char *s;
-    if( !*(s=gsti_strerror(rc)) || !strcmp(s,"[?]") )
-	fprintf( stderr, PGMNAME "gsti_%s: rc=%d\n", text, rc );
+    if( !*(s=gsti_strerror( rc )) || !strcmp( s,"[?]" ) )
+        fprintf( stderr, PGMNAME "gsti_%s: rc=%d\n", text, rc );
     else
-	fprintf( stderr, PGMNAME "gsti_%s: %s\n", text, s );
+        fprintf( stderr, PGMNAME "gsti_%s: %s\n", text, s );
 }
 
 static void
@@ -54,21 +54,21 @@ make_connection( const char *host )
 
     conn_fd = socket(PF_INET, SOCK_STREAM, 0 );
     if( conn_fd == -1 ) {
-	fprintf( stderr, PGMNAME "socket() failed: %s\n", strerror(errno) );
-	exit(2);
+        fprintf( stderr, PGMNAME "socket() failed: %s\n", strerror(errno) );
+        exit(2);
     }
 
     hostinfo = gethostbyname(host);
     if( !hostinfo ) {
-	fprintf( stderr, PGMNAME "unknown host `%s'\n", host );
-	exit(1);
+        fprintf( stderr, PGMNAME "unknown host `%s'\n", host );
+        exit(1);
     }
     name.sin_family = AF_INET;
     name.sin_port = htons(9000);
     name.sin_addr = *(struct in_addr*)hostinfo->h_addr;
     if( connect( conn_fd, (struct sockaddr*)&name, sizeof name) ) {
-	fprintf( stderr, PGMNAME "connect() failed: %s\n", strerror(errno) );
-	exit(2);
+        fprintf( stderr, PGMNAME "connect() failed: %s\n", strerror(errno) );
+        exit(2);
     }
 
 }
@@ -80,11 +80,11 @@ myread( GSTIHD hd, void *buffer, size_t *nbytes )
     int n;
 
     do {
-	n = read( conn_fd, buffer, *nbytes );
+        n = read( conn_fd, buffer, *nbytes );
     } while( n == -1 && errno == EINTR );
     if( n == -1 ) {
-	fprintf( stderr, PGMNAME "myread: error: %s\n", strerror(errno) );
-	return GSTI_READ_ERROR;
+        fprintf( stderr, PGMNAME "myread: error: %s\n", strerror(errno) );
+        return GSTI_READ_ERROR;
     }
     /*dump_hexbuf( stderr, "myread: ", buffer, n );*/
     *nbytes = n;
@@ -99,16 +99,16 @@ mywrite( GSTIHD hd, const void *buffer, size_t nbytes )
     const char *p = buffer;
 
     if( !buffer )
-	return 0; /* no need for flushing */
+        return 0; /* no need for flushing */
     do {
-	/*dump_hexbuf( stderr, "mywrite: ", p, nbytes );*/
-	n = write( conn_fd, p, nbytes );
-	if( n == -1 ) {
-	    fprintf( stderr, PGMNAME "mywrite: error: %s\n", strerror(errno) );
-	    return GSTI_WRITE_ERROR;
-	}
-	nbytes -= n;
-	p += n;
+        /*dump_hexbuf( stderr, "mywrite: ", p, nbytes );*/
+        n = write( conn_fd, p, nbytes );
+        if( n == -1 ) {
+            fprintf( stderr, PGMNAME "mywrite: error: %s\n", strerror(errno) );
+            return GSTI_WRITE_ERROR;
+        }
+        nbytes -= n;
+        p += n;
     } while( nbytes );
     return 0;
 }
@@ -118,32 +118,47 @@ mywrite( GSTIHD hd, const void *buffer, size_t nbytes )
 int
 main( int argc, char **argv )
 {
-    int rc;
+    int rc, i;
     GSTIHD hd;
     GSTI_PKTDESC pkt;
     char buffer[100];
     size_t nbytes;
 
-    if( argc ) { argc--; argv++; }
+    if( argc ) {
+        argc--;
+        argv++;
+    }
 
+    gsti_control( GSTI_SECMEM_INIT );
+    gsti_control( GSTI_DISABLE_LOCKING );
     hd = gsti_init();
     gsti_set_readfnc( hd, myread );
     gsti_set_writefnc( hd, mywrite );
-   /* rc = gsti_set_service( hd, "log-lines@gnu.org" );
-    log_rc( rc, "set-service" );*/
+#if 0
+    rc = gsti_set_service( hd, "log-lines@gnu.org" );
+       log_rc( rc, "set-service" );
+#endif
 
-    make_connection(argc? *argv: "localhost");
+    make_connection( argc? *argv: "localhost" );
 
-    pkt.data = "\xf0""hallo";
-    pkt.datalen = 5;
-    rc = gsti_put_packet( hd, &pkt );
-    log_rc( rc, "put_packet" );
-    rc = gsti_put_packet( hd, NULL );
-    log_rc( rc, "flush_packet" );
+    for( i = 0; i < 2; i++ ) {
+        memset( &pkt, 0, sizeof pkt );
+        pkt.data = "\xf0\x01\x00\x00\x00\x04""hallo""\x00\x00\x00\x00";
+        pkt.datalen = 15;
+        rc = gsti_put_packet( hd, &pkt );
+        log_rc( rc, "put_packet" );
 
+        rc = gsti_put_packet( hd, NULL );
+        log_rc( rc, "flush_packet" );
 
+        printf( "seqno %d\n", pkt.seqno );
+    }
+    
+    
     gsti_deinit( hd );
+    gsti_control( GSTI_SECMEM_RELEASE );
     return 0;
 }
+
 
 
