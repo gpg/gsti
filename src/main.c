@@ -32,9 +32,11 @@
 #include "memory.h"
 #include "packet.h"
 
-static void (*log_handler)( void*,int, const char*, va_list ) = NULL;
-static void *log_handler_value = 0;
+
+static GSTI_LOG_FNC log_handler = NULL;
+static void *log_handler_value = NULL;
 static int log_level = GSTI_LOG_NONE;
+
 
 static const char*
 parse_version_number( const char *s, int *number )
@@ -69,6 +71,7 @@ parse_version_string( const char *s, int *major, int *minor, int *micro )
     return s; /* patchlevel */
 }
 
+
 int
 map_gcry_rc( int rc )
 {
@@ -83,6 +86,7 @@ map_gcry_rc( int rc )
     default:                    return GSTI_GENERAL;
     }
 }
+
 
 static void
 _gsti_logv( int level, const char *fmt, va_list arg_ptr )
@@ -111,6 +115,7 @@ _gsti_log_rc( int rc, const char *fmt, ... )
 
     return rc;
 }
+
 
 void
 _gsti_log_info( const char *fmt, ... )
@@ -201,7 +206,7 @@ gsti_init( void )
 {
     GSTIHD hd;
 
-    hd = _gsti_calloc( 1, sizeof *hd );
+    hd = _gsti_xcalloc( 1, sizeof *hd );
     _gsti_packet_init( hd );
     return hd;
 }
@@ -257,6 +262,7 @@ gsti_set_readfnc( GSTIHD hd, GSTI_READ_FNC readfnc )
     return 0;
 }
 
+
 int
 gsti_set_writefnc( GSTIHD hd, GSTI_WRITE_FNC writefnc )
 {
@@ -293,6 +299,7 @@ gsti_set_service( GSTIHD hd, const char *svcname )
     }
     return 0;
 }
+
 
 /****************
  * Read data from the GSTI stream.  This automagically initializes the
@@ -338,7 +345,6 @@ gsti_write( GSTIHD hd, const void *buffer, size_t length )
         if( !length || *p < 192 )
             return GSTI_INV_ARG;
     }
-
     hd->user_write_buffer  = buffer;
     hd->user_write_bufsize = length;
     return fsm_user_write( hd );
@@ -355,7 +361,7 @@ gsti_set_hostkey( GSTIHD hd, const char *file )
         return GSTI_INV_ARG;
     if( stat( file, &statbuf ) )
         return GSTI_FILE;
-    rc = gsti_key_load( file, GSTI_PK_DSS, 1, &hd->hostkey );
+    rc = gsti_key_load( file, 1, &hd->hostkey );
     
     return rc;
 }
@@ -371,7 +377,7 @@ gsti_set_client_key( GSTIHD hd, const char *file )
         return GSTI_INV_ARG;
     if( stat( file, &statbuf ) )
         return GSTI_FILE;
-    rc = gsti_key_load( file, GSTI_PK_DSS, 1, &hd->auth.key );
+    rc = gsti_key_load( file, 1, &hd->auth.key );
 
     return rc;
 }
@@ -383,7 +389,7 @@ gsti_set_client_user( GSTIHD hd, const char *user )
     if( !hd )
         return GSTI_INV_ARG;
     _gsti_free( hd->auth.user );
-    hd->auth.user = _gsti_strdup( user );
+    hd->auth.user = _gsti_xstrdup( user );
     return 0;
 }
 
@@ -402,10 +408,9 @@ gsti_set_auth_method( GSTIHD hd, int methd )
         
 
 void
-gsti_set_log_handler( void (*logf)( void *, int, const char *, va_list ),
-                      void *opaque )
+gsti_set_log_handler( GSTI_LOG_FNC logfnc, void *opaque )
 {
-    log_handler = logf;
+    log_handler = logfnc;
     log_handler_value = opaque;
 }
 
@@ -418,10 +423,26 @@ gsti_set_log_level( int level )
 
 
 int
+gsti_set_compression( GSTIHD hd, int val )
+{
+#ifndef USE_ZLIB
+    hd->zlib.use = 0;
+    return GSTI_NOT_IMPL;
+#else
+    if( !hd )
+        return GSTI_INV_ARG;
+    hd->zlib.use = val;
+    return 0;
+#endif
+}
+
+
+int
 _gsti_get_log_level( void )
 {
     return log_level;
 }
+
 
 const char*
 gsti_strerror( int ec )
@@ -446,10 +467,7 @@ gsti_strerror( int ec )
     case GSTI_BAD_SIGNATURE: return "bad signature";
     case GSTI_FILE:          return strerror( errno );
     case GSTI_NOT_IMPL:      return "not implemented";
-
-    default:
-        sprintf( buf, "code=%d", ec );
-        return buf;
+    default: sprintf( buf, "code=%d", ec ); return buf;
     }
 }
 

@@ -20,13 +20,13 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
-struct buffer_s {
+typedef struct buffer_s {
     unsigned char *d;
     unsigned size;
     unsigned end;
     unsigned off;  
-};
-typedef struct buffer_s *BUFFER;
+} *BUFFER;
+
 
 int _gsti_buf_init( BUFFER *r_ctx );
 void _gsti_buf_free( BUFFER ctx );
@@ -39,6 +39,7 @@ byte* _gsti_buf_getstr( BUFFER ctx, size_t *r_n );
 int _gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a );
 int _gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n );
 int _gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr );
+void _gsti_buf_putbstr( BUFFER ctx, BSTRING bstr );
 void _gsti_buf_putc( BUFFER ctx, int val );
 int _gsti_buf_getc( BUFFER ctx );
 void _gsti_buf_putraw( BUFFER ctx, const byte *buf, size_t len );

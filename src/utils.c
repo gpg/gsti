@@ -30,6 +30,7 @@
 #include "types.h"
 #include "memory.h"
 #include "utils.h"
+#include "buffer.h"
 
 
 /****************
@@ -52,7 +53,7 @@ _gsti_algolist_parse( const byte *string, size_t length )
 	    for( s = string; n && *s && isspace( *s ); n--, s++ )
 		;
 	    if( *s && n ) { /* we have at least one non-space charcater*/
-		item = _gsti_malloc( sizeof *item + n );
+		item = _gsti_xmalloc( sizeof *item + n );
 		item->next = NULL;
 		memcpy( item->d, string, n );
 		/* and trim trailing spaces */
@@ -105,8 +106,9 @@ _gsti_algolist_build( byte *buffer, size_t length, STRLIST list )
     p[2] = n >> 8;
     p[3] = n;
 
-    return n+4;
+    return n + 4;
 }
+
 
 int
 _gsti_algolist_find( STRLIST list, const char *algo )
@@ -122,37 +124,36 @@ _gsti_algolist_find( STRLIST list, const char *algo )
 
 
 void
-_gsti_print_string( FILE *fp, const char *string, size_t n )
+_gsti_print_string( const char *string, size_t n )
 {
     const byte *p = string;
 
     for( ; n; n--, p++ ) {
 	if( iscntrl( *p ) ) {
-	    putc( '\\', fp );
+	    _gsti_log_info( "%c", '\\' );
 	    if( *p == '\n' )
-		putc( 'n', fp );
+		_gsti_log_info( "%c", 'n' );
 	    else if( *p == '\r' )
-		putc( 'r', fp );
+		_gsti_log_info( "%c", 'r' );
 	    else if( *p == '\f' )
-		putc( 'f', fp );
+		_gsti_log_info( "%c", 'f' );
 	    else if( *p == '\v' )
-		putc( 'v', fp );
+		_gsti_log_info( "%c", 'v' );
 	    else if( *p == '\b' )
-		putc( 'b', fp );
+		_gsti_log_info( "%c", 'b' );
 	    else if( !*p )
-		putc( '0', fp );
+		_gsti_log_info( "%c", '0' );
 	    else
-		fprintf( fp, "x%02x", *p );
+		_gsti_log_info( "x%02x", *p );
 	}
 	else
-	    putc(*p, fp);
+	    _gsti_log_info( "%c", *p );
     }
 }
 
 
 void
-_gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
-                   size_t len )
+_gsti_dump_object( const char *prefix, int type, void *opaque, size_t len )
 {
     if( _gsti_get_log_level() < GSTI_LOG_DEBUG )
         return;
@@ -162,10 +163,10 @@ _gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
     case TYPE_HEXBUF:
     {
         byte *buf = opaque;
-        fputs( prefix, fp );
+        _gsti_log_info( "%s", prefix );
         for( ; len ; len--, buf++ )
-            fprintf( fp, "%02X ", *buf );
-        putc( '\n', fp );
+            _gsti_log_info( "%02X ", *buf );
+        _gsti_log_info( "\n" );
         break;
     }
     case TYPE_STRLIST:
@@ -173,7 +174,7 @@ _gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
         STRLIST list = opaque;
         int i;
         for( i = 0 ; list ; list = list->next, i++ )
-            fprintf( fp, "%s[%d]: `%s'\n", prefix, i, list->d );
+            _gsti_log_info( "%s[%d]: `%s'\n", prefix, i, list->d );
         break;
     }
     case TYPE_MPI:
@@ -183,18 +184,28 @@ _gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
         size_t n = sizeof buf;
         if( gcry_mpi_print( GCRYMPI_FMT_HEX, buf, &n, a ) )
             strcpy( buf,"[can't print value]" );
-        fprintf( fp, "%s%s\n", prefix, buf );
+        _gsti_log_info( "%s%s\n", prefix, buf );
         break;
     }
     case TYPE_BSTRING:
     {
         BSTRING a = opaque;
-        fputs( prefix, fp );
+        _gsti_log_info( "%s", prefix );
         if( a )
-            _gsti_print_string( fp, a->d, a->len );
-        putc( '\n', fp );
+            _gsti_print_string( a->d, a->len );
+        _gsti_log_info( "\n" );
         break;
     }
+    case TYPE_BUFFER:
+    {
+        BUFFER buf = opaque;
+        int i;
+        for( i = buf->off; i < _gsti_buf_getlen( buf ); i++ )
+            _gsti_log_info( "%4x", buf->d[i] );
+        _gsti_log_info( "\n" );
+        break;
+    }
+    
     }
 }
 
@@ -203,7 +214,6 @@ _gsti_bstring_hash( GCRY_MD_HD md, BSTRING a )
 {
     byte buf[4];
     size_t n = a->len;
-
 
     buf[0] = n >> 24;
     buf[1] = n >> 16;

@@ -18,9 +18,7 @@
  * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#ifdef HAVE_CONFIG_H
- #include <config.h>
-#endif
+#include <config.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <gcrypt.h>
@@ -35,7 +33,7 @@ buffer_realloc( BUFFER ctx, size_t len )
 {
     if( ctx->end >= ctx->size ) {        
         ctx->size += len;
-        ctx->d = _gsti_realloc( ctx->d, ctx->size );
+        ctx->d = _gsti_xrealloc( ctx->d, ctx->size );
     }
 }
 
@@ -44,8 +42,8 @@ _gsti_buf_init( BUFFER *r_ctx )
 {
     BUFFER ctx;
 
-    ctx = _gsti_calloc( 1, sizeof *ctx );
-    ctx->d = _gsti_calloc( 1, 4096 );
+    ctx = _gsti_xcalloc( 1, sizeof *ctx );
+    ctx->d = _gsti_xcalloc( 1, 4096 );
     ctx->size = 4096;
     *r_ctx = ctx;
 
@@ -137,13 +135,14 @@ _gsti_buf_getstr( BUFFER ctx, size_t *r_n )
         *r_n = 4;
         return NULL;
     }
-    p = _gsti_calloc( 1, len + 1 );
+    p = _gsti_xcalloc( 1, len + 1 );
     _gsti_buf_getraw( ctx, p, len );
     p[len] = 0;
     *r_n = len;
     
     return p;
 }
+
 
 int
 _gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a )
@@ -159,6 +158,7 @@ _gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a )
     
     return 0;
 }
+
 
 int
 _gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
@@ -185,6 +185,13 @@ _gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
 }
 
 
+void
+_gsti_buf_putbstr( BUFFER ctx, BSTRING bstr )
+{
+    _gsti_buf_putstr( ctx, bstr->d, bstr->len );
+}
+
+
 int
 _gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr )
 {
@@ -200,6 +207,7 @@ _gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr )
     _gsti_free( p );
     return 0;
 }
+
 
 void
 _gsti_buf_putc( BUFFER ctx, int val )
@@ -260,4 +268,5 @@ _gsti_buf_dump( BUFFER ctx )
         printf( "%4x", ctx->d[i] );
     printf( "\n" );
 }
+
 

@@ -42,7 +42,7 @@ _gsti_read_stream_new( GSTI_READ_FNC readfnc )
 {
     READ_STREAM a;
     
-    a = _gsti_calloc( 1, sizeof *a + STREAM_BUFSIZE-1 );
+    a = _gsti_xcalloc( 1, sizeof *a + STREAM_BUFSIZE-1 );
     a->readfnc = readfnc;
     a->size = STREAM_BUFSIZE;
     return a;
@@ -118,7 +118,7 @@ _gsti_write_stream_new( GSTI_WRITE_FNC writefnc )
 {
     WRITE_STREAM a;
 
-    a = _gsti_calloc( 1, sizeof *a + STREAM_BUFSIZE-1 );
+    a = _gsti_xcalloc( 1, sizeof *a + STREAM_BUFSIZE-1 );
     a->writefnc = writefnc;
     a->size = STREAM_BUFSIZE;
     return a;

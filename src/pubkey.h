@@ -26,7 +26,7 @@ enum {
     SSH_PK_DSS  = 1,
 };
 
-struct key_context_s {
+struct gsti_key_s {
     GCRY_MPI key[5];
     unsigned nkey;
     int type;
@@ -44,6 +44,9 @@ int _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash,
                       GSTI_KEY *r_pk );
 
 byte * _gsti_ssh_get_pkname( int pktype, int asbstr, size_t *r_n );
+int _gsti_ssh_cmp_pkname( int pktype, const char *name, size_t len );
+int _gsti_ssh_cmp_keys( GSTI_KEY a, GSTI_KEY b );
+    
 
 #endif /*GSTI_PUBKEY_H*/
 

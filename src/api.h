@@ -44,8 +44,7 @@ struct gsti_context {
     WRITE_STREAM  write_stream;
     STRLIST local_services;
 
-    int    state;	  /* current state */
-    int    wait_packet;   /* wait for a new packet */
+    int state; /* current state */
 
     int  we_are_server;
     BSTRING peer_version_string;  /* received from other end */
@@ -57,8 +56,8 @@ struct gsti_context {
     struct packet_buffer_s pkt;
 
     BSTRING session_id;     /* the exchange hash from the first KEX */
-    u32  send_seqno;
-    u32  recv_seqno;
+    u32 send_seqno;
+    u32 recv_seqno;
     struct {
         BSTRING h;	    /* current exchange hash */
         GCRY_MPI k;	    /* the shared secret */
@@ -74,7 +73,6 @@ struct gsti_context {
 
     GCRY_MPI secret_x;  /* temporary use only */
     GCRY_MPI kexdh_e;   /* ditto */
-
     GCRY_MPI secret_y;  /* fixme: we could reuse secret_x kexdh_e */
     GCRY_MPI kexdh_f;   /* ditto */
 
@@ -104,6 +102,11 @@ struct gsti_context {
         char *user;
     } auth;
 
+    struct {
+        unsigned int use:1;
+        unsigned int init:1;
+    } zlib;
+    
     unsigned long id;
 };
 

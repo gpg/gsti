@@ -45,6 +45,8 @@ libgsti_la_SOURCES = \
 	stream.h stream.c \
 	packet.h packet.c \
 	kex.h kex.c \
-	buffer.c buffer.h
+	buffer.c buffer.h \
+	zlib.c \
+	moduli.h
 
 LDADD = $(LIBGCRYPT_LIBS)

@@ -48,14 +48,14 @@ build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
     
     _gsti_buf_init( &buf );
     _gsti_buf_putc( buf, 0 );
-    _gsti_buf_putstr( buf, ath->user->d, ath->user->len );
-    _gsti_buf_putstr( buf, ath->svcname->d, ath->svcname->len );
-    _gsti_buf_putstr( buf, ath->method->d, ath->method->len );
+    _gsti_buf_putbstr( buf, ath->user );
+    _gsti_buf_putbstr( buf, ath->svcname );
+    _gsti_buf_putbstr( buf, ath->method );
     _gsti_buf_putc( buf, ath->false );
-    _gsti_buf_putstr( buf, ath->pkalgo->d, ath->pkalgo->len );
-    _gsti_buf_putstr( buf, ath->key->d, ath->key->len );
+    _gsti_buf_putbstr( buf, ath->pkalgo );
+    _gsti_buf_putbstr( buf, ath->key );
     if( ath->sig )
-        _gsti_buf_putstr( buf, ath->sig->d, ath->sig->len );
+        _gsti_buf_putbstr( buf, ath->sig );
 
     len = _gsti_buf_getlen( buf );
     pkt->type = SSH_MSG_USERAUTH_REQUEST;
@@ -87,7 +87,7 @@ init_auth_request( MSG_auth_request *ath, const char *user, int false,
     byte *p;
     size_t n;
 
-    if( !user )
+    if( !user || !pk )
         return GSTI_INV_ARG;
     
     ath->user = _gsti_bstring_make( user, strlen( user ) );
@@ -121,6 +121,7 @@ dump_auth_request( MSG_auth_request *ath )
     _gsti_log_debug( "\n" );
 }
 
+
 int
 auth_send_accept_packet( GSTIHD hd )
 {
@@ -132,9 +133,9 @@ auth_send_accept_packet( GSTIHD hd )
     rc = _gsti_packet_write( hd );
     if( !rc )
         rc = _gsti_packet_flush( hd );
-
     return rc;
 }
+
 
 int
 auth_proc_accept_packet( GSTIHD hd )
@@ -143,6 +144,8 @@ auth_proc_accept_packet( GSTIHD hd )
     
     if( pkt->type != SSH_MSG_USERAUTH_SUCCESS )
         return GSTI_BUG;
+    if( pkt->payload_len > 1 )
+        return GSTI_INV_PKT;
     return 0;
 }
 
@@ -231,7 +234,7 @@ auth_proc_init_packet( GSTIHD hd )
         free_auth_request( &ath );
         return GSTI_NOT_IMPL;
     }
-    hd->auth.user = _gsti_strdup( ath.user->d );
+    hd->auth.user = _gsti_xstrdup( ath.user->d );
     hd->auth.key = _gsti_key_fromblob( ath.key );
     
     dump_auth_request( &ath );
@@ -254,7 +257,7 @@ calc_sig_hash( BSTRING sessid, MSG_auth_request *ath, BSTRING *r_digest )
     _gsti_bstring_hash( md, ath->user );
     _gsti_bstring_hash( md, ath->svcname );
     _gsti_bstring_hash( md, ath->method );
-    gcry_md_putc( md, 1 );
+    gcry_md_putc( md, ath->false );
     _gsti_bstring_hash( md, ath->pkalgo );
     _gsti_bstring_hash( md, ath->key );
 
@@ -284,8 +287,8 @@ build_pkok_packet( MSG_auth_pkok *ok, struct packet_buffer_s *pkt )
     
     _gsti_buf_init( &buf );
     _gsti_buf_putc( buf, 0 );
-    _gsti_buf_putstr( buf, ok->pkalgo->d, ok->pkalgo->len );
-    _gsti_buf_putstr( buf, ok->key->d, ok->key->len );
+    _gsti_buf_putbstr( buf, ok->pkalgo );
+    _gsti_buf_putbstr( buf, ok->key );
 
     len = _gsti_buf_getlen( buf );
     pkt->type = SSH_MSG_USERAUTH_PK_OK;
@@ -308,6 +311,8 @@ auth_send_pkok_packet( GSTIHD hd )
     
     memset( &ok, 0, sizeof ok );
     pk = hd->auth.key;
+    if( !pk )
+        return GSTI_INV_OBJ;
     p = _gsti_ssh_get_pkname( pk->type, 0, &n );
     ok.pkalgo = _gsti_bstring_make( p, n );
     ok.key = _gsti_key_getblob( pk );
@@ -323,15 +328,56 @@ auth_send_pkok_packet( GSTIHD hd )
 }
 
 
+static int
+parse_pkok_packet( MSG_auth_pkok *ok, struct packet_buffer_s *pkt )
+{
+    BUFFER buf;
+    byte *p;
+    size_t n;
+
+    memset( ok, 0, sizeof *ok );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, pkt->payload, pkt->payload_len );
+    if( _gsti_buf_getc( buf ) != SSH_MSG_USERAUTH_PK_OK ) {
+        _gsti_buf_free( buf );
+        return GSTI_INV_PKT;
+    }
+    p = _gsti_buf_getstr( buf, &n );
+    ok->pkalgo = _gsti_bstring_make( p, n );
+    _gsti_free( p );
+    
+    p = _gsti_buf_getstr( buf, &n );
+    ok->key = _gsti_bstring_make( p, n );
+    _gsti_free( p );
+
+    return 0;
+}
+
+    
 int
 auth_proc_pkok_packet( GSTIHD hd )
 {
-    struct packet_buffer_s *pkt = &hd->pkt;
-
-    if( pkt->type != SSH_MSG_USERAUTH_PK_OK )
+    int rc;
+    MSG_auth_pkok ok;
+    BSTRING alg;
+    
+    if( hd->pkt.type != SSH_MSG_USERAUTH_PK_OK )
         return GSTI_BUG;
-    /* fixme: check returned data? */
-    return 0;
+
+    rc = parse_pkok_packet( &ok, &hd->pkt );
+    if( rc )
+        return rc;
+    alg = ok.pkalgo;
+    rc = _gsti_ssh_cmp_pkname( hd->auth.key->type, alg->d, alg->len );
+    if( !rc ) {
+        GSTI_KEY a = _gsti_key_fromblob( ok.key );
+        if( a ) {
+            rc = _gsti_ssh_cmp_keys( a, hd->auth.key );
+            gsti_key_free( a );
+        }
+    }
+    free_auth_pkok( &ok );
+    return rc;
 }
 
 

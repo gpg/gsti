@@ -63,9 +63,9 @@ enum fsm_states {
 }; 
 
 
- /**************** 
-  * Do some initialization 
-  */ 
+/**************** 
+ * Do some initialization 
+ */ 
 static int 
 handle_init( GSTIHD hd, int want_read ) 
 { 
@@ -88,9 +88,9 @@ handle_init( GSTIHD hd, int want_read )
 
 
 
- /**************** 
-  * Cleanup the connection we are about to quit. 
-  */ 
+/**************** 
+ * Cleanup the connection we are about to quit. 
+ */ 
 static int 
 handle_quit( GSTIHD hd ) 
 { 
@@ -101,9 +101,9 @@ handle_quit( GSTIHD hd )
 
 
 
- /**************** 
-  * We are in state FSM_write: write the user supplied data 
-  */ 
+/**************** 
+ * We are in state FSM_write: write the user supplied data 
+ */ 
 static int 
 handle_write( GSTIHD hd ) 
 { 
@@ -254,12 +254,10 @@ fsm_server_loop( GSTIHD hd )
 
         case FSM_service_start:
             _gsti_log_info( "service `" );
-            _gsti_print_string( stderr, hd->service_name->d,
-                                hd->service_name->len );
+            _gsti_print_string( hd->service_name->d, hd->service_name->len );
             _gsti_log_info( "' has been started (server)\n" );
             hd->state = FSM_auth_wait;
             break;
-
 
         case FSM_auth_wait:
             rc = request_packet( hd );
@@ -438,8 +436,7 @@ fsm_client_loop( GSTIHD hd )
 
         case FSM_service_start:
             _gsti_log_info( "service `" );
-            _gsti_print_string( stderr, hd->service_name->d,
-                                hd->service_name->len );
+            _gsti_print_string( hd->service_name->d, hd->service_name->len );
             _gsti_log_info( "' has been started (client)\n" );
             hd->state = FSM_auth_start;
             break;

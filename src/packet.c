@@ -1,5 +1,6 @@
 /* packet.c - packet read/write
  *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -77,6 +78,7 @@ leave:
                         (u32)msglen );
 }
 
+
 static void
 print_debug_msg( const byte *msg, size_t msglen )
 {
@@ -109,6 +111,7 @@ print_debug_msg( const byte *msg, size_t msglen )
 
 leave:
     msglen = _gsti_buf_getlen( buf );
+    _gsti_buf_free( buf );
     if( msglen )
 	_gsti_log_info( "print_msg_debug: %lu bytes remaining\n",(u32)msglen );
 }
@@ -117,12 +120,13 @@ leave:
 void
 _gsti_packet_init( GSTIHD hd )
 {
-    if( !hd->pkt.payload ) {
+    if( hd && !hd->pkt.payload ) {
         hd->pkt.size = PKTBUFSIZE;
-        hd->pkt.packet_buffer = _gsti_malloc( hd->pkt.size + 5 );
+        hd->pkt.packet_buffer = _gsti_xmalloc( hd->pkt.size + 5 );
         hd->pkt.payload = hd->pkt.packet_buffer + 5;
     }
 }
+
 
 void
 _gsti_packet_free( GSTIHD hd )
@@ -143,23 +147,21 @@ generate_mac( GSTIHD hd, u32 seqno )
     byte buf[4];
     byte *p = hd->pkt.packet_buffer;
     size_t n = 5 + hd->pkt.payload_len + hd->pkt.padding_len;
-    size_t maclen = hd->mac_len;
 
     if( !hd->send_mac )
 	return 0; /* no MAC requested */
 
+    md = gcry_md_copy( hd->send_mac );
     buf[0] = seqno >> 24;
     buf[1] = seqno >> 16;
     buf[2] = seqno >>  8;
     buf[3] = seqno;
-
-    md = gcry_md_copy( hd->send_mac );
     gcry_md_write( md, buf, 4 );
     gcry_md_write( md, p, n );
     gcry_md_final( md );
-    memcpy( p + n, gcry_md_read( md, 0 ), maclen );
+    memcpy( p + n, gcry_md_read( md, 0 ), hd->mac_len );
     gcry_md_close( md );
-    return maclen;
+    return hd->mac_len;
 }
 
 /****************
@@ -169,22 +171,20 @@ static int
 verify_mac( GSTIHD hd, u32 seqno )
 {
     GCRY_MD_HD md;
+    byte buf[4];
     byte *p = hd->pkt.packet_buffer;
     size_t n = 5 + hd->pkt.payload_len + hd->pkt.padding_len;
-    size_t maclen = hd->mac_len;
     int rc;
-    byte buf[4];
 
+    md = gcry_md_copy( hd->recv_mac );
     buf[0] = seqno >> 24;
     buf[1] = seqno >> 16;
     buf[2] = seqno >>  8;
     buf[3] = seqno;
-
-    md = gcry_md_copy( hd->recv_mac );
     gcry_md_write( md, buf, 4 );
     gcry_md_write( md, p, n );
     gcry_md_final( md );
-    rc = !memcmp( p + n, gcry_md_read( md, 0 ), maclen );
+    rc = !memcmp( p + n, gcry_md_read( md, 0 ), hd->mac_len );
     gcry_md_close( md );
     return rc;
 }
@@ -198,33 +198,33 @@ int
 _gsti_packet_read( GSTIHD hd )
 {
     READ_STREAM rst = hd->read_stream;
-    ulong pktlen;
+    u32 pktlen, seqno;
+    size_t blksize, n, paylen, padlen, maclen;
+    byte *p;
     int rc;
-    size_t blocksize, n, paylen, padlen, maclen;
-    u32 seqno;
 
-    blocksize = hd->ciph_blksize? hd->ciph_blksize : 8;
+    blksize = hd->ciph_blksize? hd->ciph_blksize : 8;
     maclen = hd->recv_mac? hd->mac_len : 0;
  again:
     seqno = hd->recv_seqno++;
     /* read the first block so we can decipher the packet length */
-    rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer, blocksize );
+    rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer, blksize );
     if( rc )
 	return _gsti_log_rc( rc, "error reading packet header\n" );
 
     if( hd->decrypt_hd ) {
-	rc = gcry_cipher_decrypt( hd->decrypt_hd,
-				  hd->pkt.packet_buffer, blocksize, NULL, 0 );
+        p = hd->pkt.packet_buffer;
+	rc = gcry_cipher_decrypt( hd->decrypt_hd, p, blksize, NULL, 0 );
 	if( rc )
 	    return _gsti_log_rc( rc, "error decrypting first block\n" );
     }
 
-    _gsti_dump_hexbuf( "begin of packet: ", hd->pkt.packet_buffer, blocksize );
+    _gsti_dump_hexbuf( "begin of packet: ", hd->pkt.packet_buffer, blksize );
 
     pktlen = buftou32( hd->pkt.packet_buffer );
     /* FIXME: It should be 16 but NEWKEYS has 12 for some reason */
     if( pktlen < 12 ) /* minimum packet size as per secsh draft */
-	return _gsti_log_rc( GSTI_TOO_SHORT, "received pktlen %l \n",
+	return _gsti_log_rc( GSTI_TOO_SHORT, "received pktlen %lu \n",
                             (u32)pktlen );
     if( pktlen > MAX_PKTLEN )
 	return _gsti_log_rc( GSTI_TOO_LARGE, "received pktlen %lu\n",
@@ -240,14 +240,14 @@ _gsti_packet_read( GSTIHD hd )
     hd->pkt.payload_len = paylen = pktlen - padlen - 1;
 
     n = 5 + paylen + padlen;
-    if( (n % blocksize) )
+    if( (n % blksize) )
 	_gsti_log_rc( GSTI_INV_PKT, "length packet is not a "
-                      "multiple of the blocksize\n" );
+                      "multiple of the blksize\n" );
 
     /* read the rest of the packet */
     n = 4 + pktlen + maclen;
-    if( n >= blocksize )
-	n -= blocksize;
+    if( n >= blksize )
+	n -= blksize;
     else
 	n = 0; /* oops: rest of packet is too short */
 
@@ -256,38 +256,46 @@ _gsti_packet_read( GSTIHD hd )
                      (u32)hd->pkt.packet_len, (u32)hd->pkt.padding_len,
                      (u32)hd->pkt.payload_len, (u32)maclen, (u32)n );
 
-    rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer + blocksize, n );
+    rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer + blksize, n );
     if( rc )
 	return _gsti_log_rc( rc, "error reading rest of packet\n" );
     n -= maclen; /* don't want the maclen anymore */
     if( hd->decrypt_hd ) {
-	rc = gcry_cipher_decrypt( hd->decrypt_hd,
-				  hd->pkt.packet_buffer+blocksize, n,
-                                  NULL, 0 );
+        p = hd->pkt.packet_buffer + blksize;
+	rc = gcry_cipher_decrypt( hd->decrypt_hd, p, n, NULL, 0 );
 	if( rc )
-	    return _gsti_log_rc( rc,"decrypt failed\n" );
+	    return _gsti_log_rc( rc, "decrypt failed\n" );
 	/* note: there is no reason to decrypt the padding, but we do
            it anyway becuase this is easier */
-        _gsti_dump_hexbuf( "rest of packet: ",
-                           hd->pkt.packet_buffer + blocksize, n );
+        _gsti_dump_hexbuf("rest of packet: ",hd->pkt.packet_buffer+blksize, n);
     }
 
     if( hd->recv_mac && !verify_mac( hd, seqno ) )
 	return _gsti_log_rc( GSTI_INV_MAC, "wrong MAC\n" );
 
-    /* todo: uncompress if needed */
+    if( hd->zlib.use && !hd->zlib.init ) {
+        _gsti_decompress_init( );
+        hd->zlib.init = 1;
+    }
+    /* todo: do the uncompressions */
 
     hd->pkt.type = *hd->pkt.payload;
     _gsti_log_info( "received packet %lu of type %d\n",
                     (u32)seqno, hd->pkt.type );
 
-    if( hd->pkt.type == SSH_MSG_IGNORE )
-	goto again;
+    switch( hd->pkt.type ) {
+    case SSH_MSG_IGNORE:
+        goto again;
+        break;
 
-    if( hd->pkt.type == SSH_MSG_DEBUG )
+    case SSH_MSG_DEBUG:
 	print_debug_msg( hd->pkt.payload, hd->pkt.payload_len );
-    if( hd->pkt.type == SSH_MSG_DISCONNECT )
+        break;
+
+    case SSH_MSG_DISCONNECT:
 	print_disconnect_msg( hd->pkt.payload, hd->pkt.payload_len );
+        break;
+    }
 
     return 0;
 }
@@ -303,16 +311,17 @@ int
 _gsti_packet_write( GSTIHD hd )
 {
     WRITE_STREAM wst = hd->write_stream;
-    int rc;
-    int blocksize = 0;
     size_t n, padlen, paylen, maclen;
     u32 seqno = hd->send_seqno++;
+    byte *p;
+    int blksize;
+    int rc;
 
-    blocksize = hd->ciph_blksize? hd->ciph_blksize : 8;
-    hd->pkt.padding_len = blocksize - ((4 + 1 + hd->pkt.payload_len)
-                                       % blocksize );
+    blksize = hd->ciph_blksize? hd->ciph_blksize : 8;
+    hd->pkt.padding_len = blksize - ((4 + 1 + hd->pkt.payload_len)
+                                       % blksize );
     if( hd->pkt.padding_len < 4 )
-	hd->pkt.padding_len += blocksize;
+	hd->pkt.padding_len += blksize;
 
     if( hd->pkt.type == 0 )
         return GSTI_INV_PKT; /* make sure the type is set */
@@ -322,10 +331,14 @@ _gsti_packet_write( GSTIHD hd )
     _gsti_log_info( "sending packet %lu of type %d\n",
                     (u32)seqno, hd->pkt.type );
 
-    /* fixme: compress if needed */
+    if( hd->zlib.use && !hd->zlib.init ) {
+        _gsti_compress_init( );
+        hd->zlib.init = 1;
+    }
+    /* fixme: do the compression */
 
     /* construct header.  This must be a complete block, so
-     * the the encrypt function can handle it */
+       the the encrypt function can handle it */
     n = hd->pkt.packet_len;
     hd->pkt.packet_buffer[0] = n >> 24;
     hd->pkt.packet_buffer[1] = n >> 16;
@@ -340,10 +353,10 @@ _gsti_packet_write( GSTIHD hd )
 
     /* write the payload */
     n = 5 + paylen + padlen;
-    assert( !(n % blocksize) );
+    assert( !(n % blksize) );
     if( hd->encrypt_hd ) {
-	rc = gcry_cipher_encrypt( hd->encrypt_hd,
-				  hd->pkt.packet_buffer, n, NULL, 0 );
+        p = hd->pkt.packet_buffer;
+	rc = gcry_cipher_encrypt( hd->encrypt_hd, p, n, NULL, 0 );
 	if( rc )
 	    return rc;
     }
@@ -354,6 +367,7 @@ _gsti_packet_write( GSTIHD hd )
 
     return 0;
 }
+
 
 int
 _gsti_packet_flush( GSTIHD hd )

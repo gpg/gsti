@@ -84,7 +84,7 @@ enum {
 typedef struct {
     const char *name;
     int algid;
-    int blklen; /* for ciphers only */
+    int blksize; /* for ciphers only */
     int mode;   /* for ciphers only */
     int len;
 } algorithm_list;
@@ -92,7 +92,7 @@ typedef struct {
 
 typedef struct {
     byte cookie[16];
-    STRLIST kex_algorithm;
+    STRLIST kex_algo;
     STRLIST server_host_key_algos;
     STRLIST encr_algos_c2s;
     STRLIST encr_algos_s2c;

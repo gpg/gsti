@@ -1,5 +1,5 @@
 /* memory.c -  memory allocation wrappers
- *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *	Copyright (C) 1999, 2002 Free Software Foundation, Inc.
  *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
@@ -26,25 +26,41 @@
 
 #include "memory.h"
 
-
-void *
-_gsti_malloc( size_t n )
+static void
+out_of_core( void )
 {
-    return gcry_xmalloc( n );
+    fputs( "\nfatal: out of memory\n", stderr );
+    exit( 2 );
 }
 
 
 void *
-_gsti_calloc( size_t n, size_t m )
+_gsti_xmalloc( size_t n )
 {
-    return gcry_xcalloc( n, m );
+    void *p = gcry_xmalloc( n );
+    if( !p )
+        out_of_core();
+    return p;
 }
 
 
 void *
-_gsti_realloc( void *p, size_t n )
+_gsti_xcalloc( size_t n, size_t m )
 {
-    return gcry_realloc( p, n );
+    void *p = gcry_xcalloc( n, m );
+    if( !p )
+        out_of_core();
+    return p;
+}
+
+
+void *
+_gsti_xrealloc( void *p, size_t n )
+{
+    void *pp = gcry_realloc( p, n );
+    if( !pp )
+        out_of_core();
+    return pp;
 }
 
 
@@ -56,9 +72,12 @@ _gsti_free( void *p )
 
 
 char *
-_gsti_strdup( const char *string )
+_gsti_xstrdup( const char *string )
 {
-    return gcry_xstrdup( string );
+    char *p = gcry_xstrdup( string );
+    if( !p )
+        out_of_core();
+    return p;
 }
 
 
@@ -67,7 +86,7 @@ _gsti_strlist_insert( STRLIST head, const char *s )
 {
     STRLIST item;
 
-    item = _gsti_malloc( sizeof *item + strlen(s) );
+    item = _gsti_xmalloc( sizeof *item + strlen(s) );
     item->next = head;
     strcpy( item->d, s );
     return item;
@@ -89,7 +108,7 @@ _gsti_bstring_make( const byte *buffer, size_t length )
 {
     BSTRING a;
 
-    a = _gsti_malloc( sizeof *a + length - 1  );
+    a = _gsti_xmalloc( sizeof *a + length - 1  );
     a->len = length;
     if( buffer )
 	memcpy( a->d, buffer, length );

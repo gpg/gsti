@@ -24,10 +24,10 @@
 
 #include "types.h"
 
-void * _gsti_malloc( size_t n );
-void * _gsti_calloc( size_t n, size_t m );
-void * _gsti_realloc( void *p, size_t n );
-char * _gsti_strdup( const char* string );
+void * _gsti_xmalloc( size_t n );
+void * _gsti_xcalloc( size_t n, size_t m );
+void * _gsti_xrealloc( void *p, size_t n );
+char * _gsti_xstrdup( const char* string );
 void   _gsti_free( void * );
 
 STRLIST _gsti_strlist_insert( STRLIST head, const char *s );

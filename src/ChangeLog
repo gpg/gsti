@@ -32,6 +32,54 @@
 	* fsm.c (fsm_server_loop): Send the SSH_MSG_USERAUTH_PK_OK and
 	not the SSH_MSG_USERAUTH_SUCCESS twice.
 	(fsm_client_loop): Proc the new packets.
+	(pubkey.h): Prefix key context with gsti_.
+	
+2002-10-07  Timo Schulz  (ts@winpt.org)
+
+	* pubkey.c (read_dss_key): Store 'x' in secure memory.
+	* auth.c (parse_pkok_packet): New.
+	(auth_proc_pkok_packet): Use it here.
+	Check the data returned by the server.
+	* pubkey.c (_gsti_ssh_cmp_keys): New.
+	(_gsti_ssh_cmp_pkname): New.
+	* zlib.c: New. Taken from PuTTY. It's a MIT style license
+	and so it's compatible with the GPL. 
+	But we don't use compression by default.
+	* utils.h: Provide zlib prototypes or dummies.
+	* main.c (gsti_set_compression): New.
+	* kex.c (build_compress_list): New.
+	(kex_send_init_packet): Use it here.
+	
+2002-10-08  Timo Schulz  (ts@winpt.org)
+
+	* utils.c (_gsti_dump_object): Use the logging stuff and
+	not fprintf. Support to dump BUFFER's.
+	(_gsti_print_string): Removed the FILE* argument.
+	Changed all callers.
+	* buffer.c (_gsti_buf_putbstr): New.
+	* auth.c: Changed all _gsti_buf_putstr to _gsti_buf_putbstr.
+	* kex.c: Likewise.
+	* api.h: Created zlib struct inside GSTI handle.
+	* memory.c (_gsti_xmalloc): Implemented common xfoo memory
+	wrapper so they fail when there is a memory problem.
+	(_gsti_xrealloc): Ditto.
+	(_gsti_xcalloc): Ditto.
+	(_gsti_xstrdup): Ditto.
+	
+2002-10-19  Timo Schulz  (ts@winpt.org)
+
+	* pubkey.c (pktype_from_file): New.
+	(gsti_key_load): Use it here and remove the pktype param.
+	* packet.c (print_debug_msg): Free buffer.
+	* moduli.h: New. Contains various modulus values for the
+	DH group exchange method.
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

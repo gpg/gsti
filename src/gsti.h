@@ -1,4 +1,4 @@
-/* gsti.h -  GNU Secure Transport Initiative
+/* gsti.h -  GNU Secure Transport Initiative (gsti)
  *	Copyright (C) 1999, 2000 Free Software Foundation, Inc.
  *      Copyright (C) 2002 Timo Schulz
  *
@@ -53,13 +53,13 @@ enum {
     GSTI_TOO_LARGE     =  8,	 /* .. too long */
     GSTI_READ_ERROR    =  9,
     GSTI_WRITE_ERROR   = 10,
-    GSTI_INV_PKT       = 11,       /* invalid packet */
-    GSTI_INV_OBJ       = 12,       /* invalid object */
-    GSTI_INV_MAC       = 13,       /* invalid (bad) mac */
-    GSTI_PROT_VIOL     = 14,       /* protocol violation detected */
+    GSTI_INV_PKT       = 11,     /* invalid packet */
+    GSTI_INV_OBJ       = 12,     /* invalid object */
+    GSTI_INV_MAC       = 13,     /* invalid (bad) mac */
+    GSTI_PROT_VIOL     = 14,     /* protocol violation detected */
     GSTI_BAD_SIGNATURE = 15,
     GSTI_FILE          = 16,
-    GSTI_NOT_IMPL      = 17,       /* not implemented */
+    GSTI_NOT_IMPL      = 17,     /* not implemented */
 };
 
 enum gsti_ctl_cmds {
@@ -112,7 +112,7 @@ typedef struct gsti_context* GSTIHD;
 /* some handy types */
 typedef int (*GSTI_READ_FNC)( GSTIHD, void*, size_t* );
 typedef int (*GSTI_WRITE_FNC)( GSTIHD, const void*, size_t );
-
+typedef void (*GSTI_LOG_FNC)( void *, int, const char *, va_list );
 
 typedef struct {
     size_t datalen;
@@ -120,14 +120,17 @@ typedef struct {
     unsigned long seqno;
 } GSTI_PKTDESC;
 
-struct key_context_s;
-typedef struct key_context_s *GSTI_KEY;
+struct gsti_key_s;
+typedef struct gsti_key_s *GSTI_KEY;
 
 
 /*-- main.c --*/
+/* general */
 const char *gsti_check_version( const char *req_version );
 void gsti_control( enum gsti_ctl_cmds ctl );
-    
+const char *gsti_strerror( int ec );
+
+/* api */
 GSTIHD gsti_init( void );
 int gsti_deinit( GSTIHD hd );
 int gsti_set_readfnc( GSTIHD hd, GSTI_READ_FNC readfnc );
@@ -139,10 +142,11 @@ int gsti_set_hostkey( GSTIHD hd, const char *file );
 int gsti_set_client_key( GSTIHD hd, const char *file );
 int gsti_set_client_user( GSTIHD hd, const char *user );
 int gsti_set_auth_method( GSTIHD hd, int methd );
-void gsti_set_log_handler( void (*logf)( void *, int, const char *, va_list ),
-                           void *opaque );
+int gsti_set_compression( GSTIHD hd, int val );
+
+/* logging */
+void gsti_set_log_handler( GSTI_LOG_FNC logfnc, void *opaque );
 void gsti_set_log_level( int level );
-const char *gsti_strerror( int ec );    
 
 
 /*-- fsm.c --*/
@@ -151,7 +155,7 @@ int gsti_put_packet( GSTIHD hd, GSTI_PKTDESC *pkt );
 
 
 /*-- pubkey.c --*/
-int gsti_key_load( const char *file,int pktype, int keytype, GSTI_KEY *r_ctx );
+int gsti_key_load( const char *file, int keytype, GSTI_KEY *r_ctx );
 unsigned char* gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo );
 void gsti_key_free( GSTI_KEY ctx );
 

@@ -92,10 +92,10 @@ sexp_from_buffer( GCRY_SEXP *r_a, const byte *buf, size_t buflen )
     int rc;
 
     rc = gcry_mpi_scan( &a, GCRYMPI_FMT_USG, buf, &buflen );
-    if( rc )
-        return map_gcry_rc( rc );
-    rc = gcry_sexp_build( &s_a, NULL, "%m", a );
-    gcry_mpi_release( a );
+    if( !rc )
+        rc = gcry_sexp_build( &s_a, NULL, "%m", a );
+    if( !rc )
+        gcry_mpi_release( a );
     *r_a = s_a;
     return map_gcry_rc( rc );
 }
@@ -250,18 +250,17 @@ read_dss_key( FILE *fp, int keytype, GSTI_KEY ctx )
     for( i = 0; i < n; i++ ) {
         rc = read_bstring( fp, 1, &a );
         if( rc )
-            break;
+            return rc;
         ctx->key[i] = bstring_to_sshmpi( a );
         _gsti_bstring_free( a );
     }
-    if( !rc )
-        ctx->type = SSH_PK_DSS;
-    if( !rc )
-        ctx->nkey = n;
-    if( !rc )
-        ctx->secret = keytype? 1 : 0;
-
-    return rc;
+    /* if the key also contains a secret key, set the secure flag for'x' */
+    if( keytype )
+        gcry_mpi_set_flag( ctx->key[n-1], GCRYMPI_FLAG_SECURE );
+    ctx->type = SSH_PK_DSS;
+    ctx->nkey = n;
+    ctx->secret = keytype? 1 : 0;
+    return 0;
 }
 
 
@@ -271,7 +270,7 @@ parse_key_entry( FILE *fp, int pktype, int keytype, GSTI_KEY *r_ctx )
     GSTI_KEY ctx;
     int rc;
 
-    ctx = _gsti_calloc( 1, sizeof *ctx );
+    ctx = _gsti_xcalloc( 1, sizeof *ctx );
     ctx->type = SSH_PK_NONE;
     switch( pktype ) {
     case SSH_PK_DSS: rc = read_dss_key( fp, keytype, ctx ); break;
@@ -282,24 +281,77 @@ parse_key_entry( FILE *fp, int pktype, int keytype, GSTI_KEY *r_ctx )
     return rc;
 }
 
+
+static int
+pktype_from_file( FILE *fp )
+{
+    BSTRING a;
+    int rc, type;
+    
+    rc = read_bstring( fp, 0, &a );
+    fseek( fp, 0, SEEK_SET );
+    if( rc )
+        return 0;
+    if( a->len == 7 || !strcmp( a->d, "ssh-dss" ) )
+        type = SSH_PK_DSS;
+    else
+        type = 0;
+    _gsti_bstring_free( a );
+    return type;
+}    
+    
+
 /****************
  * Read a public key from the given file.
  * The file only expect that the file contains one key and as a result,
  * only the first record will be read!
  */
 int
-gsti_key_load( const char *file, int pktype, int keytype, GSTI_KEY *r_ctx )
+gsti_key_load( const char *file, int keytype, GSTI_KEY *r_ctx )
 {
     FILE *inp;
-    int rc;
+    int rc, pktype;
 
     inp = fopen( file, "r" );
     if( !inp )
         return GSTI_FILE;
+    pktype = pktype_from_file( inp );
     rc = parse_key_entry( inp, pktype, keytype, r_ctx );
     fclose( inp );
     return rc;
 }
+
+
+int
+_gsti_ssh_cmp_pkname( int pktype, const char *name, size_t len )
+{
+    const char *s;
+    
+    if( pktype > SSH_PK_DSS )
+        return GSTI_INV_OBJ;
+    s = pk_table[pktype].algname;
+    if( strlen( s ) != len )
+        return GSTI_INV_OBJ;
+    if( strncmp( pk_table[pktype].algname, name, strlen( s ) ) )
+        return GSTI_INV_OBJ;
+    return 0;
+}
+
+
+int
+_gsti_ssh_cmp_keys( GSTI_KEY a, GSTI_KEY b )
+{
+    size_t n;
+    
+    if( a->type != b->type )
+        return GSTI_INV_OBJ;
+    for( n = 0; n < a->nkey; n++ ) {
+        if( gcry_mpi_cmp( a->key[n], b->key[n] ) )
+            return GSTI_INV_OBJ;
+    }
+    return 0;
+}
+
 
 byte *
 _gsti_ssh_get_pkname( int pktype, int asbstr, size_t *r_n )
@@ -308,13 +360,13 @@ _gsti_ssh_get_pkname( int pktype, int asbstr, size_t *r_n )
     size_t len, n = 0;
     byte *p;
 
-    if( pktype > 1 )
+    if( pktype > SSH_PK_DSS )
         return NULL;
     s = pk_table[pktype].algname;
     len = strlen( s );
     if( asbstr )
         n = 4;
-    p = _gsti_malloc( n + len + 1 );
+    p = _gsti_xmalloc( n + len + 1 );
     if( asbstr ) {
         p[0] = len >> 24;
         p[1] = len >> 16;
@@ -364,7 +416,7 @@ _gsti_key_fromblob( BSTRING blob )
         rc = GSTI_BUG;
         goto leave; /* not supported */
     }
-    pk = _gsti_calloc( 1, sizeof *pk );
+    pk = _gsti_xcalloc( 1, sizeof *pk );
     pk->secret = 0;
     for( i = 0; i < pkalgo_get_nkey( 0, p ); i++ ) {
         rc = _gsti_buf_getmpi( buf, &pk->key[i], &n );
@@ -428,7 +480,7 @@ gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo )
             gcry_md_write( hd, buf, n );
     }
     gcry_md_final( hd );
-    hash = gcry_malloc( dlen + 1 );
+    hash = gcry_xmalloc( dlen + 1 );
     hash[dlen] = 0;
     memcpy( hash, gcry_md_read( hd, 0 ), dlen );
     gcry_md_close( hd );
