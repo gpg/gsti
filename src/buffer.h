@@ -49,27 +49,6 @@ struct gsti_buffer
 typedef struct gsti_buffer *gsti_buffer_t;
 
 
-void _gsti_buf_init (gsti_buffer_t *r_buf);
-void _gsti_buf_set (gsti_buffer_t *r_buf, const byte * buf, size_t blen);
-void _gsti_buf_free (gsti_buffer_t buf);
-size_t _gsti_buf_getlen (gsti_buffer_t buf);
-void *_gsti_buf_getptr (gsti_buffer_t buf);
-void _gsti_buf_putint (gsti_buffer_t buf, u32 val);
-unsigned _gsti_buf_getint (gsti_buffer_t buf);
-void _gsti_buf_putstr (gsti_buffer_t buf, const byte *data, size_t data_len);
-byte *_gsti_buf_getstr (gsti_buffer_t buf, size_t * r_n);
-gsti_error_t _gsti_buf_putmpi (gsti_buffer_t buf, gcry_mpi_t a);
-gsti_error_t _gsti_buf_getmpi (gsti_buffer_t buf, gcry_mpi_t * ret_a,
-			       size_t * r_n);
-gsti_error_t _gsti_buf_getbstr (gsti_buffer_t buf, gsti_bstr_t * r_bstr);
-void _gsti_buf_putbstr (gsti_buffer_t buf, gsti_bstr_t bstr);
-void _gsti_buf_putc (gsti_buffer_t buf, int val);
-int _gsti_buf_getc (gsti_buffer_t buf);
-void _gsti_buf_putraw (gsti_buffer_t buf, const byte *data, size_t data_len);
-int _gsti_buf_getraw (gsti_buffer_t buf, byte *data, size_t reqlen);
-void _gsti_buf_dump (gsti_buffer_t buf);
-
-
 /* Allocate a new buffer and return it in R_BUF.  */
 gpg_error_t gsti_buf_alloc (gsti_buffer_t *r_buf);
 
