@@ -293,6 +293,10 @@ typedef void (*gsti_channel_win_adj_cb_t)
      (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *win_adj_cb_value,
       gsti_uint32_t new_window_size);
 
+/* This callback is invoked when EOF for this channel is received.  */
+typedef void (*gsti_channel_eof_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *eof_cb_value);
+
 /* This callback is invoked when the channel is closed.  After this
    callback returns, the channel ID becomes invalid.  */
 typedef void (*gsti_channel_close_cb_t)
@@ -334,6 +338,8 @@ gsti_error_t gsti_channel_open (gsti_ctx_t ctx, gsti_uint32_t *channel_id,
 				void *request_cb_value,
 				gsti_channel_win_adj_cb_t win_adj_cb,
 				void *win_adj_cb_value,
+				gsti_channel_eof_cb_t eof_cb,
+				void *eof_cb_value,
 				gsti_channel_close_cb_t close_cb,
 				void *close_cb_value);
 
@@ -367,6 +373,12 @@ gsti_error_t gsti_channel_window_adjust (gsti_ctx_t ctx,
 					 gsti_uint32_t channel_id,
 					 gsti_uint32_t bytes_to_add);
 
+/* Send End-Of-File for this channel.  This should be done after
+   sending the last byte (if the channel was not closed yet).  After
+   this, no data may be sent over the channel anymore by us.  However,
+   data from the other side may still be received.  */
+gsti_error_t gsti_channel_eof (gsti_ctx_t ctx, gsti_uint32_t channel_id);
+
 
 /* Channel receiver side.  */
 
@@ -378,6 +390,7 @@ typedef gsti_error_t (*gsti_channel_open_cb_t)
       gsti_channel_read_cb_t *read_cb, void **read_cb_value,
       gsti_channel_request_cb_t *request_cb, void **request_cb_value,
       gsti_channel_win_adj_cb_t *win_adj_cb, void **win_adj_cb_value,
+      gsti_channel_eof_cb_t *eof_cb, void **eof_cb_value,
       gsti_channel_close_cb_t *close_cb, void **close_cb_value);
 
 

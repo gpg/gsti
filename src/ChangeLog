@@ -1,3 +1,22 @@
+2004-06-29  Marcus Brinkmann  <marcus@g10code.de>
+
+	* gsti.h (gsti_channel_eof): New prototype.
+	(gsti_channel_eof_cb_t): New type definition.
+	(gsti_channel_open): Add new EOF callback arguments.
+	(gsti_channel_open_cb_t): Likewise.
+	* channel.c: Add new EOF callback arguments where missing.
+	(ssh_msg_channel_eof_S): New function.
+	(gsti_channel_write): Check CHANNEL->eof.
+	(ssh_msg_channel_eof): New function.
+	(ssh_msg_channel_eof_t): New type.
+	(gsti_channel_eof): New function.
+	(struct gsti_channel): Add new EOF callback members.
+	(ssh_msg_channel_close): New function.
+	(ssh_msg_channel_close_t): New type.
+	(ssh_msg_channel_close_S): New function.
+	(_gsti_handle_channel_packet): Handle SSH_MSG_CHANNEL_EOF and
+	SSH_MSG_CHANNEL_CLOSE.
+
 2004-06-21  Timo Schulz  <twoaday@g10code.de>
 
 	* ssh.h: Add SSH Group Exchange constants.

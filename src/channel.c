@@ -104,6 +104,10 @@ struct gsti_channel
   gsti_channel_win_adj_cb_t win_adj_cb;
   void *win_adj_cb_value;
 
+  /* The EOF callback for this channel.  */
+  gsti_channel_eof_cb_t eof_cb;
+  void *eof_cb_value;
+
   /* The close callback for this channel.  */
   gsti_channel_close_cb_t close_cb;
   void *close_cb_value;
@@ -650,6 +654,8 @@ ssh_msg_channel_open_S (gsti_ctx_t ctx)
 			       &channel->request_cb_value,
 			       &channel->win_adj_cb,
 			       &channel->win_adj_cb_value,
+			       &channel->eof_cb,
+			       &channel->eof_cb_value,
 			       &channel->close_cb,
 			       &channel->close_cb_value);
 
@@ -860,6 +866,175 @@ ssh_msg_channel_data_S (gsti_ctx_t ctx)
   return 0;
 }
 
+
+/* The SSH_MSG_CHANNEL_EOF message, sender side.  */
+static gsti_error_t
+ssh_msg_channel_eof (gsti_ctx_t ctx, gsti_uint32_t recipient_channel)
+{
+  gsti_error_t err;
+  gsti_buffer_t buf;
+  size_t buflen;
+
+  /* Build message.  */
+  err = gsti_buf_alloc (&buf);
+  if (err)
+    return err;
+
+  err = gsti_buf_putbyte (buf, SSH_MSG_CHANNEL_EOF);
+  if (!err)
+    err = gsti_buf_putuint32 (buf, recipient_channel);
+  if (err)
+    {
+      gsti_buf_free (buf);
+      return err;
+    }
+
+  /* Protect against buffer overflow.  */
+  buflen = gsti_buf_readable (buf);
+  if (buflen > ctx->pkt.size)
+    {
+      gsti_buf_free (buf);
+      return gsti_error (GPG_ERR_TOO_LARGE);
+    }
+
+  /* Set up the packet.  */
+  ctx->pkt.type = SSH_MSG_CHANNEL_EOF;
+  ctx->pkt.payload_len = buflen;
+  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
+  assert (!err);
+  gsti_buf_free (buf);
+
+  /* Send the packet.  */
+  err = _gsti_packet_write (ctx);
+  if (!err)
+    err = _gsti_packet_flush (ctx);
+
+  return err;
+}
+
+
+typedef struct
+{
+  unsigned int recipient_channel;
+} ssh_msg_channel_eof_t;
+
+
+static gsti_error_t
+ssh_msg_channel_eof_S (gsti_ctx_t ctx)
+{
+  gsti_error_t err;
+  ssh_msg_channel_data_t chan_data;
+  gsti_channel_t channel;
+
+  err = gsti_buf_getuint32 (ctx->pktbuf, &chan_data.recipient_channel);
+
+  channel = channel_lookup (ctx, chan_data.recipient_channel);
+  if (!channel || (channel->state != GSTI_CHANNEL_STATE_OPEN
+		   && channel->state != GSTI_CHANNEL_STATE_CLOSED)
+      || channel->rec_eof)
+
+    {
+      /* FIXME: Should we ignore the problem?  */
+      return 0;
+    }
+
+  /* Set the recipient EOF flag for this channel.  */
+  channel->rec_eof = 1;
+
+  /* Inform the user about it.  */
+  (*channel->eof_cb) (ctx, channel->sender_channel, channel->eof_cb_value);
+  
+  return 0;
+}
+
+
+/* The SSH_MSG_CHANNEL_CLOSE message, sender side.  */
+static gsti_error_t
+ssh_msg_channel_close (gsti_ctx_t ctx, gsti_uint32_t recipient_channel)
+{
+  gsti_error_t err;
+  gsti_buffer_t buf;
+  size_t buflen;
+
+  /* Build message.  */
+  err = gsti_buf_alloc (&buf);
+  if (err)
+    return err;
+
+  err = gsti_buf_putbyte (buf, SSH_MSG_CHANNEL_CLOSE);
+  if (!err)
+    err = gsti_buf_putuint32 (buf, recipient_channel);
+  if (err)
+    {
+      gsti_buf_free (buf);
+      return err;
+    }
+
+  /* Protect against buffer overflow.  */
+  buflen = gsti_buf_readable (buf);
+  if (buflen > ctx->pkt.size)
+    {
+      gsti_buf_free (buf);
+      return gsti_error (GPG_ERR_TOO_LARGE);
+    }
+
+  /* Set up the packet.  */
+  ctx->pkt.type = SSH_MSG_CHANNEL_CLOSE;
+  ctx->pkt.payload_len = buflen;
+  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
+  assert (!err);
+  gsti_buf_free (buf);
+
+  /* Send the packet.  */
+  err = _gsti_packet_write (ctx);
+  if (!err)
+    err = _gsti_packet_flush (ctx);
+
+  return err;
+}
+
+
+typedef struct
+{
+  unsigned int recipient_channel;
+} ssh_msg_channel_close_t;
+
+
+static gsti_error_t
+ssh_msg_channel_close_S (gsti_ctx_t ctx)
+{
+  gsti_error_t err;
+  ssh_msg_channel_data_t chan_data;
+  gsti_channel_t channel;
+
+  err = gsti_buf_getuint32 (ctx->pktbuf, &chan_data.recipient_channel);
+
+  channel = channel_lookup (ctx, chan_data.recipient_channel);
+  if (!channel)
+    {
+      /* FIXME: Should we ignore the problem?  */
+      return 0;
+    }
+
+  /* The channel was closed by the other side.  If it is not yet closed by us,
+     we must do so.  */
+  if (channel->state != GSTI_CHANNEL_STATE_CLOSED)
+    {
+      err = ssh_msg_channel_close (ctx, channel->recipient_channel);
+      if (err)
+	return err;
+
+      channel->state = GSTI_CHANNEL_STATE_CLOSED;
+    }
+
+  /* Inform the user about it.  */
+  (*channel->close_cb) (ctx, channel->sender_channel, channel->close_cb_value);
+
+  /* Now we are free to destroy the channel object.  */
+  channel_dealloc (ctx, channel);
+
+  return 0;
+}
 
 
 gsti_error_t
@@ -890,6 +1065,12 @@ _gsti_handle_channel_packet (gsti_ctx_t ctx)
     case SSH_MSG_CHANNEL_DATA:
       return ssh_msg_channel_data_S (ctx);
 
+    case SSH_MSG_CHANNEL_EOF:
+      return ssh_msg_channel_eof_S (ctx);
+
+    case SSH_MSG_CHANNEL_CLOSE:
+      return ssh_msg_channel_close_S (ctx);
+
     default:
       ;	/* Ignore.  */
     }
@@ -913,6 +1094,8 @@ gsti_channel_open (gsti_ctx_t ctx, gsti_uint32_t *channel_id,
 		   void *request_cb_value,
 		   gsti_channel_win_adj_cb_t win_adj_cb,
 		   void *win_adj_cb_value,
+		   gsti_channel_eof_cb_t eof_cb,
+		   void *eof_cb_value,
 		   gsti_channel_close_cb_t close_cb,
 		   void *close_cb_value)
 {
@@ -934,6 +1117,8 @@ gsti_channel_open (gsti_ctx_t ctx, gsti_uint32_t *channel_id,
   channel->request_cb_value = request_cb_value;
   channel->win_adj_cb = win_adj_cb;
   channel->win_adj_cb_value = win_adj_cb_value;
+  channel->eof_cb = eof_cb;
+  channel->eof_cb_value = eof_cb_value;
   channel->close_cb = close_cb;
   channel->close_cb_value = close_cb_value;
 
@@ -960,7 +1145,8 @@ gsti_channel_write (gsti_ctx_t ctx, gsti_uint32_t channel_id,
   gsti_error_t err;
   gsti_channel_t channel = channel_lookup (ctx, channel_id);
 
-  if (!channel || channel->state != GSTI_CHANNEL_STATE_OPEN)
+  if (!channel || channel->state != GSTI_CHANNEL_STATE_OPEN
+      || channel->eof)
     return gsti_error (GPG_ERR_INV_ARG);
 
   /* FIXME: The check for the maximum packet size includes the five
@@ -999,6 +1185,48 @@ gsti_channel_window_adjust (gsti_ctx_t ctx, gsti_uint32_t channel_id,
 				       bytes_to_add);
   if (!err)
     channel->window_size += bytes_to_add;
+
+  return err;
+}
+
+
+/* Send End-Of-File for this channel.  This should be done after
+   sending the last byte (if the channel was not closed yet).  After
+   this, no data may be sent over the channel anymore by us.  However,
+   data from the other side may still be received.  */
+gsti_error_t
+gsti_channel_eof (gsti_ctx_t ctx, gsti_uint32_t channel_id)
+{
+  gsti_error_t err;
+  gsti_channel_t channel = channel_lookup (ctx, channel_id);
+
+  if (!channel || (channel->state != GSTI_CHANNEL_STATE_OPEN
+		   && channel->state != GSTI_CHANNEL_STATE_CLOSED)
+      || channel->eof)
+    return gsti_error (GPG_ERR_INV_ARG);
+
+  err = ssh_msg_channel_eof (ctx, channel->recipient_channel);
+  if (!err)
+    channel->eof = 1;
+
+  return err;
+}
+
+
+/* Send request to close the channel.  */
+gsti_error_t
+gsti_channel_close (gsti_ctx_t ctx, gsti_uint32_t channel_id)
+{
+  gsti_error_t err;
+  gsti_channel_t channel = channel_lookup (ctx, channel_id);
+
+  if (!channel || channel->state != GSTI_CHANNEL_STATE_OPEN)
+    return gsti_error (GPG_ERR_INV_ARG);
+
+  err = ssh_msg_channel_close (ctx, channel->recipient_channel);
+
+  if (!err)
+    channel->state = GSTI_CHANNEL_STATE_CLOSED;
 
   return err;
 }
