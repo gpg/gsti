@@ -1,0 +1,13 @@
+2002-10-05  Timo Schulz  (ts@winpt.org)
+
+	* kex.c (kex_send_init_packet): Fixed memory leak.
+	* main.c (gsti_deinit): Free auth struct.
+	* api.h: Added auth struct to the GSTI struct.
+	* auth.c (auth_send_init_packet): New.
+	(auth_proc_init_packet): New.
+	* utils.c (_gsti_bstring_hash): Moved from kex.c and
+	renamed from hash_bstring. Now it's global.
+	
+	
+	
+	

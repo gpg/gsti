@@ -99,6 +99,12 @@ struct gsti_context {
     char *hostkey_file;
     GSTI_KEY hostkey;
 
+    struct {
+        unsigned int used:1;
+        GSTI_KEY peer_pk;
+        char *user;
+    } auth;
+
     unsigned long id;
 };
 

@@ -231,6 +231,8 @@ gsti_deinit( GSTIHD hd )
     gcry_cipher_close( hd->encrypt_hd );
     gcry_cipher_close( hd->decrypt_hd );
     gsti_key_free( hd->hostkey );
+    gsti_key_free( hd->auth.peer_pk );
+    _gsti_free( hd->auth.user );
     _gsti_packet_free( hd );
     _gsti_free( hd );
     return 0;

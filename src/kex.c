@@ -545,22 +545,6 @@ hash_mpi( GCRY_MD_HD md, GCRY_MPI a )
 }
 
 
-static void
-hash_bstring( GCRY_MD_HD md, BSTRING a )
-{
-    byte buf[4];
-    size_t n = a->len;
-
-    buf[0] = n >> 24;
-    buf[1] = n >> 16;
-    buf[2] = n >>  8;
-    buf[3] = n;
-    gcry_md_write( md, buf, 4 );
-    gcry_md_write( md, a->d, n );
-}
-
-
-
 static GCRY_MPI
 calc_dh_key( GCRY_MPI f, GCRY_MPI x )
 {
@@ -595,20 +579,20 @@ calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
         return map_gcry_rc( gcry_errno() );
 
     if( hd->we_are_server ) {
-        hash_bstring( md, hd->peer_version_string );
+        _gsti_bstring_hash( md, hd->peer_version_string );
         pp = _gsti_bstring_make( ver, strlen( ver ) );
-        hash_bstring( md, pp );
+        _gsti_bstring_hash( md, pp );
         _gsti_free( pp );
     }
     else {
         pp = _gsti_bstring_make( ver, strlen( ver ) );
-        hash_bstring( md, pp );
+        _gsti_bstring_hash( md, pp );
         _gsti_free( pp );
-        hash_bstring( md, hd->peer_version_string );
+        _gsti_bstring_hash( md, hd->peer_version_string );
     }
-    hash_bstring( md, i_c );
-    hash_bstring( md, i_s );
-    hash_bstring( md, k_s );
+    _gsti_bstring_hash( md, i_c );
+    _gsti_bstring_hash( md, i_s );
+    _gsti_bstring_hash( md, k_s );
     hash_mpi( md, e );
     hash_mpi( md, f );
     hash_mpi( md, hd->kex.k );
@@ -750,9 +734,8 @@ kex_send_init_packet( GSTIHD hd )
     kex.compr_algos_c2s = _gsti_strlist_insert( NULL, "none" );
     kex.compr_algos_s2c = _gsti_strlist_insert( NULL, "none" );
     rc = build_msg_kexinit( &kex, &hd->pkt );
-    if( rc )
-        return rc;
-    rc = _gsti_packet_write( hd );
+    if( !rc )
+        rc = _gsti_packet_write( hd );
     if( rc ) {
         free_msg_kexinit( &kex );
         return rc;
@@ -935,7 +918,7 @@ kex_send_kexdh_reply( GSTIHD hd )
     gcry_mpi_release( hd->kexdh_e );
     if( rc )
         return rc;
-    dhr.sig_h = _gsti_sig_encode( hd->hostkey_file, hd->kex.h->d );
+    dhr.sig_h = _gsti_sig_encode( hd->hostkey, hd->kex.h->d );
 
     rc = build_msg_kexdh_reply( &dhr, &hd->pkt );
     if( !rc )

@@ -30,6 +30,8 @@ enum {
     TYPE_BSTRING = 4
 };
 
+void _gsti_bstring_hash( GCRY_MD_HD md, BSTRING a );
+
 STRLIST _gsti_algolist_parse( const byte *string, size_t length );
 size_t _gsti_algolist_build( byte *buffer, size_t length, STRLIST list );
 int _gsti_algolist_find( STRLIST list, const char *algo );

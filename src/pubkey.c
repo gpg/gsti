@@ -89,10 +89,9 @@ sexp_from_buffer( GCRY_SEXP *r_a, const byte *buf, size_t buflen )
 {
     GCRY_SEXP s_a;
     GCRY_MPI a;
-    size_t n = buflen;
     int rc;
 
-    rc = gcry_mpi_scan( &a, GCRYMPI_FMT_USG, buf, &n );
+    rc = gcry_mpi_scan( &a, GCRYMPI_FMT_USG, buf, &buflen );
     if( rc )
         return map_gcry_rc( rc );
     rc = gcry_sexp_build( &s_a, NULL, "%m", a );
@@ -208,7 +207,7 @@ read_bstring( FILE *fp, int ismpi, BSTRING *r_a )
     }
     else
         n = 0;
-    /*_gsti_log_info( "got string with a length of %d\n", len );*/
+    _gsti_log_debug( "got string with a length of %d\n", len );
     while( len-- )
         a->d[n++] = fgetc( fp );
     *r_a = a;
@@ -302,8 +301,8 @@ gsti_key_load( const char *file, int pktype, int keytype, GSTI_KEY *r_ctx )
     return rc;
 }
 
-static byte *
-get_sshkeyname( int pktype, int asbstr, size_t *r_n )
+byte *
+_gsti_ssh_get_pkname( int pktype, int asbstr, size_t *r_n )
 {
     const char *s;
     size_t len, n = 0;
@@ -362,6 +361,7 @@ _gsti_key_fromblob( BSTRING blob )
     p = _gsti_buf_getstr( buf, &n );
     if( n != 7 || strcmp( p, "ssh-dss" ) ) {
         _gsti_free( p );
+        rc = GSTI_BUG;
         goto leave; /* not supported */
     }
     pk = _gsti_calloc( 1, sizeof *pk );
@@ -392,7 +392,7 @@ _gsti_key_getblob( GSTI_KEY pk )
     if( !pk || pk->type > 1 )
         return _gsti_bstring_make( NULL, 4 );
     _gsti_buf_init( &buf );
-    p = get_sshkeyname( pk->type, 0, &n );
+    p = _gsti_ssh_get_pkname( pk->type, 0, &n );
     _gsti_buf_putstr( buf, p, n );
     for( n = 0; n < pk_table[pk->type].nkey; n++ )
         _gsti_buf_putmpi( buf, pk->key[n] );
@@ -414,11 +414,13 @@ gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo )
     size_t n = sizeof buf -1;
     int i, dlen;
 
+    name = _gsti_ssh_get_pkname( ctx->type, 1, &n );
+    if( !name )
+        return NULL;
+    dlen = gcry_md_get_algo_dlen( mdalgo );
     hd = gcry_md_open( mdalgo, 0 );
     if( !hd )
         return NULL;
-    dlen = gcry_md_get_algo_dlen( mdalgo );
-    name = get_sshkeyname( ctx->type, 1, &n );
     gcry_md_write( hd, name, n );
     for( i = 0; i < pkalgo_get_nkey( ctx->type, NULL ); i++ ) {
         n = sizeof buf -1;
@@ -492,9 +494,8 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
 
 
 BSTRING
-_gsti_sig_encode( const char *file, const byte *hash  )
+_gsti_sig_encode( GSTI_KEY sk, const byte *hash  )
 {
-    GSTI_KEY sk;
     GCRY_MPI sig[2];
     BUFFER buf;
     BSTRING a;
@@ -502,20 +503,14 @@ _gsti_sig_encode( const char *file, const byte *hash  )
     size_t n, n2;
     int rc;
 
-    if( !file )
+    if( !sk )
         return _gsti_bstring_make( NULL, 4 );
-    rc = gsti_key_load( file, GSTI_PK_DSS, 1, &sk );
-    if( rc ) {
-        _gsti_log_info( "could not load secret key\n" );
-        return NULL;
-    }
     rc = _gsti_dss_sign( sk, hash, sig );
-    gsti_key_free( sk );
     if( rc ) {
         _gsti_log_info( "signing failed rc=%d\n", rc );
         return NULL;
     }
-    p = get_sshkeyname( GSTI_PK_DSS, 0, &n );
+    p = _gsti_ssh_get_pkname( sk->type, 0, &n );
     _gsti_buf_init( &buf );
     _gsti_buf_putstr( buf, p, n );
     n = sizeof buffer -1;

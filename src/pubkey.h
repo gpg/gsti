@@ -39,10 +39,11 @@ int _gsti_dss_verify( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] );
 BSTRING _gsti_key_getblob( GSTI_KEY pk );
 GSTI_KEY _gsti_key_fromblob( BSTRING blob );
 
-BSTRING _gsti_sig_encode( const char *file, const byte *hash  );
+BSTRING _gsti_sig_encode( GSTI_KEY sk, const byte *hash  );
 int _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash,
                       GSTI_KEY *r_pk );
 
+byte * _gsti_ssh_get_pkname( int pktype, int asbstr, size_t *r_n );
 
 #endif /*GSTI_PUBKEY_H*/
 

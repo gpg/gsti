@@ -156,6 +156,8 @@ _gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
 {
     if( _gsti_get_log_level() != GSTI_LOG_DEBUG )
         return;
+    if( !opaque )
+        return;
     switch( type ) {
     case TYPE_HEXBUF:
     {
@@ -195,3 +197,19 @@ _gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
     }
     }
 }
+
+void
+_gsti_bstring_hash( GCRY_MD_HD md, BSTRING a )
+{
+    byte buf[4];
+    size_t n = a->len;
+
+
+    buf[0] = n >> 24;
+    buf[1] = n >> 16;
+    buf[2] = n >>  8;
+    buf[3] = n;
+    gcry_md_write( md, buf, 4 );
+    gcry_md_write( md, a->d, n );
+}
+
