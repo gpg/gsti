@@ -22,9 +22,10 @@
 #ifndef _GSTI_H
 #define _GSTI_H
 #ifdef __cplusplus
-extern "C" {
-#if 0 /* keep Emacsens's auto-indent happy */
-}
+extern "C"
+{
+#if 0
+}				/*(keep Emacs' auto-indent happy) */
 #endif
 #endif
 
@@ -41,83 +42,92 @@ extern "C" {
  */
 #define GSTI_VERSION "0.3.0-cvs"
 
-enum {
-    GSTI_SUCCESS       =  0,	 /* "no error" */
-    GSTI_GENERAL       =  1,	 /* catch all the other errors code */
-    GSTI_BUG	       =  2,	 /* internal error */
-    GSTI_INV_ARG       =  3,	 /* invalid argument */
-    GSTI_NO_DATA       =  4,	 /* no data to process (eof) */
-    GSTI_NOT_SSH       =  5,	 /* not connected to a SSH protocol stream */
-    GSTI_PRE_EOF       =  6,	 /* premature EOF */
-    GSTI_TOO_SHORT     =  7,	 /* some entity is too short */
-    GSTI_TOO_LARGE     =  8,	 /* .. too long */
-    GSTI_READ_ERROR    =  9,
-    GSTI_WRITE_ERROR   = 10,
-    GSTI_INV_PKT       = 11,     /* invalid packet */
-    GSTI_INV_OBJ       = 12,     /* invalid object */
-    GSTI_INV_MAC       = 13,     /* invalid (bad) mac */
-    GSTI_PROT_VIOL     = 14,     /* protocol violation detected */
-    GSTI_BAD_SIGNATURE = 15,
-    GSTI_FILE          = 16,
-    GSTI_NOT_IMPL      = 17,     /* not implemented */
+enum
+{
+  GSTI_SUCCESS = 0,		/* "no error" */
+  GSTI_GENERAL = 1,		/* catch all the other errors code */
+  GSTI_BUG = 2,			/* internal error */
+  GSTI_INV_ARG = 3,		/* invalid argument */
+  GSTI_NO_DATA = 4,		/* no data to process (eof) */
+  GSTI_NOT_SSH = 5,		/* not connected to a SSH protocol stream */
+  GSTI_PRE_EOF = 6,		/* premature EOF */
+  GSTI_TOO_SHORT = 7,		/* some entity is too short */
+  GSTI_TOO_LARGE = 8,		/* .. too long */
+  GSTI_READ_ERROR = 9,
+  GSTI_WRITE_ERROR = 10,
+  GSTI_INV_PKT = 11,		/* invalid packet */
+  GSTI_INV_OBJ = 12,		/* invalid object */
+  GSTI_INV_MAC = 13,		/* invalid (bad) mac */
+  GSTI_PROT_VIOL = 14,		/* protocol violation detected */
+  GSTI_BAD_SIGNATURE = 15,
+  GSTI_FILE = 16,
+  GSTI_NOT_IMPL = 17,		/* not implemented */
 };
 
-enum gsti_ctl_cmds {
-    GSTI_DISABLE_LOCKING = 1,
-    GSTI_SECMEM_INIT     = 2,
-    GSTI_SECMEM_RELEASE  = 3,
+enum gsti_ctl_cmds
+{
+  GSTI_DISABLE_LOCKING = 1,
+  GSTI_SECMEM_INIT = 2,
+  GSTI_SECMEM_RELEASE = 3,
 };
 
-enum {
-    GSTI_LOG_NONE   = 0,
-    GSTI_LOG_INFO   = 1,
-    GSTI_LOG_DEBUG  = 2,
+enum
+{
+  GSTI_LOG_NONE = 0,
+  GSTI_LOG_INFO = 1,
+  GSTI_LOG_DEBUG = 2,
 };
 
 
-enum gsti_hmac_algos {
-    GSTI_HMAC_SHA1    = 0,
-    GSTI_HMAC_SHA1_96 = 1,
-    GSTI_HMAC_MD5     = 2,
-    GSTI_HMAC_MD5_96  = 3,
-    GSTI_HMAC_RMD160  = 4,
-};
-    
-enum gsti_cipher_algos {
-    GSTI_CIPHER_3DES     = 0,
-    GSTI_CIPHER_BLOWFISH = 1,
-    GSTI_CIPHER_CAST128  = 2,
-    GSTI_CIPHER_TWOFISH  = 3,
-    GSTI_CIPHER_AES128   = 4,
+enum gsti_hmac_algos
+{
+  GSTI_HMAC_SHA1 = 0,
+  GSTI_HMAC_SHA1_96 = 1,
+  GSTI_HMAC_MD5 = 2,
+  GSTI_HMAC_MD5_96 = 3,
+  GSTI_HMAC_RMD160 = 4,
 };
 
-enum gsti_digest_algos {
-    GSTI_DIGEST_MD5  = 1,
-    GSTI_DIGEST_SHA1 = 2,
+enum gsti_cipher_algos
+{
+  GSTI_CIPHER_3DES = 0,
+  GSTI_CIPHER_BLOWFISH = 1,
+  GSTI_CIPHER_CAST128 = 2,
+  GSTI_CIPHER_TWOFISH = 3,
+  GSTI_CIPHER_AES128 = 4,
 };
 
-enum gsti_pk_algos {
-    GSTI_PK_DSS = 1
+enum gsti_digest_algos
+{
+  GSTI_DIGEST_MD5 = 1,
+  GSTI_DIGEST_SHA1 = 2,
 };
 
-enum gsti_auth_methods {
-    GSTI_AUTH_PUBLICKEY = 1
+enum gsti_pk_algos
+{
+  GSTI_PK_DSS = 1
 };
 
-    
+enum gsti_auth_methods
+{
+  GSTI_AUTH_PUBLICKEY = 1
+};
+
+
 /* Our handle type */
 struct gsti_context;
-typedef struct gsti_context* GSTIHD;
+typedef struct gsti_context *GSTIHD;
 
 /* some handy types */
-typedef int (*GSTI_READ_FNC)( GSTIHD, void*, size_t* );
-typedef int (*GSTI_WRITE_FNC)( GSTIHD, const void*, size_t );
-typedef void (*GSTI_LOG_FNC)( void *, int, const char *, va_list );
+typedef int (*GSTI_READ_FNC) (GSTIHD, void *, size_t *);
+typedef int (*GSTI_WRITE_FNC) (GSTIHD, const void *, size_t);
+typedef void (*GSTI_LOG_FNC) (void *, int, const char *, va_list);
 
-typedef struct {
-    size_t datalen;
-    const unsigned char *data;
-    unsigned long seqno;
+typedef struct
+{
+  size_t datalen;
+  const unsigned char *data;
+  unsigned long seqno;
 } GSTI_PKTDESC;
 
 struct gsti_key_s;
@@ -126,43 +136,46 @@ typedef struct gsti_key_s *GSTI_KEY;
 
 /*-- main.c --*/
 /* general */
-const char *gsti_check_version( const char *req_version );
-void gsti_control( enum gsti_ctl_cmds ctl );
-const char *gsti_strerror( int ec );
+const char *gsti_check_version (const char *req_version);
+void gsti_control (enum gsti_ctl_cmds ctl);
+const char *gsti_strerror (int ec);
 
 /* api */
-GSTIHD gsti_init( void );
-int gsti_deinit( GSTIHD hd );
-int gsti_set_readfnc( GSTIHD hd, GSTI_READ_FNC readfnc );
-int gsti_set_writefnc( GSTIHD hd, GSTI_WRITE_FNC writefnc );
-int gsti_set_service( GSTIHD hd, const char *svcname );
-int gsti_read( GSTIHD hd, void *buffer, size_t *length );
-int gsti_write( GSTIHD hd, const void *buffer, size_t length );
-int gsti_set_hostkey( GSTIHD hd, const char *file );
-int gsti_set_client_key( GSTIHD hd, const char *file );
-int gsti_set_client_user( GSTIHD hd, const char *user );
-int gsti_set_auth_method( GSTIHD hd, int methd );
-int gsti_set_compression( GSTIHD hd, int val );
-int gsti_set_dhgex( GSTIHD hd, unsigned int min, unsigned int n,
-                    unsigned int max );
+GSTIHD gsti_init (void);
+int gsti_deinit (GSTIHD hd);
+int gsti_set_readfnc (GSTIHD hd, GSTI_READ_FNC readfnc);
+int gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc);
+int gsti_set_service (GSTIHD hd, const char *svcname);
+int gsti_read (GSTIHD hd, void *buffer, size_t * length);
+int gsti_write (GSTIHD hd, const void *buffer, size_t length);
+int gsti_set_hostkey (GSTIHD hd, const char *file);
+int gsti_set_client_key (GSTIHD hd, const char *file);
+int gsti_set_client_user (GSTIHD hd, const char *user);
+int gsti_set_auth_method (GSTIHD hd, int methd);
+int gsti_set_compression (GSTIHD hd, int val);
+int gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n,
+		    unsigned int max);
 
 /* logging */
-void gsti_set_log_handler( GSTI_LOG_FNC logfnc, void *opaque );
-void gsti_set_log_level( int level );
+void gsti_set_log_handler (GSTI_LOG_FNC logfnc, void *opaque);
+void gsti_set_log_level (int level);
 
 
 /*-- fsm.c --*/
-int gsti_get_packet( GSTIHD hd, GSTI_PKTDESC *pkt );
-int gsti_put_packet( GSTIHD hd, GSTI_PKTDESC *pkt );
+int gsti_get_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
+int gsti_put_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
 
 
 /*-- pubkey.c --*/
-int gsti_key_load( const char *file, int keytype, GSTI_KEY *r_ctx );
-unsigned char* gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo );
-void gsti_key_free( GSTI_KEY ctx );
+int gsti_key_load (const char *file, int keytype, GSTI_KEY * r_ctx);
+unsigned char *gsti_key_fingerprint (GSTI_KEY ctx, int mdalgo);
+void gsti_key_free (GSTI_KEY ctx);
 
 
 #ifdef __cplusplus
+#if 0
+{				/*(keep Emacs' auto-indent happy) */
+#endif
 }
 #endif
 #endif /* _GSTI_H */

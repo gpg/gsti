@@ -21,31 +21,31 @@
 #ifndef GSTI_KEX_H
 #define GSTI_KEX_H
 
-int kex_send_version( GSTIHD hd );
-int kex_wait_on_version( GSTIHD hd );
+int kex_send_version (GSTIHD hd);
+int kex_wait_on_version (GSTIHD hd);
 
-int kex_send_init_packet( GSTIHD hd );
-int kex_proc_init_packet( GSTIHD hd );
+int kex_send_init_packet (GSTIHD hd);
+int kex_proc_init_packet (GSTIHD hd);
 
-int kex_send_kexdh_init( GSTIHD hd );
-int kex_proc_kexdh_init( GSTIHD hd );
+int kex_send_kexdh_init (GSTIHD hd);
+int kex_proc_kexdh_init (GSTIHD hd);
 
-int kex_send_kexdh_reply( GSTIHD hd );
-int kex_proc_kexdh_reply( GSTIHD hd );
+int kex_send_kexdh_reply (GSTIHD hd);
+int kex_proc_kexdh_reply (GSTIHD hd);
 
-int kex_send_newkeys( GSTIHD hd );
-int kex_proc_newkeys( GSTIHD hd );
+int kex_send_newkeys (GSTIHD hd);
+int kex_proc_newkeys (GSTIHD hd);
 
-int kex_send_service_request( GSTIHD hd, const char *name );
-int kex_proc_service_request( GSTIHD hd );
-int kex_send_service_accept( GSTIHD hd );
-int kex_proc_service_accept( GSTIHD hd );
+int kex_send_service_request (GSTIHD hd, const char *name);
+int kex_proc_service_request (GSTIHD hd);
+int kex_send_service_accept (GSTIHD hd);
+int kex_proc_service_accept (GSTIHD hd);
 
-int kex_send_gex_request( GSTIHD hd );
-int kex_proc_gex_request( GSTIHD hd );
+int kex_send_gex_request (GSTIHD hd);
+int kex_proc_gex_request (GSTIHD hd);
 
-int kex_send_gex_group( GSTIHD hd );
-int kex_proc_gex_group( GSTIHD hd );
+int kex_send_gex_group (GSTIHD hd);
+int kex_proc_gex_group (GSTIHD hd);
 
 
 #endif /* GSTI_KEX_H */

@@ -27,101 +27,97 @@
 #include "memory.h"
 
 static void
-out_of_core( void )
+out_of_core (void)
 {
-    fputs( "\nfatal: out of memory\n", stderr );
-    exit( 2 );
+  fputs ("\nfatal: out of memory\n", stderr);
+  exit (2);
 }
 
 
 void *
-_gsti_xmalloc( size_t n )
+_gsti_xmalloc (size_t n)
 {
-    void *p = gcry_xmalloc( n );
-    if( !p )
-        out_of_core();
-    return p;
+  void *p = gcry_xmalloc (n);
+  if (!p)
+    out_of_core ();
+  return p;
 }
 
 
 void *
-_gsti_xcalloc( size_t n, size_t m )
+_gsti_xcalloc (size_t n, size_t m)
 {
-    void *p = gcry_xcalloc( n, m );
-    if( !p )
-        out_of_core();
-    return p;
+  void *p = gcry_xcalloc (n, m);
+  if (!p)
+    out_of_core ();
+  return p;
 }
 
 
 void *
-_gsti_xrealloc( void *p, size_t n )
+_gsti_xrealloc (void *p, size_t n)
 {
-    void *pp = gcry_realloc( p, n );
-    if( !pp )
-        out_of_core();
-    return pp;
+  void *pp = gcry_realloc (p, n);
+  if (!pp)
+    out_of_core ();
+  return pp;
 }
 
 
 void
-_gsti_free( void *p )
+_gsti_free (void *p)
 {
-    gcry_free( p );
+  gcry_free (p);
 }
 
 
 char *
-_gsti_xstrdup( const char *string )
+_gsti_xstrdup (const char *string)
 {
-    char *p = gcry_xstrdup( string );
-    if( !p )
-        out_of_core();
-    return p;
+  char *p = gcry_xstrdup (string);
+  if (!p)
+    out_of_core ();
+  return p;
 }
 
 
 STRLIST
-_gsti_strlist_insert( STRLIST head, const char *s )
+_gsti_strlist_insert (STRLIST head, const char *s)
 {
-    STRLIST item;
+  STRLIST item;
 
-    item = _gsti_xmalloc( sizeof *item + strlen(s) );
-    item->next = head;
-    strcpy( item->d, s );
-    return item;
+  item = _gsti_xmalloc (sizeof *item + strlen (s));
+  item->next = head;
+  strcpy (item->d, s);
+  return item;
 }
 
 
 void
-_gsti_strlist_free( STRLIST a )
+_gsti_strlist_free (STRLIST a)
 {
-    while( a ) {
-	STRLIST a2 = a->next;
-	_gsti_free( a );
-	a = a2;
+  while (a)
+    {
+      STRLIST a2 = a->next;
+      _gsti_free (a);
+      a = a2;
     }
 }
 
 BSTRING
-_gsti_bstring_make( const byte *buffer, size_t length )
+_gsti_bstring_make (const byte * buffer, size_t length)
 {
-    BSTRING a;
+  BSTRING a;
 
-    a = _gsti_xmalloc( sizeof *a + length - 1  );
-    a->len = length;
-    if( buffer )
-	memcpy( a->d, buffer, length );
-    return a;
+  a = _gsti_xmalloc (sizeof *a + length - 1);
+  a->len = length;
+  if (buffer)
+    memcpy (a->d, buffer, length);
+  return a;
 }
 
 void
-_gsti_bstring_free( BSTRING a )
+_gsti_bstring_free (BSTRING a)
 {
-    _gsti_free( a );
+  _gsti_free (a);
 }
-
-
-
-
-

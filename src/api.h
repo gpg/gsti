@@ -27,118 +27,124 @@
 #include "utils.h"
 
 
-struct packet_buffer_s {
-    int packet_len;
-    int padding_len;
-    byte *packet_buffer; /* malloced of length SIZE+5 */
-    size_t payload_len;
-    size_t size;
-    byte *payload;       /* = packet_buffer+5 */
-    int type;
+struct packet_buffer_s
+{
+  int packet_len;
+  int padding_len;
+  byte *packet_buffer;		/* malloced of length SIZE+5 */
+  size_t payload_len;
+  size_t size;
+  byte *payload;		/* = packet_buffer+5 */
+  int type;
 };
 
-struct gsti_context {
-    GSTI_READ_FNC  readfnc;
-    GSTI_WRITE_FNC writefnc;
-    READ_STREAM   read_stream;
-    WRITE_STREAM  write_stream;
-    STRLIST local_services;
+struct gsti_context
+{
+  GSTI_READ_FNC readfnc;
+  GSTI_WRITE_FNC writefnc;
+  READ_STREAM read_stream;
+  WRITE_STREAM write_stream;
+  STRLIST local_services;
 
-    int state; /* current state */
+  int state;			/* current state */
 
-    int  we_are_server;
-    BSTRING peer_version_string;  /* received from other end */
-    BSTRING host_kexinit_data;	  /* the KEX data we have send to the peer */
-    BSTRING peer_kexinit_data;	  /* the KEX data we have got from the peer */
+  int we_are_server;
+  BSTRING peer_version_string;	/* received from other end */
+  BSTRING host_kexinit_data;	/* the KEX data we have send to the peer */
+  BSTRING peer_kexinit_data;	/* the KEX data we have got from the peer */
 
-    BSTRING service_name;
+  BSTRING service_name;
 
-    struct packet_buffer_s pkt;
-    BUFFER pktbuf;
+  struct packet_buffer_s pkt;
+  BUFFER pktbuf;
 
-    BSTRING session_id;     /* the exchange hash from the first KEX */
-    u32 send_seqno;
-    u32 recv_seqno;
-    struct {
-        BSTRING h;	    /* current exchange hash */
-        gcry_mpi_t k;	    /* the shared secret */
-        BSTRING iv_a;	    /* IV client to server */
-        BSTRING iv_b;	    /* IV server to client */
-        BSTRING key_c;	    /* Enc client to server */
-        BSTRING key_d;	    /* Enc server to client */
-        BSTRING mac_e;	    /* Mac client to server */
-        BSTRING mac_f;	    /* Mac server to client */
-    } kex;
+  BSTRING session_id;		/* the exchange hash from the first KEX */
+  u32 send_seqno;
+  u32 recv_seqno;
+  struct
+  {
+    BSTRING h;			/* current exchange hash */
+    gcry_mpi_t k;		/* the shared secret */
+    BSTRING iv_a;		/* IV client to server */
+    BSTRING iv_b;		/* IV server to client */
+    BSTRING key_c;		/* Enc client to server */
+    BSTRING key_d;		/* Enc server to client */
+    BSTRING mac_e;		/* Mac client to server */
+    BSTRING mac_f;		/* Mac server to client */
+  } kex;
 
-    int kex_type;
-    
-    struct {
-        unsigned int min;
-        unsigned int max;
-        unsigned int n;
-    } gex;
-        
-    byte cookie[16];
-    int sent_newkeys;
+  int kex_type;
 
-    gcry_mpi_t secret_x;  /* temporary use only */
-    gcry_mpi_t kexdh_e;   /* ditto */
-    gcry_mpi_t secret_y;  /* fixme: we could reuse secret_x kexdh_e */
-    gcry_mpi_t kexdh_f;   /* ditto */
+  struct
+  {
+    unsigned int min;
+    unsigned int max;
+    unsigned int n;
+  } gex;
 
-    int ciph_blksize;
-    int ciph_algo;
-    int ciph_mode;
-    gcry_cipher_hd_t encrypt_hd;
-    gcry_cipher_hd_t decrypt_hd;
+  byte cookie[16];
+  int sent_newkeys;
 
-    int mac_algo;
-    int mac_len;
-    gcry_md_hd_t send_mac;
-    gcry_md_hd_t recv_mac;
+  gcry_mpi_t secret_x;		/* temporary use only */
+  gcry_mpi_t kexdh_e;		/* ditto */
+  gcry_mpi_t secret_y;		/* fixme: we could reuse secret_x kexdh_e */
+  gcry_mpi_t kexdh_f;		/* ditto */
 
-    byte *user_read_buffer;
-    size_t user_read_bufsize;
-    size_t user_read_nbytes;
+  int ciph_blksize;
+  int ciph_algo;
+  int ciph_mode;
+  gcry_cipher_hd_t encrypt_hd;
+  gcry_cipher_hd_t decrypt_hd;
 
-    const byte *user_write_buffer;
-    size_t user_write_bufsize;
+  int mac_algo;
+  int mac_len;
+  gcry_md_hd_t send_mac;
+  gcry_md_hd_t recv_mac;
 
-    GSTI_KEY hostkey;
+  byte *user_read_buffer;
+  size_t user_read_bufsize;
+  size_t user_read_nbytes;
 
-    struct {
-        int method;
-        GSTI_KEY key;
-        char *user;
-    } auth;
+  const byte *user_write_buffer;
+  size_t user_write_bufsize;
 
-    struct {
-        unsigned int use:1;
-        unsigned int init:1;
-    } zlib;
-    
-    unsigned long id;
+  GSTI_KEY hostkey;
+
+  struct
+  {
+    int method;
+    GSTI_KEY key;
+    char *user;
+  } auth;
+
+  struct
+  {
+    unsigned int use:1;
+    unsigned int init:1;
+  } zlib;
+
+  unsigned long id;
 };
 
 
 /*-- main.c --*/
-int map_gcry_rc( int rc );
+int map_gcry_rc (int rc);
 
 /*-- fsm.c --*/
-int fsm_user_read( GSTIHD hd );
-int fsm_user_write( GSTIHD hd );
+int fsm_user_read (GSTIHD hd);
+int fsm_user_write (GSTIHD hd);
 
 /*-- auth.c --*/
-int auth_send_accept_packet( GSTIHD hd );
-int auth_proc_accept_packet( GSTIHD hd );
+int auth_send_accept_packet (GSTIHD hd);
+int auth_proc_accept_packet (GSTIHD hd);
 
-int auth_send_pkok_packet( GSTIHD hd );
-int auth_proc_pkok_packet( GSTIHD hd );
+int auth_send_pkok_packet (GSTIHD hd);
+int auth_proc_pkok_packet (GSTIHD hd);
 
-int auth_send_init_packet( GSTIHD hd );
-int auth_proc_init_packet( GSTIHD hd );
+int auth_send_init_packet (GSTIHD hd);
+int auth_proc_init_packet (GSTIHD hd);
 
-int auth_send_second_packet( GSTIHD hd );
-int auth_proc_second_packet( GSTIHD hd );
+int auth_send_second_packet (GSTIHD hd);
+int auth_proc_second_packet (GSTIHD hd);
 
 #endif /* GSTI_API_H */

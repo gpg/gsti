@@ -51,36 +51,38 @@
  * The line is modified.
  */
 static int
-parse_line( char *line, char **name, char **value )
+parse_line (char *line, char **name, char **value)
 {
-    byte *mark, *p = line;
+  byte *mark, *p = line;
 
-    *name = *value = NULL;
-    while( isspace(*p) )
-	p++;
-    if( !*p || *p == '#' )
-	return 0;
-    *name = p;
-    for(p++; *p && !isspace(*p) && *p != '='; p++ )
-	;
-    if( *p != '=' )
-	return -1;  /* syntax error */
+  *name = *value = NULL;
+  while (isspace (*p))
     p++;
-    if( !*p || isspace(*p) )
-	return -1; /* syntax error */
-    *name = p;
-    /* remove trailing spaces */
-    for( mark = NULL,p++; *p; p++ ) {
-	if( isspace( *p ) ) {
-	    if( !mark )
-		mark = p;
-	}
-	else
-	    mark = NULL ;
-    }
-    if( mark )
-	*mark = 0;  /* cut */
+  if (!*p || *p == '#')
     return 0;
+  *name = p;
+  for (p++; *p && !isspace (*p) && *p != '='; p++)
+    ;
+  if (*p != '=')
+    return -1;			/* syntax error */
+  p++;
+  if (!*p || isspace (*p))
+    return -1;			/* syntax error */
+  *name = p;
+  /* remove trailing spaces */
+  for (mark = NULL, p++; *p; p++)
+    {
+      if (isspace (*p))
+	{
+	  if (!mark)
+	    mark = p;
+	}
+      else
+	mark = NULL;
+    }
+  if (mark)
+    *mark = 0;			/* cut */
+  return 0;
 }
 
 
@@ -89,12 +91,8 @@ parse_line( char *line, char **name, char **value )
  * FIXME: better use mmap of read() for the secret key.
  */
 static int
-read_keyfile( FILE *fp, )
+read_keyfile (FILE * fp,)
 {
 
 
 }
-
-
-
-

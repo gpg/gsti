@@ -1,5 +1,9 @@
 2004-03-08  Werner Koch  <wk@gnupg.org>
 
+        Changed indentation to GNU style.
+	
+2004-03-08  Werner Koch  <wk@gnupg.org>
+
 	* main.c (map_gcry_rc): Shortcut code as we are now using
 	gpg-error.h anyway.
 

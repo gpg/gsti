@@ -42,146 +42,158 @@ static int listen_fd = -1;
 static int conn_fd = -1;
 
 void
-dump_hexbuf( FILE *fp, const char *prefix,const unsigned char *buf,size_t len )
+dump_hexbuf (FILE * fp, const char *prefix, const unsigned char *buf,
+	     size_t len)
 {
-    fputs( prefix, fp );
-    for( ; len ; len--, buf++ )
-        fprintf( fp, "%02X ", *buf );
-    putc( '\n', fp );    
+  fputs (prefix, fp);
+  for (; len; len--, buf++)
+    fprintf (fp, "%02X ", *buf);
+  putc ('\n', fp);
 }
 
 static void
-log_rc( int rc, const char *text)
+log_rc (int rc, const char *text)
 {
-    const char *s;
-    if( !*(s=gsti_strerror(rc)) || !strcmp(s,"[?]") )
-        fprintf( stderr, PGMNAME "gsti_%s: rc=%d\n", text, rc );
-    else
-        fprintf( stderr, PGMNAME "gsti_%s: %s\n", text, s );
+  const char *s;
+  if (!*(s = gsti_strerror (rc)) || !strcmp (s, "[?]"))
+    fprintf (stderr, PGMNAME "gsti_%s: rc=%d\n", text, rc);
+  else
+    fprintf (stderr, PGMNAME "gsti_%s: %s\n", text, s);
 }
 
 static void
-wait_connection( void )
+wait_connection (void)
 {
-    struct sockaddr_in name;
-    struct sockaddr_in peer_name;
-    int namelen;
-    int one = 1;
+  struct sockaddr_in name;
+  struct sockaddr_in peer_name;
+  int namelen;
+  int one = 1;
 
-    if( listen_fd != -1 )
-        close( listen_fd );
+  if (listen_fd != -1)
+    close (listen_fd);
 
-    listen_fd = socket( PF_INET, SOCK_STREAM, 0 );
-    if( listen_fd == -1 ) {
-        fprintf( stderr, PGMNAME "socket() failed: %s", strerror(errno) );
-        exit(2);
+  listen_fd = socket (PF_INET, SOCK_STREAM, 0);
+  if (listen_fd == -1)
+    {
+      fprintf (stderr, PGMNAME "socket() failed: %s", strerror (errno));
+      exit (2);
     }
 
-    if( setsockopt( listen_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one) ){
-        fprintf( stderr, PGMNAME "setsocketopt() failed: %s", strerror(errno));
-        exit(2);
+  if (setsockopt (listen_fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof one))
+    {
+      fprintf (stderr, PGMNAME "setsocketopt() failed: %s", strerror (errno));
+      exit (2);
     }
 
-    name.sin_family = AF_INET;
-    name.sin_port = htons(9000);
-    name.sin_addr.s_addr = htonl(INADDR_ANY);
-    if( bind( listen_fd, (struct sockaddr*)&name, sizeof name) ) {
-        fprintf( stderr, PGMNAME "bind() failed: %s", strerror(errno) );
-        exit(2);
+  name.sin_family = AF_INET;
+  name.sin_port = htons (9000);
+  name.sin_addr.s_addr = htonl (INADDR_ANY);
+  if (bind (listen_fd, (struct sockaddr *) &name, sizeof name))
+    {
+      fprintf (stderr, PGMNAME "bind() failed: %s", strerror (errno));
+      exit (2);
     }
 
-    if( listen( listen_fd, 1 ) ) {
-        fprintf( stderr, PGMNAME "listen() failed: %s\n", strerror(errno) );
-        exit(2);
+  if (listen (listen_fd, 1))
+    {
+      fprintf (stderr, PGMNAME "listen() failed: %s\n", strerror (errno));
+      exit (2);
     }
 
-    namelen = sizeof peer_name;
-    conn_fd = accept( listen_fd, (struct sockaddr *)&peer_name, &namelen);
-    if( conn_fd == -1 ) {
-        fprintf( stderr, PGMNAME "accept() failed: %s\n", strerror(errno) );
-        exit(2);
+  namelen = sizeof peer_name;
+  conn_fd = accept (listen_fd, (struct sockaddr *) &peer_name, &namelen);
+  if (conn_fd == -1)
+    {
+      fprintf (stderr, PGMNAME "accept() failed: %s\n", strerror (errno));
+      exit (2);
     }
-    close( listen_fd );
-    listen_fd = -1; /* not needed anymore */
+  close (listen_fd);
+  listen_fd = -1;		/* not needed anymore */
 }
 
 
 static int
-myread( GSTIHD hd, void *buffer, size_t *nbytes )
+myread (GSTIHD hd, void *buffer, size_t * nbytes)
 {
-    int n;
+  int n;
 
-    do {
-        n = read( conn_fd, buffer, *nbytes );
-    } while( n == -1 && errno == EINTR );
-    if( n == -1 ) {
-        fprintf( stderr, PGMNAME "myread: error: %s\n", strerror( errno ) );
-        return GSTI_READ_ERROR;
+  do
+    {
+      n = read (conn_fd, buffer, *nbytes);
     }
-    /*dump_hexbuf( stderr, "myread: ", buffer, n );*/
-    *nbytes = n;
-    return 0;
+  while (n == -1 && errno == EINTR);
+  if (n == -1)
+    {
+      fprintf (stderr, PGMNAME "myread: error: %s\n", strerror (errno));
+      return GSTI_READ_ERROR;
+    }
+  /*dump_hexbuf( stderr, "myread: ", buffer, n ); */
+  *nbytes = n;
+  return 0;
 }
 
 
 static int
-mywrite( GSTIHD hd, const void *buffer, size_t nbytes )
+mywrite (GSTIHD hd, const void *buffer, size_t nbytes)
 {
-    int n;
-    const char *p = buffer;
+  int n;
+  const char *p = buffer;
 
-    if( !buffer )
-        return 0; /* no need for flushing */
-    do {
-        /*dump_hexbuf( stderr, "mywrite: ", p, nbytes );*/
-        n = write( conn_fd, p, nbytes );
-        if( n == -1 ) {
-            fprintf( stderr, PGMNAME "mywrite: error: %s\n", strerror(errno) );
-            return GSTI_WRITE_ERROR;
-        }
-        nbytes -= n;
-        p += n;
-    } while( nbytes );
-    return 0;
+  if (!buffer)
+    return 0;			/* no need for flushing */
+  do
+    {
+      /*dump_hexbuf( stderr, "mywrite: ", p, nbytes ); */
+      n = write (conn_fd, p, nbytes);
+      if (n == -1)
+	{
+	  fprintf (stderr, PGMNAME "mywrite: error: %s\n", strerror (errno));
+	  return GSTI_WRITE_ERROR;
+	}
+      nbytes -= n;
+      p += n;
+    }
+  while (nbytes);
+  return 0;
 }
 
 
 
 int
-main( int argc, char **argv )
+main (int argc, char **argv)
 {
-    int rc, i;
-    GSTIHD hd;
-    GSTI_PKTDESC pkt;
+  int rc, i;
+  GSTIHD hd;
+  GSTI_PKTDESC pkt;
 
-    if( argc ) {
-        argc--;
-        argv++;
+  if (argc)
+    {
+      argc--;
+      argv++;
     }
 
-    gsti_control( GSTI_SECMEM_INIT );
-    gsti_set_log_level( GSTI_LOG_DEBUG );
-    hd = gsti_init();
-    gsti_set_hostkey( hd, SECKEY );
-    gsti_set_readfnc( hd, myread );
-    gsti_set_writefnc( hd, mywrite );
+  gsti_control (GSTI_SECMEM_INIT);
+  gsti_set_log_level (GSTI_LOG_DEBUG);
+  hd = gsti_init ();
+  gsti_set_hostkey (hd, SECKEY);
+  gsti_set_readfnc (hd, myread);
+  gsti_set_writefnc (hd, mywrite);
 
-    /*rc = gsti_set_service( hd, "log-lines@gnu.org,dummy@gnu.org" );*/
-    /*log_rc( rc, "set-service" );*/
+  /*rc = gsti_set_service( hd, "log-lines@gnu.org,dummy@gnu.org" ); */
+  /*log_rc( rc, "set-service" ); */
 
-    wait_connection();
+  wait_connection ();
 
-    for( i = 0; i < 2; i++ ) {
-        rc = gsti_get_packet( hd, &pkt );
-        log_rc( rc, "get-packet" );
-        if( !rc )
-            dump_hexbuf( stderr, "got packet: ", pkt.data, pkt.datalen );
+  for (i = 0; i < 2; i++)
+    {
+      rc = gsti_get_packet (hd, &pkt);
+      log_rc (rc, "get-packet");
+      if (!rc)
+	dump_hexbuf (stderr, "got packet: ", pkt.data, pkt.datalen);
     }
 
-    gsti_control( GSTI_SECMEM_RELEASE );
-    rc = gsti_deinit( hd );
-    log_rc( rc, "deinit" );
-    return 0;
+  gsti_control (GSTI_SECMEM_RELEASE);
+  rc = gsti_deinit (hd);
+  log_rc (rc, "deinit");
+  return 0;
 }
-
-

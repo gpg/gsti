@@ -24,16 +24,16 @@
 
 #include "types.h"
 
-void * _gsti_xmalloc( size_t n );
-void * _gsti_xcalloc( size_t n, size_t m );
-void * _gsti_xrealloc( void *p, size_t n );
-char * _gsti_xstrdup( const char* string );
-void   _gsti_free( void * );
+void *_gsti_xmalloc (size_t n);
+void *_gsti_xcalloc (size_t n, size_t m);
+void *_gsti_xrealloc (void *p, size_t n);
+char *_gsti_xstrdup (const char *string);
+void _gsti_free (void *);
 
-STRLIST _gsti_strlist_insert( STRLIST head, const char *s );
-void    _gsti_strlist_free( STRLIST a );
+STRLIST _gsti_strlist_insert (STRLIST head, const char *s);
+void _gsti_strlist_free (STRLIST a);
 
-BSTRING _gsti_bstring_make( const byte *buffer, size_t length );
-void    _gsti_bstring_free( BSTRING a );
+BSTRING _gsti_bstring_make (const byte * buffer, size_t length);
+void _gsti_bstring_free (BSTRING a);
 
 #endif /* GSTI_MEMORY_H */

@@ -26,26 +26,27 @@
 #include <gsti.h>
 
 #ifndef HAVE_BYTE_TYPEDEF
-  #undef byte
-  typedef unsigned char byte;
-  #define HAVE_BYTE_TYPEDEF
+#undef byte
+typedef unsigned char byte;
+#define HAVE_BYTE_TYPEDEF
 #endif
 
 #ifndef HAVE_U32_TYPEDEF
-  #undef u32
-  typedef unsigned int u32;
-  #define HAVE_U32_TYPEDEF
+#undef u32
+typedef unsigned int u32;
+#define HAVE_U32_TYPEDEF
 #endif
 
 #ifndef HAVE_U16_TYPEDEF
-  #undef u16
-  typedef unsigned short u16;
-  #define HAVE_U16_TYPEDEF
+#undef u16
+typedef unsigned short u16;
+#define HAVE_U16_TYPEDEF
 #endif
 
-typedef struct strlist_s {
-    struct strlist_s *next;
-    char d[1];
+typedef struct strlist_s
+{
+  struct strlist_s *next;
+  char d[1];
 } *STRLIST;
 
 
@@ -53,13 +54,14 @@ typedef struct strlist_s {
  * I don't think that string is a good name for an generic data object,
  * so we call it BSTRING for BinaryString
  */
-typedef struct bstring_s {
-    size_t len;
-    unsigned char d[1];
+typedef struct bstring_s
+{
+  size_t len;
+  unsigned char d[1];
 } *BSTRING;
 
 #ifndef DIM
-  #define DIM(v) (sizeof(v)/sizeof((v)[0]))
+#define DIM(v) (sizeof(v)/sizeof((v)[0]))
 #endif
 
 #endif /* GSTI_TYPES_H */

@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <malloc.h>  /* ????? fixme */
+#include <malloc.h>		/* ????? fixme */
 
 #include "gsti.h"
 
@@ -32,51 +32,54 @@
 /* secret key #7e:17:76:1b:3a:fe:05:ff:a9:08:4e:2b:6c:fd:aa:a6:c0:a6:b5:90# */
 
 static void
-print_fpr( unsigned char *fpr )
+print_fpr (unsigned char *fpr)
 {
-    unsigned char *fprhex;
-    int i, n = strlen( fpr );
-    
-    fprhex = calloc( 1, 128 );
-    for( i = 0; i < n; i++ ) {
-        int c = (i != (n-1))? ':' : ' ';
-        sprintf( fprhex + 3*i, "%02X%c", fpr[i], c );
+  unsigned char *fprhex;
+  int i, n = strlen (fpr);
+
+  fprhex = calloc (1, 128);
+  for (i = 0; i < n; i++)
+    {
+      int c = (i != (n - 1)) ? ':' : ' ';
+      sprintf (fprhex + 3 * i, "%02X%c", fpr[i], c);
     }
-    fprintf( stderr, "%s\n", fprhex );
-    free( fprhex );
+  fprintf (stderr, "%s\n", fprhex);
+  free (fprhex);
 }
 
 
 int
-main( int argc, char **argv )
+main (int argc, char **argv)
 {
-    GSTI_KEY key;
-    unsigned char *fpr;
-    int rc, md_arr[2], i;
+  GSTI_KEY key;
+  unsigned char *fpr;
+  int rc, md_arr[2], i;
 
-    gsti_control( GSTI_SECMEM_INIT );
-    rc = gsti_key_load( PUBKEY, 0, &key );
-    if( rc ) {
-        printf( "load pubkey: %s: `%s'\n", PUBKEY, gsti_strerror( rc ) );
-        exit( 1 );
+  gsti_control (GSTI_SECMEM_INIT);
+  rc = gsti_key_load (PUBKEY, 0, &key);
+  if (rc)
+    {
+      printf ("load pubkey: %s: `%s'\n", PUBKEY, gsti_strerror (rc));
+      exit (1);
     }
-    md_arr[0] = GSTI_DIGEST_MD5;
-    md_arr[1] = GSTI_DIGEST_SHA1;
-    for( i = 0; i < 2; i++ ) {
-        fpr = gsti_key_fingerprint( key, md_arr[i] );
-        if( !fpr )
-            printf( "could not get fingerprint.\n" );
-        else
-            print_fpr( fpr );
+  md_arr[0] = GSTI_DIGEST_MD5;
+  md_arr[1] = GSTI_DIGEST_SHA1;
+  for (i = 0; i < 2; i++)
+    {
+      fpr = gsti_key_fingerprint (key, md_arr[i]);
+      if (!fpr)
+	printf ("could not get fingerprint.\n");
+      else
+	print_fpr (fpr);
     }
-    
-    gsti_key_free( key );
 
-    rc = gsti_key_load( SECKEY, 1, &key );
-    if( rc )
-        printf( "load seckey: %s: `%s'\n", SECKEY, gsti_strerror( rc ) );
-    gsti_key_free( key );
-    gsti_control( GSTI_SECMEM_RELEASE );
-    
-    return 0;
+  gsti_key_free (key);
+
+  rc = gsti_key_load (SECKEY, 1, &key);
+  if (rc)
+    printf ("load seckey: %s: `%s'\n", SECKEY, gsti_strerror (rc));
+  gsti_key_free (key);
+  gsti_control (GSTI_SECMEM_RELEASE);
+
+  return 0;
 }

@@ -29,26 +29,28 @@
  */
 
 typedef struct read_stream_s *READ_STREAM;
-struct read_stream_s {
-    GSTI_READ_FNC readfnc;
-    int read_eof;  /* last read returned eof */
-    int error;	   /* an error has been encountered */
-    size_t size;   /* allocated size */
-    /* todo: replace counts by pointers */
-    size_t start;  /* number of invalid bytes at the begin of the buffer */
-    size_t len;    /* currently filled to this len */
-    unsigned char buf[1];
+struct read_stream_s
+{
+  GSTI_READ_FNC readfnc;
+  int read_eof;			/* last read returned eof */
+  int error;			/* an error has been encountered */
+  size_t size;			/* allocated size */
+  /* todo: replace counts by pointers */
+  size_t start;			/* number of invalid bytes at the begin of the buffer */
+  size_t len;			/* currently filled to this len */
+  unsigned char buf[1];
 };
 
 
 typedef struct write_stream_s *WRITE_STREAM;
-struct write_stream_s {
-    GSTI_WRITE_FNC writefnc;
-    int error;	   /* an error has been encountered */
-    size_t size;   /* allocated size */
-    /* todo: replace counts by pointers */
-    size_t  used;    /* currently filled to this len */
-    unsigned char buf[1];
+struct write_stream_s
+{
+  GSTI_WRITE_FNC writefnc;
+  int error;			/* an error has been encountered */
+  size_t size;			/* allocated size */
+  /* todo: replace counts by pointers */
+  size_t used;			/* currently filled to this len */
+  unsigned char buf[1];
 };
 
 
@@ -63,18 +65,18 @@ struct write_stream_s {
 #define _gsti_stream_eof(a)   ( (a)->start >= a->len && (a)->read_eof )
 #define _gsti_stream_error(a) ( (a)->error )
 
-READ_STREAM _gsti_read_stream_new( GSTI_READ_FNC readfnc );
-void _gsti_read_stream_free( READ_STREAM a );
+READ_STREAM _gsti_read_stream_new (GSTI_READ_FNC readfnc);
+void _gsti_read_stream_free (READ_STREAM a);
 
-int  _gsti_stream_getbyte( READ_STREAM a );
-int  _gsti_stream_readn( READ_STREAM a, byte *buffer, size_t nbytes );
+int _gsti_stream_getbyte (READ_STREAM a);
+int _gsti_stream_readn (READ_STREAM a, byte * buffer, size_t nbytes);
 
-WRITE_STREAM _gsti_write_stream_new( GSTI_WRITE_FNC writefnc );
-void _gsti_write_stream_free( WRITE_STREAM a );
+WRITE_STREAM _gsti_write_stream_new (GSTI_WRITE_FNC writefnc);
+void _gsti_write_stream_free (WRITE_STREAM a);
 
-int _gsti_stream_putbyte( WRITE_STREAM a, int c );
-int _gsti_stream_writen( WRITE_STREAM a, const byte *buffer, size_t nbytes );
-int _gsti_stream_flush( WRITE_STREAM a );
+int _gsti_stream_putbyte (WRITE_STREAM a, int c);
+int _gsti_stream_writen (WRITE_STREAM a, const byte * buffer, size_t nbytes);
+int _gsti_stream_flush (WRITE_STREAM a);
 
 
 #endif /* GSTI_STREAM_H */
