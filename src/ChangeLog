@@ -1,3 +1,7 @@
+2004-06-30  Marcus Brinkmann  <marcus@g10code.de>
+
+	* gsti.h (gsti_channel_close): Add prototype.
+
 2004-06-29  Marcus Brinkmann  <marcus@g10code.de>
 
 	* channel.c (ssh_msg_channel_open_confirmation_S): Only invoke

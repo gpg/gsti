@@ -381,6 +381,9 @@ gsti_error_t gsti_channel_window_adjust (gsti_ctx_t ctx,
    data from the other side may still be received.  */
 gsti_error_t gsti_channel_eof (gsti_ctx_t ctx, gsti_uint32_t channel_id);
 
+/* Send request to close the channel.  */
+gsti_error_t gsti_channel_close (gsti_ctx_t ctx, gsti_uint32_t channel_id);
+
 
 /* Channel receiver side.  */
 
