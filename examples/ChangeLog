@@ -1,3 +1,9 @@
+2004-07-14  Timo Schulz  <ts@g10code.de>
+
+	* server.c (main): Set an example banner which is shown to
+	the client.
+	* client.c (my_auth_cb): New. Show banner if available.
+	
 2004-07-10  Timo Schulz  <ts@g10code.de>
 
 	* server.c (my_auth_cb): Example how to use the auth callback.

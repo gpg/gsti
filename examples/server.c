@@ -254,7 +254,7 @@ main (int argc, char **argv)
   gsti_set_auth_callback (ctx, my_auth_cb, NULL);
 
   /* Set simple banner message */
-  /*gsti_set_auth_banner (ctx, "Eddie lives somewhere in time...", 0);*/
+  gsti_set_auth_banner (ctx, "Eddie lives somewhere in time...", 0);
 
 #if 0
   rc = gsti_set_service (ctx, "log-lines@gnu.org,dummy@gnu.org");
