@@ -193,7 +193,7 @@ main (int argc, char **argv)
     }
 
   gsti_control (GSTI_SECMEM_RELEASE);
-  rc = gsti_deinit (hd);
-  log_rc (rc, "deinit");
+  gsti_deinit (hd);
+
   return 0;
 }
