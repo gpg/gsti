@@ -131,6 +131,7 @@ main( int argc, char **argv )
 
     gsti_control( GSTI_SECMEM_INIT );
     gsti_control( GSTI_DISABLE_LOCKING );
+    gsti_set_log_level( GSTI_LOG_DEBUG );
     hd = gsti_init();
     gsti_set_readfnc( hd, myread );
     gsti_set_writefnc( hd, mywrite );

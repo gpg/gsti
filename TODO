@@ -1,8 +1,4 @@
 
-    * give the internal global functions a unique name. (partly done)
-
-    * correct the code so we can use a random cookie.
-    
     * find a way to handle the first packet to establish a connection.
       2002-10-01: partly done. but it's not really clean.
       

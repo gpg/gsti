@@ -41,6 +41,15 @@
 static int listen_fd = -1;
 static int conn_fd = -1;
 
+void
+dump_hexbuf( FILE *fp, const char *prefix,const unsigned char *buf,size_t len )
+{
+    fputs( prefix, fp );
+    for( ; len ; len--, buf++ )
+        fprintf( fp, "%02X ", *buf );
+    putc( '\n', fp );    
+}
+
 static void
 log_rc( int rc, const char *text)
 {
@@ -152,6 +161,7 @@ main( int argc, char **argv )
     }
 
     gsti_control( GSTI_SECMEM_INIT );
+    gsti_set_log_level( GSTI_LOG_DEBUG );
     hd = gsti_init();
     gsti_set_hostkey_file( hd, SECKEY );
     gsti_set_readfnc( hd, myread );
