@@ -1,3 +1,23 @@
+2004-06-07  Timo Schulz  <twoaday@g10code.de>
+
+	* gsti.h (GSTI_PKTDESC): Rename type to ...
+	(gsti_pktdesc_t): .. this.
+
+	* api.h (gsti_kex_t): New.
+	* kex.c (choose_kex_algo): Support new ctx.
+	(build_msg_service): Remove goto.
+	(parse_gex_group): Likewise.
+
+	* pubkey.c (read_key): Remove the secure mpi code.
+	(check_pubalgo): Return optional the algorithm id.
+
+	* stream.c (_gsti_stream_flush): Store the return code
+	in case of an error.
+	(_gsti_stream_getbyte): Likewise.
+	(_gsti_stream_putbyte): Likewise.
+	(_gsti_stream_writen, _gsti_stream_readn): Return the
+	stored return value in case of an error.
+	
 2004-06-06  Timo Schulz  <twoaday@g10code.de>
 
 	* auth.c (gsti_auth_new): New.
@@ -6,19 +26,16 @@
 	Changed some structure names to the foo_t format.
 
 	* main.c (gsti_set_readfnc): Support new callback implementation.
-	(gsti_set_writefnc): New.
+	(gsti_set_writefnc): Likewise.
 
-	* gsti.h: Changed prototypes.
-
+	* gsti.h (gsti_read_fnc_t, gsti_write_fnc_t): Changed prototypes.
 	* stream.c: Likewise.
 	
 2004-06-02  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (gsti_key_save): New.
 	(_gsti_key_fromblob): RSA support.
-
-	* Finished RSA support.
-	
+	(_gsti_rsa_sign, _gsti_rsa_verify): Likewise.
 	
 2004-06-01  Timo Schulz  <twoaday@g10code.de>
 
@@ -36,8 +53,6 @@
 2004-05-28  Timo Schulz  <twoaday@freakmail.de>
 
 	* pubkey.c (gsti_key_load): Open file in binary mode.
-
-	Untested RSA support.
 
 	* pubkey.h: Removed unused prototypes.
 	

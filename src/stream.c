@@ -62,7 +62,7 @@ _gsti_read_stream_free (read_stream_t a)
 int
 _gsti_stream_getbyte (read_stream_t a)
 {
-  int rc;
+  gsti_error_t rc;
   size_t n;
 
   if (a->start < a->len)
@@ -76,7 +76,7 @@ _gsti_stream_getbyte (read_stream_t a)
   rc = a->readfnc (a->fnc_ctx, a->buf, n, &n);
   if (rc)
     {
-      a->error = 1;
+      a->error = rc;
       return -1;
     }
   if (!n)
@@ -101,8 +101,7 @@ _gsti_stream_readn (read_stream_t a, byte * buffer, size_t nbytes)
     {
       c = _gsti_stream_get (a);
       if (c == -1)
-	/* FIXME */
-	return gsti_error_from_errno (EIO);
+        return a->error;
       if (buffer)
 	{
 	  *buffer = c;
@@ -141,7 +140,7 @@ int
 _gsti_stream_putbyte (write_stream_t a, int c)
 {
   size_t n;
-  int rc;
+  gsti_error_t rc;
 
   if (!a->used)
     return 0;
@@ -149,7 +148,7 @@ _gsti_stream_putbyte (write_stream_t a, int c)
   rc = a->writefnc (a->fnc_ctx, a->buf, a->used, &n);
   if (rc)
     {
-      a->error = 1;
+      a->error = rc;
       return -1;
     }
   a->used = 0;
@@ -161,22 +160,20 @@ gsti_error_t
 _gsti_stream_flush (write_stream_t a)
 {
   size_t n;
-  int rc;
+  gsti_error_t rc;
 
   rc = a->used ? a->writefnc (a->fnc_ctx, a->buf, a->used, &n) : 0;
   if (rc)
     {
-      a->error = 1;
-      /* FIXME.  */
-      return gsti_error_from_errno (EIO);
+      a->error = rc;
+      return rc;
     }
   a->used = 0;
   rc = a->writefnc (a->fnc_ctx, NULL, 0, NULL);
   if (rc)
     {
-      a->error = 1;
-      /* FIXME.  */
-      return gsti_error_from_errno (EIO);
+      a->error = rc;
+      return rc;
     }
   return 0;
 }
@@ -196,8 +193,7 @@ _gsti_stream_writen (write_stream_t a, const byte * buffer, size_t nbytes)
 	{
 	  if (_gsti_stream_put (a, *s))
 	    {
-	      /* FIXME.  */
-	      err = gsti_error_from_errno (EIO);
+              err = a->error;
 	      break;
 	    }
 	  s++;

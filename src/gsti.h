@@ -197,12 +197,13 @@ typedef gsti_error_t (*gsti_read_fnc_t)(void *, void *, size_t, size_t *);
 typedef gsti_error_t (*gsti_write_fnc_t)(void *, const void *, size_t, size_t *);
 
 
-typedef struct
+struct gsti_pktdesc_s
 {
   size_t datalen;
   const unsigned char *data;
   unsigned long seqno;
-} GSTI_PKTDESC;
+};
+typedef struct gsti_pktdesc_s * gsti_pktdesc_t;
 
 struct gsti_key_s;
 typedef struct gsti_key_s *gsti_key_t;
@@ -255,8 +256,8 @@ void gsti_set_log_level (gsti_ctx_t ctx, gsti_log_level_t level);
 
 
 /*-- fsm.c --*/
-gsti_error_t gsti_get_packet (gsti_ctx_t ctx, GSTI_PKTDESC * pkt);
-gsti_error_t gsti_put_packet (gsti_ctx_t ctx, GSTI_PKTDESC * pkt);
+gsti_error_t gsti_get_packet (gsti_ctx_t ctx, gsti_pktdesc_t pkt);
+gsti_error_t gsti_put_packet (gsti_ctx_t ctx, gsti_pktdesc_t pkt);
 
 
 /*-- pubkey.c --*/

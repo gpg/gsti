@@ -43,11 +43,12 @@ static struct
   size_t nsig;
   const char *sec_elements;
   size_t nskey;
+  int algid;
 } pk_table[] =
 {
-  {"none",    "dummy", 0, "dummy", 0, "dummy", 0},
-  {"ssh-dss", "pqgy",  4, "rs",    2, "x",     1},
-  {"ssh-rsa", "ne",    2, "s",     1, "dpqu",  4},
+  {"none",    "dummy", 0, "dummy", 0, "dummy", 0, SSH_PK_NONE},
+  {"ssh-dss", "pqgy",  4, "rs",    2, "x",     1, SSH_PK_DSS},
+  {"ssh-rsa", "ne",    2, "s",     1, "dpqu",  4, SSH_PK_RSA},
   {0}
 };
 
@@ -388,10 +389,8 @@ read_key (FILE * fp, gsti_key_t ctx, int n, int algo, int keytype)
       ctx->key[i] = bstring_to_sshmpi (a);
       _gsti_bstring_free (a);
     }
-  /* if the key also contains a secret key, set the secure flag for'x' */
-  /* XXX do the same for RSA */
-  if (keytype)
-    gcry_mpi_set_flag (ctx->key[n - 1], GCRYMPI_FLAG_SECURE);
+  /* XXX the GCRYMPI_FLAG_SECURE casues a segfault at the end in
+     gsti_key_free, so do not use it for the moment */
   ctx->type = algo;
   ctx->nkey = n;
   ctx->secret = keytype ? 1 : 0;
@@ -637,13 +636,23 @@ pkalgo_get_nkey (int algid, const char *name)
 
 
 static int
-check_pubalgo (const char * s)
+check_pubalgo (const char * s, int * algid)
 {
   int n = strlen (s);
-  if (n != 7 || strcmp (s, "ssh-dss"))
-    if (n != 7 || strcmp (s, "ssh-rsa"))
-      return -1;
-  return 0;
+  int i;
+  
+  for (i=0; i < SSH_PK_LAST; i++)
+    {
+      if (n != strlen (pk_table[i].algname))
+        continue;
+      if (!strcmp (s, pk_table[i].algname))
+        {
+          if (algid)
+            *algid = pk_table[i].algid;
+          return 0;
+        }
+    }
+  return -1;
 }
 
 
@@ -655,13 +664,14 @@ _gsti_key_fromblob (BSTRING blob)
   gsti_key_t pk = NULL;
   byte * p = NULL;
   size_t n, i;
+  int algid;
 
   if (blob->len == 4)
     return NULL;
   _gsti_buf_init (&buf);
   _gsti_buf_putraw (buf, blob->d, blob->len);
   p = _gsti_buf_getstr (buf, &n);
-  if (check_pubalgo (p))
+  if (check_pubalgo (p, &algid))
     {
       _gsti_free (p);
       err = gsti_error (GPG_ERR_BUG);
@@ -676,11 +686,7 @@ _gsti_key_fromblob (BSTRING blob)
       if (err)
 	goto leave;
     }
-  /* XXX generic code */
-  if (strstr (p, "dss"))
-    pk->type = SSH_PK_DSS;
-  else
-    pk->type = SSH_PK_RSA;
+  pk->type = algid;
   pk->nkey = pk_table[pk->type].nkey;
  leave:
   _gsti_free (p);
@@ -777,7 +783,7 @@ _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
   _gsti_buf_init (&buf);
   _gsti_buf_putraw (buf, sig->d, sig->len);
   p = _gsti_buf_getstr (buf, &n);
-  if (check_pubalgo (p))
+  if (check_pubalgo (p, NULL))
     {
       err = gsti_error (GPG_ERR_INV_OBJ);
       goto leave;

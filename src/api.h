@@ -39,6 +39,20 @@ struct packet_buffer_s
 };
 typedef struct packet_buffer_s * packet_buffer_t;
 
+struct gsti_kex_s
+{
+  BSTRING h;		/* current exchange hash */
+  gcry_mpi_t k;		/* the shared secret */
+  BSTRING iv_a;		/* IV client to server */
+  BSTRING iv_b;		/* IV server to client */
+  BSTRING key_c;	/* Enc client to server */
+  BSTRING key_d;	/* Enc server to client */
+  BSTRING mac_e;	/* Mac client to server */
+  BSTRING mac_f;	/* Mac server to client */
+  int type;
+};
+typedef struct gsti_kex_s * gsti_kex_t;
+  
 struct gsti_context
 {
   gsti_read_fnc_t readfnc;
@@ -68,20 +82,9 @@ struct gsti_context
   BSTRING session_id;		/* the exchange hash from the first KEX */
   u32 send_seqno;
   u32 recv_seqno;
-  struct
-  {
-    BSTRING h;			/* current exchange hash */
-    gcry_mpi_t k;		/* the shared secret */
-    BSTRING iv_a;		/* IV client to server */
-    BSTRING iv_b;		/* IV server to client */
-    BSTRING key_c;		/* Enc client to server */
-    BSTRING key_d;		/* Enc server to client */
-    BSTRING mac_e;		/* Mac client to server */
-    BSTRING mac_f;		/* Mac server to client */
-  } kex;
 
-  int kex_type;
-
+  struct gsti_kex_s kex;
+  
   struct
   {
     unsigned int min;

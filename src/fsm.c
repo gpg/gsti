@@ -561,7 +561,7 @@ fsm_loop (gsti_ctx_t ctx, int want_read)
    NOTE: The returned buffer is only valid until the next
    gsti_{get,put}_packet and as long as the handle is valid!  */
 gsti_error_t
-gsti_get_packet (gsti_ctx_t ctx, GSTI_PKTDESC *pkt)
+gsti_get_packet (gsti_ctx_t ctx, gsti_pktdesc_t pkt)
 {
   gsti_error_t err;
 
@@ -590,7 +590,7 @@ gsti_get_packet (gsti_ctx_t ctx, GSTI_PKTDESC *pkt)
    protocol which is used on top of this transport protocol must
    assure that a packet has really been sent to the peer.  */
 gsti_error_t
-gsti_put_packet (gsti_ctx_t ctx, GSTI_PKTDESC *pkt)
+gsti_put_packet (gsti_ctx_t ctx, gsti_pktdesc_t pkt)
 {
   gsti_error_t err;
   const byte *data;
@@ -644,7 +644,7 @@ gsti_error_t
 fsm_user_read (gsti_ctx_t ctx)
 {
   gsti_error_t err;
-  GSTI_PKTDESC pkt;
+  struct gsti_pktdesc_s pkt;
 
   err = gsti_get_packet (ctx, &pkt);
   if (err)
@@ -661,7 +661,7 @@ fsm_user_read (gsti_ctx_t ctx)
 gsti_error_t
 fsm_user_write (gsti_ctx_t ctx)
 {
-  GSTI_PKTDESC pkt;
+  struct gsti_pktdesc_s pkt;
 
   pkt.data = ctx->user_write_buffer;
   pkt.datalen = ctx->user_write_bufsize;

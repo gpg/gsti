@@ -743,7 +743,7 @@ build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
   *lst = _gsti_strlist_insert (NULL, "diffie-hellman-group-exchange-sha1");
   *lst = _gsti_strlist_insert (*lst, "diffie-hellman-group1-sha1");
 
-  ctx->kex_type = SSH_KEX_GROUP_EXCHANGE;
+  ctx->kex.type = SSH_KEX_GROUP_EXCHANGE;
 }
 
 
@@ -863,8 +863,8 @@ choose_kex_algo (gsti_ctx_t ctx, STRLIST peer)
     {
       p = strstr (peer->d, "exchange");
       res = p ? SSH_KEX_GROUP_EXCHANGE : SSH_KEX_GROUP1;
-      if (ctx->kex_type != res)
-	ctx->kex_type = res;
+      if (ctx->kex.type != res)
+	ctx->kex.type = res;
       _gsti_log_debug (ctx, "chosen kex-algo: %s\n", peer->d);
     }
   return 0;
@@ -1231,12 +1231,12 @@ build_msg_service (BSTRING svcname, packet_buffer_t pkt, int type)
   if (len > pkt->size)
     {
       err = gsti_error (GPG_ERR_TOO_LARGE);
-      goto leave;
+      _gsti_buf_free (buf);
+      return err;
     }
   memcpy (pkt->payload, _gsti_buf_getptr (buf), len);
   pkt->payload_len = len;
 
-leave:
   _gsti_buf_free (buf);
 
   return err;
@@ -1557,7 +1557,7 @@ parse_gex_group (MSG_gexdh_group * gex, const BUFFER buf)
   if (_gsti_buf_getc (buf) != SSH_MSG_KEX_DH_GEX_GROUP)
     {
       err = gsti_error (GPG_ERR_BUG);
-      goto leave;
+      return err;
     }
   err = _gsti_buf_getmpi (buf, &gex->p, &n);
   if (!err)
@@ -1565,7 +1565,6 @@ parse_gex_group (MSG_gexdh_group * gex, const BUFFER buf)
   if (!err && _gsti_buf_getlen (buf))
     err = gsti_error (GPG_ERR_INV_PACKET);
 
-leave:
   return err;
 }
 
