@@ -309,8 +309,9 @@ again:
 	return _gsti_log_err (ctx, err, "decrypt failed\n");
       /* Note: There is no reason to decrypt the padding, but we do it
          anyway because this is easier.  */
-      _gsti_dump_hexbuf ("rest of packet: ", ctx->pkt.packet_buffer + blksize,
-			 n);
+      _gsti_dump_hexbuf ("next 16 bytes of packet: ",
+                         ctx->pkt.packet_buffer + blksize,
+			 n > 16? 16: n);
     }
 
   if (ctx->recv_mac && !verify_mac (ctx, seqno))

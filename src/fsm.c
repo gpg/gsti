@@ -71,6 +71,50 @@ enum fsm_states
 };
 
 
+static const char *
+state_to_string (enum fsm_states state)
+{
+  const char *s;
+
+  switch (state)
+    {
+#define X(a) case FSM_ ## a: s = STR(a); break
+      X(init);
+      X(read);
+      X(write);
+      X(wait_on_version);
+      X(send_version);
+      X(kex_start);
+      X(kex_wait);
+      X(kex_wait_newkeys);
+      X(kex_done);
+      X(wait_service_request);
+      X(send_service_request);
+      X(wait_service_accept);
+      X(send_service_accept);
+      X(service_start);
+      X(auth_start);
+      X(auth_wait);
+      X(auth_send_pkok);
+      X(auth_wait_pkok);
+      X(auth_send_request);
+      X(auth_wait_request);
+      X(auth_send_accept);
+      X(auth_wait_accept);
+      X(auth_done);
+      X(idle);
+      X(kex_failed);
+      X(auth_failed);
+      X(not_implemented);
+      X(quit);
+#undef X
+      default: s = "unknown"; break;
+    }
+
+  return s;
+}
+
+
 /* Do some initialization.  */
 static gsti_error_t
 handle_init (gsti_ctx_t ctx, int want_read)
@@ -157,15 +201,16 @@ fsm_server_loop (gsti_ctx_t ctx)
       ctx->state = FSM_read;
       break;
     default:
-      _gsti_log_info (ctx, "FSM: start fsm_loop: invalid state %d\n",
-		      ctx->state);
+      _gsti_log_info (ctx, "FSM: start fsm_loop: invalid state %s\n",
+		      state_to_string (ctx->state));
       err = gsti_error (GPG_ERR_BUG);
       break;
     }
 
   while (!err && ctx->state != FSM_quit && ctx->state != FSM_idle)
     {
-      _gsti_log_info (ctx, "** FSM (server) state=%d\n", ctx->state);
+      _gsti_log_info (ctx, "** FSM (server) state=%s\n",
+                      state_to_string (ctx->state));
       switch (ctx->state)
 	{
 	case FSM_wait_on_version:
@@ -274,7 +319,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	  _gsti_log_info (ctx, "service `");
 	  _gsti_print_string (gsti_bstr_data (ctx->service_name),
 			      gsti_bstr_length (ctx->service_name));
-	  _gsti_log_info (ctx, "' has been started (server)\n");
+	  _gsti_log_cont (ctx, "' has been started (server)\n");
 	  ctx->state = FSM_auth_wait;
 	  break;
 
@@ -371,15 +416,16 @@ fsm_client_loop (gsti_ctx_t ctx)
       ctx->state = FSM_write;
       break;
     default:
-      _gsti_log_info (ctx, "FSM: start fsm_loop: invalid state %d\n",
-		      ctx->state);
+      _gsti_log_info (ctx, "FSM: start fsm_loop: invalid state %s\n",
+		      state_to_string (ctx->state));
       err = gsti_error (GPG_ERR_BUG);
       break;
     }
 
   while (!err && ctx->state != FSM_quit && ctx->state != FSM_idle)
     {
-      _gsti_log_info (ctx, "** FSM (client) state=%d\n", ctx->state);
+      _gsti_log_info (ctx, "** FSM (client) state=%s\n",
+                      state_to_string (ctx->state));
       switch (ctx->state)
 	{
 	case FSM_send_version:
@@ -457,7 +503,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  err = kex_send_service_request (ctx, ctx->local_services ?
 					  ctx->local_services->d
 					  : "ssh-userauth");
-	  _gsti_log_info (ctx, "\n");
+	  _gsti_log_cont (ctx, "\n");
 	  if (!err)
 	    {
 	      ctx->state = FSM_wait_service_accept;
@@ -484,7 +530,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  _gsti_log_info (ctx, "service `");
 	  _gsti_print_string (gsti_bstr_data (ctx->service_name),
 			      gsti_bstr_length (ctx->service_name));
-	  _gsti_log_info (ctx, "' has been started (client)\n");
+	  _gsti_log_cont (ctx, "' has been started (client)\n");
 	  ctx->state = FSM_auth_start;
 	  break;
 

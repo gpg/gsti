@@ -246,6 +246,8 @@ typedef enum
     GSTI_LOG_INFO = 128,
     GSTI_LOG_DEBUG = 256,
 
+    GSTI_LOG_CONT = (1<<16),
+
     /* This also enforces a minimum width for the used integer type.  */
     GSTI_LOG_MAX = (1 << 30)
   }

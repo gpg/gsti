@@ -141,26 +141,28 @@ _gsti_print_string (const char *string, size_t n)
 
   for (; n; n--, p++)
     {
-      if (iscntrl (*p))
+      if (*p < 32 || *p > 126 || *p == '\\')
 	{
-	  _gsti_log_info (0, "%c", '\\');
+	  _gsti_log_cont (0, "%c", '\\');
 	  if (*p == '\n')
-	    _gsti_log_info (0, "%c", 'n');
+	    _gsti_log_cont (0, "%c", 'n');
 	  else if (*p == '\r')
-	    _gsti_log_info (0, "%c", 'r');
+	    _gsti_log_cont (0, "%c", 'r');
 	  else if (*p == '\f')
-	    _gsti_log_info (0, "%c", 'f');
+	    _gsti_log_cont (0, "%c", 'f');
 	  else if (*p == '\v')
-	    _gsti_log_info (0, "%c", 'v');
+	    _gsti_log_cont (0, "%c", 'v');
 	  else if (*p == '\b')
-	    _gsti_log_info (0, "%c", 'b');
+	    _gsti_log_cont (0, "%c", 'b');
+	  else if (*p == '\\')
+	    _gsti_log_cont (0, "%c", '\\');
 	  else if (!*p)
-	    _gsti_log_info (0, "%c", '0');
+	    _gsti_log_cont (0, "%c", '0');
 	  else
-	    _gsti_log_info (0, "x%02x", *p);
+	    _gsti_log_cont (0, "x%02x", *p);
 	}
       else
-	_gsti_log_info (0, "%c", *p);
+	_gsti_log_cont (0, "%c", *p);
     }
 }
 
@@ -177,8 +179,8 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	byte *buf = opaque;
 	_gsti_log_info (0, "%s", prefix);
 	for (; len; len--, buf++)
-	  _gsti_log_info (0, "%02X ", *buf);
-	_gsti_log_info (0, "\n");
+	  _gsti_log_cont (0, "%02X ", *buf);
+	_gsti_log_cont (0, "\n");
 	break;
       }
     case TYPE_STRLIST:
@@ -206,7 +208,7 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	_gsti_log_info (0, "%s", prefix);
 	if (a)
 	  _gsti_print_string (gsti_bstr_data (a), gsti_bstr_length (a));
-	_gsti_log_info (0, "\n");
+	_gsti_log_cont (0, "\n");
 	break;
       }
     case TYPE_BUFFER:
@@ -217,7 +219,7 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	
 	while (amount--)
 	  _gsti_log_info (0, "%4x", *(data++));
-	_gsti_log_info (0, "\n");
+	_gsti_log_cont (0, "\n");
 	break;
       }
 

@@ -55,8 +55,13 @@ _gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
 
   /* FIXME: This is not atomic.  Also, it does not show the context in
      which the error occured.  */
+  if (level != GSTI_LOG_CONT)
+    fputs ("gsti: ", log_stream);
   switch (level)
     {
+    case GSTI_LOG_CONT:
+      break;
+
     case GSTI_LOG_INFO:
       break;
 
@@ -96,6 +101,18 @@ _gsti_log_info (gsti_ctx_t ctx, const char *fmt, ...)
 
   va_start (arg, fmt);
   _gsti_logv (ctx, GSTI_LOG_INFO, fmt, arg);
+  va_end (arg);
+}
+
+/* Log the information FMT for context CTX; this version does not
+   print a prefix and should be used to continue a log line.  */
+void
+_gsti_log_cont (gsti_ctx_t ctx, const char *fmt, ...)
+{
+  va_list arg;
+
+  va_start (arg, fmt);
+  _gsti_logv (ctx, GSTI_LOG_CONT, fmt, arg);
   va_end (arg);
 }
 

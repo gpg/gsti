@@ -1,3 +1,16 @@
+2004-06-29  Werner Koch  <wk@gnupg.org>
+
+	* fsm.c (state_to_string): New.
+	(fsm_server_loop, fsm_client_loop): Use it here.
+	* utils.h (STR,STR2): New macros.
+	* packet.c (_gsti_packet_read): Do not dump the entire packet.
+	* logging.c (_gsti_logv): Prepend the lines with "gsti: ";
+	(_gsti_log_cont): New.
+	(_gsti_logv): Support GSTI_LOG_CONT.
+	* gsti.h (gsti_log_level_t): Add GSTI_LOG_CONT.
+	* utils.c (_gsti_print_string, _gsti_dump_object): Use it here.
+	(_gsti_print_string): Quote everything except plain ascii.
+
 2004-06-29  Marcus Brinkmann  <marcus@g10code.de>
 
 	* gsti.h (gsti_channel_eof): New prototype.
@@ -33,22 +46,22 @@
 	
 2004-06-14  Timo Schulz  <twoaday@g10code.de>
 
-        * stream.c (_gsti_read_new_stream): Return error code
+	* stream.c (_gsti_read_new_stream): Return error code
         and not the context itself. Changed all callers.
         (_gsti_write_new_stream): Likewise.
 
-        * auth.c (parse_auth_request): Handle possible errors.
+	* auth.c (parse_auth_request): Handle possible errors.
         (calc_sig_hash): Likewise.
         (auth_send_failure_packet): New.
 
-        * pubkey.c (_gsti_key_getblob): Return 'No Seckey' if
+	* pubkey.c (_gsti_key_getblob): Return 'No Seckey' if
         the key context is invalid.
 
-        * kex.c (wait_on_version): Handle possible errors.
+	* kex.c (wait_on_version): Handle possible errors.
         (calc_exchange_hash): Likewise.
         (construct_one_key): Likewise.
         (kex_proc_init_packet): Likewise.
-        * packet.c (_gsti_packet_read): Ditto.
+	* packet.c (_gsti_packet_read): Ditto.
 	
 2004-06-14  Werner Koch  <wk@gnupg.org>
 

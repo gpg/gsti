@@ -139,7 +139,8 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 int
 main (int argc, char **argv)
 {
-  int rc, i;
+  gpg_error_t err;
+  int i;
   struct sock_ctx_s fd;
   gsti_ctx_t ctx;
   struct gsti_pktdesc_s pkt;
@@ -150,38 +151,62 @@ main (int argc, char **argv)
       argv++;
     }
 
+  /* Initialize our local context object. */
   memset (&fd, 0, sizeof fd);
+
+  /* Make sure we get secure memory. */
   gsti_control (GSTI_SECMEM_INIT);
+
+  /* We are single-threaded, thus no locking is required. */
   gsti_control (GSTI_DISABLE_LOCKING);
-  gsti_init (&ctx);
+
+
+  /* Initialize a GSTI context. */
+  err = gsti_init (&ctx);
+  log_rc (err, "init");
+
+  /* This context should be logged at debug level. */
   gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
+
+  /* Register our read/write functions. */
   gsti_set_readfnc (ctx, myread, &fd);
   gsti_set_writefnc (ctx, mywrite, &fd);
-  gsti_set_client_key (ctx, SECKEY);
-  gsti_set_client_user (ctx, "twoaday");
+
+  /* Register a key and a user. */
+  err = gsti_set_client_key (ctx, SECKEY);
+  log_rc (err, "set_client_key");
+  err = gsti_set_client_user (ctx, "twoaday");
+  log_rc (err, "set_client_user");
 
 #if 0
   rc = gsti_set_service (ctx, "log-lines@gnu.org");
   log_rc (rc, "set-service");
 #endif
 
+  /* Create a conenction to the host given on the command line or to
+     localhost if no args are given. */
   make_connection (&fd.conn_fd, argc ? *argv : "localhost");
 
+  /* Start the processing by sending 2 simple data packets. */
   for (i = 0; i < 2; i++)
     {
       memset (&pkt, 0, sizeof pkt);
       pkt.data = "\xf0\x01\x00\x00\x00\x04" "hallo" "\x00\x00\x00\x00";
       pkt.datalen = 15;
-      rc = gsti_put_packet (ctx, &pkt);
-      log_rc (rc, "put_packet");
+      err = gsti_put_packet (ctx, &pkt);
+      log_rc (err, "put_packet");
 
-      rc = gsti_put_packet (ctx, NULL);
-      log_rc (rc, "flush_packet");
+      err = gsti_put_packet (ctx, NULL);
+      log_rc (err, "flush_packet");
 
       printf ("seqno %lu\n", pkt.seqno);
     }
 
+  /* Release the context. */
   gsti_deinit (ctx);
+
+  /* And the secure memory. */
   gsti_control (GSTI_SECMEM_RELEASE);
+
   return 0;
 }

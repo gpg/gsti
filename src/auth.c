@@ -170,7 +170,7 @@ dump_auth_request (gsti_ctx_t ctx, MSG_auth_request * ath)
      that we can dump objects by using a special format spec, eg %B,
      for a binary string.  This will also preserve the log level etc.  */
 #if WE_EVENTUALLY_HAVE_A_FEATURE_COMPLETE_GIO
-  _gsti_log_debug (ctx, "\nMSG_auth_request:\n");
+  _gsti_log_debug (ctx, "MSG_auth_request:\n");
   _gsti_log_debug (ctx, "user: %B\n", ath->user);
   _gsti_log_debug (ctx, "service: %B\n", ath->svcname);
   _gsti_log_debug (ctx, "method: %B\n", ath->method);
@@ -178,14 +178,14 @@ dump_auth_request (gsti_ctx_t ctx, MSG_auth_request * ath)
   _gsti_log_debug (ctx, "key: %B\n", ath->key);
   _gsti_log_debug (ctx, "signature: %B", ath->sig);
 #else
-  _gsti_log_debug (ctx, "\nMSG_auth_request:\n");
+  _gsti_log_debug (ctx, "MSG_auth_request:\n");
   _gsti_dump_bstring ("user: ", ath->user);
   _gsti_dump_bstring ("service: ", ath->svcname);
   _gsti_dump_bstring ("method: ", ath->method);
-  _gsti_log_debug (ctx, "false=%d\n", ath->false);
+  _gsti_log_info (ctx, "false=%d\n", ath->false);
   _gsti_dump_bstring ("key: ", ath->key);
   _gsti_dump_bstring ("signature: ", ath->sig);
-  _gsti_log_debug (ctx, "\n");
+  _gsti_log_debug (ctx, "[end MSG_auth_request]\n");
 #endif
 }
 

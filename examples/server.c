@@ -67,6 +67,8 @@ log_rc (int rc, const char *text)
     fprintf (stderr, PGMNAME "gsti_%s: %s\n", text, s);
 }
 
+
+
 static void
 wait_connection (int * listen_fd, int * conn_fd)
 {
@@ -172,7 +174,8 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 int
 main (int argc, char **argv)
 {
-  int rc, i;
+  gpg_error_t err;
+  int i;
   struct sock_ctx_s fd;
   gsti_ctx_t ctx;
   struct gsti_pktdesc_s pkt;
@@ -183,11 +186,24 @@ main (int argc, char **argv)
       argv++;
     }
 
+  /* Initialize our local context object. */
   memset (&fd, 0, sizeof fd);
+
+  /* Make sure we get secure memory. */
   gsti_control (GSTI_SECMEM_INIT);
-  gsti_init (&ctx);
+
+  /* Initialize a GSTI context. */
+  err = gsti_init (&ctx);
+  log_rc (err, "init");
+
+  /* This context should be logged at debug level. */
   gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
-  gsti_set_hostkey (ctx, SECKEY);
+
+  /* Register our host key. */
+  err = gsti_set_hostkey (ctx, SECKEY);
+  log_rc (err, "set_hostkey");
+
+  /* Register our read/write functions. */
   gsti_set_readfnc (ctx, myread, &fd);
   gsti_set_writefnc (ctx, mywrite, &fd);
 
@@ -196,18 +212,23 @@ main (int argc, char **argv)
   log_rc (rc, "set-service");
 #endif
 
+  /* Wait for a client to connect. */
   wait_connection (&fd.listen_fd, &fd.conn_fd);
 
+  /* Read 2 packets to get the protocol going.  */
   for (i = 0; i < 2; i++)
     {
-      rc = gsti_get_packet (ctx, &pkt);
-      log_rc (rc, "get-packet");
-      if (!rc)
+      err = gsti_get_packet (ctx, &pkt);
+      log_rc (err, "get-packet");
+      if (!err)
 	dump_hexbuf (stderr, "got packet: ", pkt.data, pkt.datalen);
     }
 
-  gsti_control (GSTI_SECMEM_RELEASE);
+  /* Release the context. */
   gsti_deinit (ctx);
+
+  /* And the secure memory. */
+  gsti_control (GSTI_SECMEM_RELEASE);
 
   return 0;
 }

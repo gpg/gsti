@@ -60,6 +60,7 @@ void _gsti_print_string (const char *string, size_t n);
 /*-- logging.c --*/
 int _gsti_log_err (gsti_ctx_t ctx, int rc, const char *fmt, ...);
 void _gsti_log_info (gsti_ctx_t ctx, const char *fmt, ...);
+void _gsti_log_cont (gsti_ctx_t ctx, const char *fmt, ...);
 void _gsti_log_debug (gsti_ctx_t ctx, const char *fmt, ...);
 
 /*-- zlib.c --*/
@@ -69,6 +70,13 @@ int _gsti_compress_block (byte * block, int len, byte ** outblock,
 void _gsti_decompress_init (void);
 int _gsti_decompress_block (byte * block, int len, byte ** outblock,
 			    int *outlen);
+
+
+/* Some handy macros */
+#ifndef STR
+#define STR(v) #v
+#endif
+#define STR2(v) STR(v)
 
 
 #endif	/* GSTI_UTILS_H */
