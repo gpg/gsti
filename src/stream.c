@@ -36,20 +36,21 @@
 #define STREAM_BUFSIZE 512
 
 /* Create a new read stream.  */
-READ_STREAM
-_gsti_read_stream_new (GSTI_READ_FNC readfnc)
+read_stream_t
+_gsti_read_stream_new (gsti_read_fnc_t readfnc, void * fnc_ctx)
 {
-  READ_STREAM a;
+  read_stream_t a;
 
   a = _gsti_xcalloc (1, sizeof *a + STREAM_BUFSIZE - 1);
   a->readfnc = readfnc;
+  a->fnc_ctx = fnc_ctx;
   a->size = STREAM_BUFSIZE;
   return a;
 }
 
 
 void
-_gsti_read_stream_free (READ_STREAM a)
+_gsti_read_stream_free (read_stream_t a)
 {
   _gsti_free (a);
 }
@@ -59,7 +60,7 @@ _gsti_read_stream_free (READ_STREAM a)
    internally to to the underflow handling.  It may be used directly.
    the function returns -1 on EOF.  */
 int
-_gsti_stream_getbyte (READ_STREAM a)
+_gsti_stream_getbyte (read_stream_t a)
 {
   int rc;
   size_t n;
@@ -72,7 +73,7 @@ _gsti_stream_getbyte (READ_STREAM a)
   a->len = 0;
   a->start = 0;
   n = a->size;
-  rc = a->readfnc (NULL, a->buf, &n);
+  rc = a->readfnc (a->fnc_ctx, a->buf, n, &n);
   if (rc)
     {
       a->error = 1;
@@ -92,7 +93,7 @@ _gsti_stream_getbyte (READ_STREAM a)
    given anpount is actually skipped.  Returns 0 on success or an
    error code.  */
 gsti_error_t
-_gsti_stream_readn (READ_STREAM a, byte * buffer, size_t nbytes)
+_gsti_stream_readn (read_stream_t a, byte * buffer, size_t nbytes)
 {
   int c;
 
@@ -114,20 +115,21 @@ _gsti_stream_readn (READ_STREAM a, byte * buffer, size_t nbytes)
 }
 
 
-WRITE_STREAM
-_gsti_write_stream_new (GSTI_WRITE_FNC writefnc)
+write_stream_t
+_gsti_write_stream_new (gsti_write_fnc_t writefnc, void * fnc_ctx)
 {
-  WRITE_STREAM a;
+  write_stream_t a;
 
   a = _gsti_xcalloc (1, sizeof *a + STREAM_BUFSIZE - 1);
   a->writefnc = writefnc;
+  a->fnc_ctx = fnc_ctx;
   a->size = STREAM_BUFSIZE;
   return a;
 }
 
 
 void
-_gsti_write_stream_free (WRITE_STREAM a)
+_gsti_write_stream_free (write_stream_t a)
 {
   _gsti_free (a);
 }
@@ -136,14 +138,15 @@ _gsti_write_stream_free (WRITE_STREAM a)
 /* This is the function version of the stream_put() macro.  It is used
    internally to do the flush handling.  It may be used directly.  */
 int
-_gsti_stream_putbyte (WRITE_STREAM a, int c)
+_gsti_stream_putbyte (write_stream_t a, int c)
 {
+  size_t n;
   int rc;
 
   if (!a->used)
     return 0;
 
-  rc = a->writefnc (NULL, a->buf, a->used);
+  rc = a->writefnc (a->fnc_ctx, a->buf, a->used, &n);
   if (rc)
     {
       a->error = 1;
@@ -155,11 +158,12 @@ _gsti_stream_putbyte (WRITE_STREAM a, int c)
 
 
 gsti_error_t
-_gsti_stream_flush (WRITE_STREAM a)
+_gsti_stream_flush (write_stream_t a)
 {
+  size_t n;
   int rc;
 
-  rc = a->used ? a->writefnc (NULL, a->buf, a->used) : 0;
+  rc = a->used ? a->writefnc (a->fnc_ctx, a->buf, a->used, &n) : 0;
   if (rc)
     {
       a->error = 1;
@@ -167,7 +171,7 @@ _gsti_stream_flush (WRITE_STREAM a)
       return gsti_error_from_errno (EIO);
     }
   a->used = 0;
-  rc = a->writefnc (NULL, NULL, 0);
+  rc = a->writefnc (a->fnc_ctx, NULL, 0, NULL);
   if (rc)
     {
       a->error = 1;
@@ -181,7 +185,7 @@ _gsti_stream_flush (WRITE_STREAM a)
 /* Write NBYTES from buffer. If BUFFER is NULL the strong random bytes
    are written.  Returns 0 on success or an error code.  */
 gsti_error_t
-_gsti_stream_writen (WRITE_STREAM a, const byte * buffer, size_t nbytes)
+_gsti_stream_writen (write_stream_t a, const byte * buffer, size_t nbytes)
 {
   gsti_error_t err = 0;
   const byte *s = buffer;

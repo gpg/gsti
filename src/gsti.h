@@ -189,10 +189,13 @@ enum gsti_auth_methods
 struct gsti_context;
 typedef struct gsti_context *gsti_ctx_t;
 
+struct gsti_auth_s;
+typedef struct gsti_auth_s *gsti_auth_t;
 
 /* Some handy types.  */
-typedef int (*GSTI_READ_FNC) (gsti_ctx_t ctx, void *, size_t *);
-typedef int (*GSTI_WRITE_FNC) (gsti_ctx_t ctx, const void *, size_t);
+typedef gsti_error_t (*gsti_read_fnc_t)(void *, void *, size_t, size_t *);
+typedef gsti_error_t (*gsti_write_fnc_t)(void *, const void *, size_t, size_t *);
+
 
 typedef struct
 {
@@ -214,8 +217,10 @@ void gsti_control (enum gsti_ctl_cmds ctl);
 /* api */
 gsti_ctx_t gsti_init (void);
 void gsti_deinit (gsti_ctx_t ctx);
-gsti_error_t gsti_set_readfnc (gsti_ctx_t ctx, GSTI_READ_FNC readfnc);
-gsti_error_t gsti_set_writefnc (gsti_ctx_t ctx, GSTI_WRITE_FNC writefnc);
+gsti_error_t gsti_set_readfnc (gsti_ctx_t ctx, gsti_read_fnc_t readfnc,
+                               void * opaque);
+gsti_error_t gsti_set_writefnc (gsti_ctx_t ctx, gsti_write_fnc_t writefnc,
+                                void * opaque);
 gsti_error_t gsti_set_service (gsti_ctx_t ctx, const char *svcname);
 gsti_error_t gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length);
 gsti_error_t gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length);
@@ -260,6 +265,10 @@ gsti_error_t gsti_key_save (const char *file, int secpart, gsti_key_t ctx);
 unsigned char *gsti_key_fingerprint (gsti_key_t ctx, int mdalgo);
 gsti_error_t gsti_key_from_sexp (void * ctx_key, gsti_key_t * r_key);
 void gsti_key_free (gsti_key_t ctx);
+
+/*-- auth.c --*/
+gsti_error_t gsti_auth_new (gsti_auth_t * r_ath);
+void gsti_auth_free (gsti_auth_t ath);
 
 
 #ifdef __cplusplus

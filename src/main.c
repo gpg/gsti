@@ -150,18 +150,8 @@ gsti_init (void)
   ctx = _gsti_xcalloc (1, sizeof *ctx);
   _gsti_packet_init (ctx);
   init_gex_default (ctx);
+  gsti_auth_new (&ctx->auth);
   return ctx;
-}
-
-
-static void
-_gsti_free_auth (gsti_ctx_t ctx)
-{
-  if (ctx)
-    {
-      _gsti_free (ctx->auth.user);
-      gsti_key_free (ctx->auth.key);
-    }
 }
 
 
@@ -171,7 +161,7 @@ gsti_deinit (gsti_ctx_t ctx)
   if (!ctx)
     return;
 
-  _gsti_free_auth (ctx);
+  gsti_auth_free (ctx->auth);
   _gsti_read_stream_free (ctx->read_stream);
   _gsti_write_stream_free (ctx->write_stream);
   _gsti_strlist_free (ctx->local_services);
@@ -196,24 +186,26 @@ gsti_deinit (gsti_ctx_t ctx)
 
 
 gsti_error_t
-gsti_set_readfnc (gsti_ctx_t ctx, GSTI_READ_FNC readfnc)
+gsti_set_readfnc (gsti_ctx_t ctx, gsti_read_fnc_t readfnc, void * opaque)
 {
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
   ctx->readfnc = readfnc;
+  ctx->readctx = opaque;
 
   return 0;
 }
 
 
 gsti_error_t
-gsti_set_writefnc (gsti_ctx_t ctx, GSTI_WRITE_FNC writefnc)
+gsti_set_writefnc (gsti_ctx_t ctx, gsti_write_fnc_t writefnc, void * opaque)
 {
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
   ctx->writefnc = writefnc;
+  ctx->writectx = opaque;
 
   return 0;
 }
@@ -322,7 +314,7 @@ gsti_set_client_key (gsti_ctx_t ctx, const char *file)
   if (stat (file, &statbuf))
     return gsti_error_from_errno (errno);
 
-  return gsti_key_load (file, 1, &ctx->auth.key);
+  return gsti_key_load (file, 1, &ctx->auth->key);
 }
 
 
@@ -332,8 +324,8 @@ gsti_set_client_user (gsti_ctx_t ctx, const char *user)
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  _gsti_free (ctx->auth.user);
-  ctx->auth.user = _gsti_xstrdup (user);
+  _gsti_free (ctx->auth->user);
+  ctx->auth->user = _gsti_xstrdup (user);
 
   return 0;
 }
@@ -348,7 +340,7 @@ gsti_set_auth_method (gsti_ctx_t ctx, int methd)
   switch (methd)
     {
     case GSTI_AUTH_PUBLICKEY:
-      ctx->auth.method = methd;
+      ctx->auth->method = methd;
       break;
     default:
       return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);

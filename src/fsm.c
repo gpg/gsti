@@ -80,8 +80,8 @@ handle_init (gsti_ctx_t ctx, int want_read)
   if (!ctx->readfnc || !ctx->writefnc)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  ctx->read_stream = _gsti_read_stream_new (ctx->readfnc);
-  ctx->write_stream = _gsti_write_stream_new (ctx->writefnc);
+  ctx->read_stream = _gsti_read_stream_new (ctx->readfnc, ctx->readctx);
+  ctx->write_stream = _gsti_write_stream_new (ctx->writefnc, ctx->writectx);
   if (want_read)
     {
       /* Be the server side.  */
@@ -278,7 +278,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_REQUEST:
-		  err = auth_proc_init_packet (ctx);
+		  err = auth_proc_init_packet (ctx, ctx->auth);
 		  if (!err)
 		    ctx->state = FSM_auth_send_pkok;
 		  break;
@@ -291,7 +291,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_send_pkok:
-	  err = auth_send_pkok_packet (ctx);
+	  err = auth_send_pkok_packet (ctx, ctx->auth);
 	  if (!err)
 	    ctx->state = FSM_auth_wait_request;
 	  break;
@@ -303,7 +303,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_REQUEST:
-		  err = auth_proc_second_packet (ctx);
+		  err = auth_proc_second_packet (ctx, ctx->auth);
 		  if (!err)
 		    ctx->state = FSM_auth_send_accept;
 		  break;
@@ -474,7 +474,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_start:
-	  err = auth_send_init_packet (ctx);
+	  err = auth_send_init_packet (ctx, ctx->auth);
 	  if (!err)
 	    ctx->state = FSM_auth_wait_pkok;
 	  break;
@@ -486,7 +486,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_PK_OK:
-		  err = auth_proc_pkok_packet (ctx);
+		  err = auth_proc_pkok_packet (ctx, ctx->auth);
 		  if (!err)
 		    ctx->state = FSM_auth_send_request;
 		  break;
@@ -499,7 +499,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_send_request:
-	  err = auth_send_second_packet (ctx);
+	  err = auth_send_second_packet (ctx, ctx->auth);
 	  if (!err)
 	    ctx->state = FSM_auth_wait_accept;
 	  break;

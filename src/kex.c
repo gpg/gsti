@@ -94,7 +94,7 @@ gsti_error_t
 kex_send_version (gsti_ctx_t ctx)
 {
   gsti_error_t err;
-  WRITE_STREAM wst = ctx->write_stream;
+  write_stream_t wst = ctx->write_stream;
   const char *ver = host_version_string;
 
   err = _gsti_stream_writen (wst, ver, strlen (ver));
@@ -116,7 +116,7 @@ gsti_error_t
 kex_wait_on_version (gsti_ctx_t ctx)
 {
   static int initstr[4] = { 0x53, 0x53, 0x48, 0x2d };	/* "SSH-" in ascii */
-  READ_STREAM rst = ctx->read_stream;
+  read_stream_t rst = ctx->read_stream;
   char version[300];
   int any = 0, pos = 0;
   int c;

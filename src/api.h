@@ -41,10 +41,12 @@ typedef struct packet_buffer_s * packet_buffer_t;
 
 struct gsti_context
 {
-  GSTI_READ_FNC readfnc;
-  GSTI_WRITE_FNC writefnc;
-  READ_STREAM read_stream;
-  WRITE_STREAM write_stream;
+  gsti_read_fnc_t readfnc;
+  void * readctx;
+  gsti_write_fnc_t writefnc;
+  void * writectx;
+  read_stream_t read_stream;
+  write_stream_t write_stream;
   STRLIST local_services;
 
   /* Logging.  */
@@ -115,12 +117,7 @@ struct gsti_context
 
   gsti_key_t hostkey;
 
-  struct
-  {
-    int method;
-    gsti_key_t key;
-    char *user;
-  } auth;
+  gsti_auth_t auth;
 
   struct
   {
@@ -132,6 +129,14 @@ struct gsti_context
 };
 
 
+struct gsti_auth_s 
+{
+  int method;
+  gsti_key_t key;
+  char *user;
+};
+
+
 /*-- fsm.c --*/
 gsti_error_t fsm_user_read (gsti_ctx_t ctx);
 gsti_error_t fsm_user_write (gsti_ctx_t ctx);
@@ -140,13 +145,13 @@ gsti_error_t fsm_user_write (gsti_ctx_t ctx);
 gsti_error_t auth_send_accept_packet (gsti_ctx_t ctx);
 gsti_error_t auth_proc_accept_packet (gsti_ctx_t ctx);
 
-gsti_error_t auth_send_pkok_packet (gsti_ctx_t ctx);
-gsti_error_t auth_proc_pkok_packet (gsti_ctx_t ctx);
+gsti_error_t auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
-gsti_error_t auth_send_init_packet (gsti_ctx_t ctx);
-gsti_error_t auth_proc_init_packet (gsti_ctx_t ctx);
+gsti_error_t auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
-gsti_error_t auth_send_second_packet (gsti_ctx_t ctx);
-gsti_error_t auth_proc_second_packet (gsti_ctx_t ctx);
+gsti_error_t auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t auth_proc_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
 #endif	/* GSTI_API_H */

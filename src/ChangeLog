@@ -1,3 +1,17 @@
+2004-06-06  Timo Schulz  <twoaday@g10code.de>
+
+	* auth.c (gsti_auth_new): New.
+	(gsti_auth_free): New.
+
+	Changed some structure names to the foo_t format.
+
+	* main.c (gsti_set_readfnc): Support new callback implementation.
+	(gsti_set_writefnc): New.
+
+	* gsti.h: Changed prototypes.
+
+	* stream.c: Likewise.
+	
 2004-06-02  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (gsti_key_save): New.

@@ -209,7 +209,7 @@ gsti_error_t
 _gsti_packet_read (gsti_ctx_t ctx)
 {
   gsti_error_t err;
-  READ_STREAM rst = ctx->read_stream;
+  read_stream_t rst = ctx->read_stream;
   u32 pktlen, seqno;
   size_t blksize, n, paylen, padlen, maclen;
   byte *p;
@@ -327,7 +327,7 @@ gsti_error_t
 _gsti_packet_write (gsti_ctx_t ctx)
 {
   gsti_error_t err;
-  WRITE_STREAM wst = ctx->write_stream;
+  write_stream_t wst = ctx->write_stream;
   size_t n, padlen, paylen, maclen;
   u32 seqno = ctx->send_seqno++;
   byte *p;
@@ -389,7 +389,7 @@ _gsti_packet_write (gsti_ctx_t ctx)
 gsti_error_t
 _gsti_packet_flush (gsti_ctx_t ctx)
 {
-  WRITE_STREAM wst = ctx->write_stream;
+  write_stream_t wst = ctx->write_stream;
 
   return _gsti_stream_flush (wst);
 }

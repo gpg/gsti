@@ -28,10 +28,11 @@
  * this library is supposed to be run on many different kinds of systems
  */
 
-typedef struct read_stream_s *READ_STREAM;
+typedef struct read_stream_s *read_stream_t;
 struct read_stream_s
 {
-  GSTI_READ_FNC readfnc;
+  gsti_read_fnc_t readfnc;
+  void * fnc_ctx;
   int read_eof;			/* last read returned eof */
   int error;			/* an error has been encountered */
   size_t size;			/* allocated size */
@@ -42,10 +43,11 @@ struct read_stream_s
 };
 
 
-typedef struct write_stream_s *WRITE_STREAM;
+typedef struct write_stream_s *write_stream_t;
 struct write_stream_s
 {
-  GSTI_WRITE_FNC writefnc;
+  gsti_write_fnc_t writefnc;
+  void * fnc_ctx;
   int error;			/* an error has been encountered */
   size_t size;			/* allocated size */
   /* todo: replace counts by pointers */
@@ -65,19 +67,19 @@ struct write_stream_s
 #define _gsti_stream_eof(a)   ( (a)->start >= a->len && (a)->read_eof )
 #define _gsti_stream_error(a) ( (a)->error )
 
-READ_STREAM _gsti_read_stream_new (GSTI_READ_FNC readfnc);
-void _gsti_read_stream_free (READ_STREAM a);
+read_stream_t _gsti_read_stream_new (gsti_read_fnc_t readfnc, void * fnc_ctx);
+void _gsti_read_stream_free (read_stream_t a);
 
-int _gsti_stream_getbyte (READ_STREAM a);
-gsti_error_t _gsti_stream_readn (READ_STREAM a, byte * buffer, size_t nbytes);
+int _gsti_stream_getbyte (read_stream_t a);
+gsti_error_t _gsti_stream_readn (read_stream_t a, byte * buffer, size_t nbytes);
 
-WRITE_STREAM _gsti_write_stream_new (GSTI_WRITE_FNC writefnc);
-void _gsti_write_stream_free (WRITE_STREAM a);
+write_stream_t _gsti_write_stream_new (gsti_write_fnc_t writefnc, void * fnc_ctx);
+void _gsti_write_stream_free (write_stream_t a);
 
-int _gsti_stream_putbyte (WRITE_STREAM a, int c);
-gsti_error_t _gsti_stream_writen (WRITE_STREAM a, const byte * buffer,
+int _gsti_stream_putbyte (write_stream_t a, int c);
+gsti_error_t _gsti_stream_writen (write_stream_t a, const byte * buffer,
 				  size_t nbytes);
-gsti_error_t _gsti_stream_flush (WRITE_STREAM a);
+gsti_error_t _gsti_stream_flush (write_stream_t a);
 
 
 #endif /* GSTI_STREAM_H */
