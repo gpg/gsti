@@ -135,6 +135,18 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 }
 
 
+static gsti_error_t
+my_auth_cb (void * hd, int code, const void * buf, size_t len)
+{
+  if (code != GSTI_AUTHID_BANNER)
+    return 0;
+  if (!len)
+    fprintf (stderr, "*** empty banner message.\n");
+  else
+    fprintf (stderr, "*** banner message: %s\n", (const char *)buf);
+  return 0;
+}
+
 
 int
 main (int argc, char **argv)
@@ -169,7 +181,7 @@ main (int argc, char **argv)
   gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
 
   /* Enable DH group exchange */
-  /*gsti_set_dhgex (ctx, 1024, 1024, 4096);*/
+  /*gsti_set_kex_dhgex (ctx, 1024, 1024, 4096);*/
 
   /* Set personal kex preferences */
   c_prefs[0] = GSTI_CIPHER_CAST128;
@@ -188,6 +200,9 @@ main (int argc, char **argv)
   /* Register our read/write functions. */
   gsti_set_readfnc (ctx, myread, &fd);
   gsti_set_writefnc (ctx, mywrite, &fd);
+
+  /* Register our auth callback */
+  gsti_set_auth_callback (ctx, my_auth_cb, NULL);
 
   /* Register a key and a user. */
   err = gsti_set_client_key (ctx, SECKEY);

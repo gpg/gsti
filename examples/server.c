@@ -179,6 +179,12 @@ my_auth_cb (void * ctx, int authid, const void * buf, size_t buflen)
   FILE * fp;
   unsigned char keybuf[512];
   size_t n;
+
+  if (!buflen)
+    {
+      fprintf (stderr, "** auth callback: no data.\n");
+      return 0;
+    }
   
   switch (authid)
     {
@@ -246,6 +252,9 @@ main (int argc, char **argv)
 
   /* Register our auth callback function */
   gsti_set_auth_callback (ctx, my_auth_cb, NULL);
+
+  /* Set simple banner message */
+  /*gsti_set_auth_banner (ctx, "Eddie lives somewhere in time...", 0);*/
 
 #if 0
   rc = gsti_set_service (ctx, "log-lines@gnu.org,dummy@gnu.org");
