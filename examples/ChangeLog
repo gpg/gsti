@@ -1,3 +1,8 @@
+2004-07-01  Werner Koch  <wk@gnupg.org>
+
+	* server.c (PUBKEY): Not used; removed.
+	* rsa.sec: Adapted for swapped n,e.
+
 2004-06-30  Werner Koch  <wk@gnupg.org>
 
 	* server.c, client.c: Add a few comments.

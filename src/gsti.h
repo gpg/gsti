@@ -45,7 +45,7 @@ extern "C"
 
 
 /* The version of this header should match the one of the library It
-   should not be used by a program because gcry_check_version() should
+   should not be used by a program because gsti_check_version() should
    reurn the same version.  The purpose of this macro is to let
    autoconf (using the AM_PATH_GSTI macro) check that this header
    matches the installed library.
@@ -214,6 +214,14 @@ struct gsti_key_s;
 typedef struct gsti_key_s *gsti_key_t;
 
 
+/* Hmmm, we depend on Libgcrypt here.  Should we really do this or
+   better change the callback typedef to take canonical encoded
+   S-expressions? */
+#include <gcrypt.h>
+typedef gsti_error_t (*gsti_sign_fnc_t) (void *, gcry_sexp_t *result,
+                                         gcry_sexp_t data, gcry_sexp_t skey);
+
+
 /*-- main.c --*/
 /* general */
 const char *gsti_check_version (const char *req_version);
@@ -233,6 +241,10 @@ gsti_error_t gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length);
 gsti_error_t gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length);
 gsti_error_t gsti_set_hostkey (gsti_ctx_t ctx, const char *file);
 gsti_error_t gsti_set_client_key (gsti_ctx_t ctx, const char *file);
+gsti_error_t gsti_set_client_key_blob (gsti_ctx_t ctx,
+                                       const unsigned char *key, size_t keylen,
+                                       gsti_sign_fnc_t sign_fnc,
+                                       void *sign_fnc_value);
 gsti_error_t gsti_set_client_user (gsti_ctx_t ctx, const char *user);
 gsti_error_t gsti_set_auth_method (gsti_ctx_t ctx, int methd);
 gsti_error_t gsti_set_compression (gsti_ctx_t ctx, int val);

@@ -1,3 +1,15 @@
+2004-07-01  Werner Koch  <wk@gnupg.org>
+
+	* main.c (gsti_set_client_key): Release an existing key.
+	(gsti_set_client_key_blob): New.
+
+	* pubkey.c (pk_table): Swapped RSA parameters; E comes first.
+	(_gsti_rsa_sign, _gsti_rsa_verify): Adapt for it.
+	(_gsti_rsa_sign, _gsti_dss_sign): Check number of parameters and
+	support a sign callback.
+	* pubkey.h (struct gsti_key_s): Add members SIGN_FNC and
+	SIGN_FNC_VALUE.
+
 2004-06-30  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c: s/nkey/npkey for the pubkey table.
@@ -9,6 +21,7 @@
 	(_gsti_ssh_get_pkname): Return error code and not the buffer.
 	* main.c (gsti_get_auth_key): Return NULL for an invalid ctx.
 	
+
 2004-06-30  Marcus Brinkmann  <marcus@g10code.de>
 
 	* gsti.h (gsti_get_auth_key): Add prototype.

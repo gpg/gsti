@@ -35,6 +35,8 @@ struct gsti_key_s
   unsigned nkey;
   int type;
   unsigned int secret:1;
+  gsti_sign_fnc_t  sign_fnc;
+  void            *sign_fnc_value;
 };
 
 gsti_error_t _gsti_key_getblob (gsti_key_t pk, gsti_bstr_t * r_blob);

@@ -35,7 +35,6 @@
 
 /*#define PUBKEY "dsa.pub"
   #define SECKEY "dsa.sec"*/
-#define PUBKEY "rsa.pub"
 #define SECKEY "rsa.sec"
 
 #define PGMNAME "ex-server: "

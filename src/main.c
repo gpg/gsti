@@ -37,6 +37,7 @@
 #include "packet.h"
 #include "api.h"
 #include "kex.h"
+#include "pubkey.h"
 
 static const char *
 parse_version_number (const char *s, int *number)
@@ -305,7 +306,40 @@ gsti_set_client_key (gsti_ctx_t ctx, const char *file)
   if (stat (file, &statbuf))
     return gsti_error_from_errno (errno);
 
+  gsti_key_free (ctx->auth->key);
+  ctx->auth->key = NULL;
   return gsti_key_load (file, 1, &ctx->auth->key);
+}
+
+
+/* Set the client authentication key from a ssh style keyblob in KEY
+   and KEYLEN.  Optionally a sign function may be assigned to the
+   key. */
+gsti_error_t
+gsti_set_client_key_blob (gsti_ctx_t ctx,
+                          const unsigned char *key, size_t keylen,
+                          gsti_sign_fnc_t sign_fnc, void *sign_fnc_value)
+{
+  gsti_error_t err;
+  gsti_bstr_t bstr;
+
+  if (!ctx)
+    return gsti_error (GPG_ERR_INV_ARG);
+
+  err = gsti_bstr_make (&bstr, key, keylen);
+  if (err)
+    return err;
+    
+  gsti_key_free (ctx->auth->key);
+  ctx->auth->key = NULL;
+  err = _gsti_key_fromblob (bstr, &ctx->auth->key);
+  if (!err)
+    {
+      ctx->auth->key->sign_fnc = sign_fnc;
+      ctx->auth->key->sign_fnc_value = sign_fnc_value;
+    }
+  gsti_bstr_free (bstr);
+  return err;
 }
 
 
@@ -320,7 +354,6 @@ gsti_set_client_user (gsti_ctx_t ctx, const char *user)
 
   return 0;
 }
-
 
 gsti_error_t
 gsti_set_auth_method (gsti_ctx_t ctx, int methd)

@@ -50,7 +50,7 @@ static struct
 {
   {"none",    "dummy", 0, "dummy", 0, "dummy", 0, SSH_PK_NONE},
   {"ssh-dss", "pqgy",  4, "rs",    2, "x",     1, SSH_PK_DSS},
-  {"ssh-rsa", "ne",    2, "s",     1, "dpqu",  4, SSH_PK_RSA},
+  {"ssh-rsa", "en",    2, "s",     1, "dpqu",  4, SSH_PK_RSA},
   {0}
 };
 
@@ -164,21 +164,42 @@ _gsti_rsa_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
   
   if (ctx->type != SSH_PK_RSA)
     return gsti_error (GPG_ERR_BUG);
-  if (!ctx->secret)
+  if (!ctx->secret && !ctx->sign_fnc)
     return gsti_error (GPG_ERR_INV_OBJ);
   
   err = sexp_from_buffer (&s_hash, hash, dlen, 1);
   if (!err)
-    err = gcry_sexp_build (&s_key, NULL,
-                           "(private-key(rsa(n%m)(e%m)(d%m)(p%m)(q%m)(u%m)))",
-                           ctx->key[0],
-                           ctx->key[1],
-                           ctx->key[2],
-                           ctx->key[3],
-                           ctx->key[4],
-                           ctx->key[5]);
+    {
+      /* Usually it does not make sense to use a public key for signing.
+         However if the callback is used, it might want to use the public
+         key for looking up the private key; in particular for smartcards
+         this is very useful.  */
+      if (ctx->nkey == 2)
+        err = gcry_sexp_build (&s_key, NULL,
+                               "(puplic-key(rsa(e%m)(n%m)))",
+                               ctx->key[0],
+                               ctx->key[1]);
+      else if (ctx->nkey == 6)
+        err = gcry_sexp_build (&s_key, NULL,
+                        "(private-key(rsa(e%m)(n%m)(d%m)(p%m)(q%m)(u%m)))",
+                               ctx->key[0],
+                               ctx->key[1],
+                               ctx->key[2],
+                               ctx->key[3],
+                               ctx->key[4],
+                               ctx->key[5]);
+      else
+        err = gsti_error (GPG_ERR_BUG);
+    }
+
   if (!err)
-    err = gcry_pk_sign (&s_sig, s_hash, s_key);
+    {
+      if (ctx->sign_fnc)
+        err = ctx->sign_fnc (ctx->sign_fnc_value, &s_sig, s_hash, s_key);
+      else
+        err = gcry_pk_sign (&s_sig, s_hash, s_key);
+    }
+
   if (!err)
     err = sexp_get_sshmpi (s_sig, SSH_PK_RSA, sig);
 
@@ -200,21 +221,43 @@ _gsti_dss_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
 
   if (ctx->type != SSH_PK_DSS)
     return gsti_error (GPG_ERR_BUG);
-  if (!ctx->secret)
+  if (!ctx->secret && !ctx->sign_fnc)
     return gsti_error (GPG_ERR_INV_OBJ);
 
   err = sexp_from_buffer (&s_hash, hash, dlen, 0);
   if (!err)
-    err = gcry_sexp_build (&s_key, NULL,
-                           "(private-key(dsa(p%m)(q%m)(g%m)(y%m)(x%m)))",
-                           ctx->key[0],	/* p */
-                           ctx->key[1],	/* q */
-                           ctx->key[2],	/* g */
-                           ctx->key[3],	/* y */
-                           ctx->key[4] /* x */ );
+    {
+      /* Usually it does not make sense to use a public key for signing.
+         However if the callback is used, it might want to use the public
+         key for looking up the private key; in particular for smartcards
+         this is very useful.  */
+      if (ctx->nkey == 4)
+        err = gcry_sexp_build (&s_key, NULL,
+                               "(public-key(dsa(p%m)(q%m)(g%m)(y%m)))",
+                               ctx->key[0],	/* p */
+                               ctx->key[1],	/* q */
+                               ctx->key[2],	/* g */
+                               ctx->key[3]	/* y */);
+      if (ctx->nkey == 5)
+        err = gcry_sexp_build (&s_key, NULL,
+                               "(private-key(dsa(p%m)(q%m)(g%m)(y%m)(x%m)))",
+                               ctx->key[0],	/* p */
+                               ctx->key[1],	/* q */
+                               ctx->key[2],	/* g */
+                               ctx->key[3],	/* y */
+                               ctx->key[4] /* x */ );
+
+      else
+        err = gsti_error (GPG_ERR_BUG);
+    }
 
   if (!err)
-    err = gcry_pk_sign (&s_sig, s_hash, s_key);
+    {
+      if (ctx->sign_fnc)
+        err = ctx->sign_fnc (ctx->sign_fnc_value, &s_sig, s_hash, s_key);
+      else
+        err = gcry_pk_sign (&s_sig, s_hash, s_key);
+    }
   if (!err)
     err = sexp_get_sshmpi (s_sig, SSH_PK_DSS, sig);
 
@@ -239,7 +282,7 @@ _gsti_rsa_verify (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
   err = sexp_from_buffer (&s_md, hash, dlen, 1);
   if (!err)
     err = gcry_sexp_build (&s_key, NULL,
-                           "(public-key(rsa(n%m)(e%m)))",
+                           "(public-key(rsa(e%m)(n%m)))",
                            ctx->key[0],
                            ctx->key[1]);
   if (!err)
@@ -320,10 +363,15 @@ _gsti_key_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
     case SSH_PK_RSA:
       return _gsti_rsa_sign (ctx, hash, sig);
     }
+
   return gsti_error (GPG_ERR_BUG);
 }
 
 
+/* Read a bstring object from the stream FP and store it at the
+   address A.  With ISMPI set to true, the function assumes that the
+   bstring contains an multi precision integer value and prepends the
+   length as a 4 byte big endian value. */
 static gsti_error_t
 read_bstring (FILE * fp, int ismpi, gsti_bstr_t * r_a)
 {
@@ -403,13 +451,17 @@ read_key (FILE * fp, gsti_key_t ctx, int n, int algo, int keytype)
 }
 
 
+/* Read an RSA key into the key context CTX.  Assume a secret key when
+   KEYTYPE is true. */
 static gsti_error_t
 read_rsa_key (FILE * fp, int keytype, gsti_key_t ctx)
 {
   gsti_error_t err;
   gsti_bstr_t a;
   size_t n;
-  
+
+  /* Get the properties of the key, check the name and start reading
+     the elements. */
   n = pk_table[SSH_PK_RSA].npkey;
   if (keytype)
     n += pk_table[SSH_PK_RSA].nskey;
@@ -455,6 +507,7 @@ read_dss_key (FILE * fp, int keytype, gsti_key_t ctx)
 }
 
 
+/* Create a new key object and fill read in the object. */
 static gsti_error_t
 parse_key_entry (FILE * fp, int pktype, int keytype, gsti_key_t * r_ctx)
 {
@@ -482,6 +535,8 @@ parse_key_entry (FILE * fp, int pktype, int keytype, gsti_key_t * r_ctx)
 }
 
 
+/* Start reading from FP and expect the name of the public key
+   algorithm. Return its type. */
 static int
 pktype_from_file (FILE * fp)
 {
@@ -490,7 +545,7 @@ pktype_from_file (FILE * fp)
   int type = 0;
 
   err = read_bstring (fp, 0, &a);
-  fseek (fp, 0, SEEK_SET);
+  fseek (fp, 0, SEEK_SET); /* Rewind. */
   if (err)
     return 0;
   check_pubalgo (gsti_bstr_data (a), gsti_bstr_length (a), &type);
@@ -499,9 +554,9 @@ pktype_from_file (FILE * fp)
 }
 
 
-/* Read a public key from the given file.  It is expected that the
-   file contains one key and as a result, only the first record will
-   be read!  */
+/* Read a public or secret key from the given file.  It is expected
+   that the file contains one key and as a result, only the first
+   record will be read!  */
 gsti_error_t
 gsti_key_load (const char *file, int keytype, gsti_key_t *r_ctx)
 {
@@ -662,6 +717,8 @@ check_pubalgo (const char * s, int slen, int * algid)
 }
 
 
+/* Fixme: we could enhance this fucntion to aslo read secret keys by
+   detecting trhough the unread space. */
 gsti_error_t
 _gsti_key_fromblob (gsti_bstr_t blob, gsti_key_t * r_key)
 {
@@ -884,8 +941,11 @@ _gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte * hash,
 }
 
 
+/* Create a signature for HASH using the key SK and return the
+   signature at R_SIG. */
 gsti_error_t
-_gsti_sig_encode (gsti_key_t sk, const byte * hash, gsti_bstr_t * r_sig)
+_gsti_sig_encode (gsti_key_t sk,
+                  const unsigned char  * hash, gsti_bstr_t * r_sig)
 {
   gsti_error_t err;
   gcry_mpi_t sig[2];
@@ -903,7 +963,7 @@ _gsti_sig_encode (gsti_key_t sk, const byte * hash, gsti_bstr_t * r_sig)
   err = _gsti_key_sign (sk, hash, sig);
   if (err)
     {
-      _gsti_log_info (0, "signing failed err=%d\n", err);
+      _gsti_log_info (0, "signing failed: %s\n", gsti_strerror (err));
       return err;
     }
   err = _gsti_ssh_get_pkname (sk->type, 0, &p, &n);
