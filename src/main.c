@@ -1,5 +1,5 @@
 /* main.c - Main APIs
- *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *	Copyright (C) 1999, 2002 Free Software Foundation, Inc.
  *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
@@ -31,6 +31,10 @@
 #include "api.h"
 #include "memory.h"
 #include "packet.h"
+
+static void (*log_handler)( void*,int, const char*, va_list ) = NULL;
+static void *log_handler_value = 0;
+static int log_level = GSTI_LOG_NONE;
 
 static const char*
 parse_version_number( const char *s, int *number )
@@ -78,6 +82,43 @@ map_gcry_rc( int rc )
     case GCRYERR_BAD_SIGNATURE: return GSTI_BAD_SIGNATURE;
     default:                    return GSTI_GENERAL;
     }
+}
+
+static void
+_gsti_logv( int level, const char *fmt, va_list arg_ptr )
+{
+    if( log_handler )
+        log_handler( log_handler_value, level, fmt, arg_ptr );
+    else {
+        switch( level ) {
+        case GSTI_LOG_DEBUG: fputs( "DBG:", stderr ); break;
+        case GSTI_LOG_NONE: return;
+        }
+        vfprintf( stderr, fmt, arg_ptr );
+    }
+}
+
+
+int
+_gsti_log_rc( int rc, const char *fmt, ... )
+{
+    va_list arg;
+    
+    va_start( arg, fmt );
+    _gsti_logv( GSTI_LOG_DEBUG, fmt, arg );
+    va_end( arg );
+
+    return rc;
+}
+
+void
+_gsti_log_info( const char *fmt, ... )
+{
+    va_list arg;
+
+    va_start( arg, fmt );
+    _gsti_logv( GSTI_LOG_INFO, fmt, arg );
+    va_end( arg );
 }
 
 
@@ -221,7 +262,7 @@ gsti_set_service( GSTIHD hd, const char *svcname )
     for( s = hd->local_services; s; s = s->next ) {
         if( !strchr( s->d, '@' ) )
             ;
-        log_info( "service `%s'\n", s->d );
+        _gsti_log_info( "service `%s'\n", s->d );
     }
     return 0;
 }
@@ -294,6 +335,28 @@ gsti_set_hostkey_file( GSTIHD hd, const char *file )
     return rc;
 }
 
+
+void
+gsti_set_log_handler( void (*logf)( void *, int, const char *, va_list ),
+                      void *opaque )
+{
+    log_handler = logf;
+    log_handler_value = opaque;
+}
+
+
+void
+gsti_set_log_level( int level )
+{
+    log_level = level;
+}
+
+
+int
+_gsti_get_log_level( void )
+{
+    return log_level;
+}
 
 const char*
 gsti_strerror( int ec )

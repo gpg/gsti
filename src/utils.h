@@ -23,20 +23,40 @@
 
 #include <gcrypt.h>
 
+enum {
+    TYPE_HEXBUF = 1,
+    TYPE_STRLIST = 2,
+    TYPE_MPI = 3,
+    TYPE_BSTRING = 4
+};
+
 STRLIST _gsti_algolist_parse( const byte *string, size_t length );
 size_t _gsti_algolist_build( byte *buffer, size_t length, STRLIST list );
 int _gsti_algolist_find( STRLIST list, const char *algo );
+void _gsti_dump_object( FILE *fp, const char *prefix, int type,
+                        void *opaque, size_t len );
+
+#define _gsti_dump_bstring( prefix, str ) \
+_gsti_dump_object( (stderr), (prefix), TYPE_BSTRING, (str), 0 )
+
+#define _gsti_dump_hexbuf( prefix, buf, len ) \
+_gsti_dump_object( (stderr), (prefix), TYPE_HEXBUF, (buf), (len) )
+
+#define _gsti_dump_mpi( prefix, mpi ) \
+_gsti_dump_object( (stderr), (prefix), TYPE_MPI, (mpi) )
+
+#define _gsti_dump_strlist( prefix, list ) \
+_gsti_dump_object( (stderr), (prefix), TYPE_STRLIST, (list) )
 
 int  cmp_bstring( BSTRING a, BSTRING b );
 
-void gsti_print_string( FILE *fp, const char *string, size_t n );
+void _gsti_print_string( FILE *fp, const char *string, size_t n );
 
-void dump_hexbuf( FILE *fp, const char *prefix, const byte *buf, size_t len );
-void dump_strlist( FILE *fp, const char *prefix, STRLIST list );
-void dump_mpi( FILE *fp, const char *prefix, GCRY_MPI a );
-void dump_bstring( FILE *fp, const char *prefix, BSTRING a );
 
-int debug_rc( int rc, const char *format, ... );
-void log_info( const char *format, ... );
+/*-- main.c --*/
+void _gsti_log_info( const char *fmt, ... );
+int _gsti_log_rc( int rc, const char *fmt, ... );
+int _gsti_get_log_level( void );
 
 #endif /* GSTI_UTILS_H */
+

@@ -131,8 +131,8 @@ new_state( GSTIHD hd )
             break; 
 
         default:
-            log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                      hd->state, hd->pkt.type );
+            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
+                            hd->state, hd->pkt.type );
             hd->state = FSM_kex_failed; 
         } 
         break; 
@@ -141,7 +141,7 @@ new_state( GSTIHD hd )
         switch( hd->pkt.type ) { 
         case SSH_MSG_KEXDH_REPLY: 
             if( hd->we_are_server ) { 
-                rc = debug_rc( GSTI_PROT_VIOL, "server got KEXDH_REPLY" );
+                rc = _gsti_log_rc( GSTI_PROT_VIOL, "server got KEXDH_REPLY" );
                 break; 
             } 
             rc = kex_proc_kexdh_reply( hd );
@@ -153,7 +153,7 @@ new_state( GSTIHD hd )
 
         case SSH_MSG_KEXDH_INIT: 
             if( !hd->we_are_server ) { 
-                rc = debug_rc( GSTI_PROT_VIOL, "client got KEXDH_INIT" );
+                rc = _gsti_log_rc( GSTI_PROT_VIOL, "client got KEXDH_INIT" );
                 break; 
             } 
             rc = kex_proc_kexdh_init( hd );
@@ -166,8 +166,8 @@ new_state( GSTIHD hd )
             break;
 
         default:
-            log_info( "FSM: at new_state: state=%d, packet=%d\n",
-                      hd->state, hd->pkt.type ); 
+            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n",
+                            hd->state, hd->pkt.type ); 
             hd->state = FSM_kex_failed; 
         }
         break; 
@@ -181,8 +181,8 @@ new_state( GSTIHD hd )
             break;
             
         default: 
-            log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                      hd->state, hd->pkt.type );
+            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
+                            hd->state, hd->pkt.type );
             hd->state = FSM_kex_failed; 
         }
         break; 
@@ -196,8 +196,8 @@ new_state( GSTIHD hd )
             break;
 
         default:
-            log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                      hd->state, hd->pkt.type );
+            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
+                            hd->state, hd->pkt.type );
             hd->state = FSM_kex_failed;
         } 
         break; 
@@ -211,8 +211,8 @@ new_state( GSTIHD hd )
             break;
 
         default:
-            log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                      hd->state, hd->pkt.type ); 
+            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
+                            hd->state, hd->pkt.type ); 
             hd->state = FSM_kex_failed; 
         }
         break;
@@ -230,7 +230,7 @@ new_state( GSTIHD hd )
         break;
 
     default:
-        log_info( "FSM: at new_state: invalid state %d\n", hd->state ); 
+        _gsti_log_info( "FSM: at new_state: invalid state %d\n", hd->state ); 
         hd->state = GSTI_BUG; 
     }
 
@@ -255,13 +255,13 @@ fsm_loop( GSTIHD hd, int want_read )
     case FSM_init: rc = handle_init( hd, want_read ); break;
     case FSM_idle: hd->state = want_read? FSM_read : FSM_write; break;
     default:
-        log_info( "FSM: start fsm_loop: invalid state %d\n", hd->state ); 
+        _gsti_log_info( "FSM: start fsm_loop: invalid state %d\n", hd->state); 
         rc = GSTI_BUG;
         break;
     }
 
     while( !rc && hd->state != FSM_idle && hd->state != FSM_quit ) {
-        log_info( "FSM: state is %d\n", hd->state );
+        _gsti_log_info( "FSM: state is %d\n", hd->state );
         switch( hd->state ) { 
         case FSM_wait_on_version:
             rc = kex_wait_on_version( hd ); 
@@ -305,7 +305,8 @@ fsm_loop( GSTIHD hd, int want_read )
             break;
 
         case FSM_send_service_request:
-            /*log_info( "local service =%d\n", hd->local_services? 1 : 0 );*/
+            /*_gsti_log_info( "local service =%d\n",
+              hd->local_services? 1 : 0 );*/
             rc = kex_send_service_request( hd, hd->local_services?
                                            hd->local_services->d
                                            : "ssh-userauth" );
@@ -322,15 +323,15 @@ fsm_loop( GSTIHD hd, int want_read )
             break;
 
         case FSM_service_start:
-            fprintf( stderr, "service `" );
-            gsti_print_string( stderr, hd->service_name->d,
-                               hd->service_name->len );
+            _gsti_log_info( "service `" );
+            _gsti_print_string( stderr, hd->service_name->d,
+                                hd->service_name->len );
             if( hd->we_are_server ) {
-                fprintf( stderr, "' has been started (server)\n" );
+                _gsti_log_info( "' has been started (server)\n" );
                 hd->state = FSM_read;
             }
             else {
-                fprintf( stderr, "' has been started (client)\n" );
+                _gsti_log_info( "' has been started (client)\n" );
                 hd->state = FSM_write;
             }
             break;
@@ -347,18 +348,18 @@ fsm_loop( GSTIHD hd, int want_read )
 
         case FSM_quit:
             rc = handle_quit( hd );
-            log_info( "FSM: returning from quit state: %s\n",
-                      gsti_strerror( rc ) );
+            _gsti_log_info( "FSM: returning from quit state: %s\n",
+                            gsti_strerror( rc ) );
             break;
 
         default:
-            log_info( "FSM: at fsm_loop: invalid state %d\n", hd->state );
+            _gsti_log_info( "FSM: at fsm_loop: invalid state %d\n",hd->state );
             rc = GSTI_BUG;
         }
         if( rc ) {
             hd->wait_packet = 0;
-            log_info( "FSM: error at state %d: %s\n",
-                      hd->state, gsti_strerror( rc ) );
+            _gsti_log_info( "FSM: error at state %d: %s\n",
+                            hd->state, gsti_strerror( rc ) );
         }
 
         if( hd->wait_packet ) {
@@ -366,14 +367,14 @@ fsm_loop( GSTIHD hd, int want_read )
             do {
                 rc = _gsti_packet_read( hd );
                 if( rc )
-                    log_info( "FSM: read packet at state %d failed: %s\n",
-                              hd->state, gsti_strerror( rc ) );
+                    _gsti_log_info("FSM: read packet at state %d failed: %s\n",
+                                   hd->state, gsti_strerror( rc ) );
             } while( !rc && skip_packet( hd->pkt.type ) );
             if( !rc ) {
                 rc = new_state( hd );
                 if( rc ) {
-                    log_info( "FSM: new_state at state %d failed: %s\n",
-                              hd->state, gsti_strerror( rc ) );
+                    _gsti_log_info( "FSM: new_state at state %d failed: %s\n",
+                                    hd->state, gsti_strerror( rc ) );
                     return rc;
                 }
             }

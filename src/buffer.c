@@ -30,15 +30,13 @@
 #include "memory.h"
 #include "buffer.h"
 
-static int
+static void
 buffer_realloc( BUFFER ctx, size_t len )
 {
     if( ctx->end >= ctx->size ) {        
         ctx->size += len;
         ctx->d = _gsti_realloc( ctx->d, ctx->size );
     }
-    
-    return 0;
 }
 
 int
@@ -82,7 +80,7 @@ _gsti_buf_getptr( BUFFER ctx )
 }
 
 
-int
+void
 _gsti_buf_putint( BUFFER ctx, unsigned val )
 {
     int i = ctx->end;
@@ -94,8 +92,6 @@ _gsti_buf_putint( BUFFER ctx, unsigned val )
     ctx->d[i++] = val >>  8;
     ctx->d[i++] = val;
     ctx->end = i;
-
-    return 0;
 }
 
 
@@ -117,7 +113,7 @@ _gsti_buf_getint( BUFFER ctx )
 }
 
 
-int
+void
 _gsti_buf_putstr( BUFFER ctx, const byte *buf, size_t len )
 {
     _gsti_buf_putint( ctx, len );
@@ -127,8 +123,6 @@ _gsti_buf_putstr( BUFFER ctx, const byte *buf, size_t len )
         memcpy( ctx->d + ctx->end, buf, len );
         ctx->end += len;
     }
-
-    return 0;
 }
 
 
@@ -190,6 +184,7 @@ _gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
     return 0;
 }
 
+
 int
 _gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr )
 {
@@ -198,13 +193,15 @@ _gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr )
     size_t len;
 
     p = _gsti_buf_getstr( ctx, &len );
+    if( len < 4 )
+        return GSTI_TOO_SHORT;
     a = _gsti_bstring_make( p, len );
     *r_bstr = a;
     _gsti_free( p );
     return 0;
 }
 
-int
+void
 _gsti_buf_putc( BUFFER ctx, int val )
 {
     int i = ctx->end;
@@ -213,8 +210,6 @@ _gsti_buf_putc( BUFFER ctx, int val )
         buffer_realloc( ctx, 1024 );
     ctx->d[i++] = val & 0xff;
     ctx->end = i;
-
-    return 0;
 }
 
 
@@ -232,15 +227,13 @@ _gsti_buf_getc( BUFFER ctx )
 }
 
 
-int
+void
 _gsti_buf_putraw( BUFFER ctx, const byte *buf, size_t len )
 {
     if( ctx->end + len >= ctx->size )
         buffer_realloc( ctx, len + 1024 );
     memcpy( ctx->d + ctx->end, buf, len );
     ctx->end += len;
-
-    return 0;
 }
 
 
@@ -267,3 +260,4 @@ _gsti_buf_dump( BUFFER ctx )
         printf( "%4x", ctx->d[i] );
     printf( "\n" );
 }
+

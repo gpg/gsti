@@ -49,7 +49,7 @@ print_disconnect_msg( const byte *msg, size_t msglen )
     u32 reason;
     
     if( msglen < 13 ) {
-	log_info( "SSH_MSG_DISCONNECT is not valid\n" );
+	_gsti_log_info( "SSH_MSG_DISCONNECT is not valid\n" );
 	return;
     }
     _gsti_buf_init( &buf );
@@ -57,23 +57,24 @@ print_disconnect_msg( const byte *msg, size_t msglen )
     if( _gsti_buf_getc( buf ) != SSH_MSG_DISCONNECT )
         goto leave;
     reason = _gsti_buf_getint( buf );
-    log_info( "SSH_MSG_DISCONNECT: reason=%lu `", reason );
+    _gsti_log_info( "SSH_MSG_DISCONNECT: reason=%lu `", reason );
 
     if( _gsti_buf_getbstr( buf, &desc ) )
         goto leave;
-    dump_bstring( stderr, "description:", desc );
+    _gsti_dump_bstring( "description:", desc );
     _gsti_bstring_free( desc );
     
     if( _gsti_buf_getbstr( buf, &lang ) )
         goto leave;
-    dump_bstring( stderr, "language-tag:", lang );
+    _gsti_dump_bstring( "language-tag:", lang );
     _gsti_bstring_free( lang );
 
 leave:
     msglen = _gsti_buf_getlen( buf );
     _gsti_buf_free( buf );
     if( msglen )
-	log_info( "print_msg_disconnect: %lu bytes remaining\n", (u32)msglen );
+	_gsti_log_info( "print_msg_disconnect: %lu bytes remaining\n",
+                        (u32)msglen );
 }
 
 static void
@@ -84,7 +85,7 @@ print_debug_msg( const byte *msg, size_t msglen )
     int display;
     
     if( msglen < (1+1+4+4) ) {
-	log_info( "SSH_MSG_DEBUG is not valid\n" );
+	_gsti_log_info( "SSH_MSG_DEBUG is not valid\n" );
 	return;
     }
     _gsti_buf_init( &buf );
@@ -93,23 +94,24 @@ print_debug_msg( const byte *msg, size_t msglen )
         goto leave;    
 
     display = _gsti_buf_getc( buf );
-    log_info( "SSH_MSG_DEBUG:%s `", display? " (always display)":"" );
+    _gsti_log_info( "SSH_MSG_DEBUG:%s `", display? " (always display)":"" );
 
     if( _gsti_buf_getbstr( buf, &mesag ) )
         goto leave;
-    dump_bstring( stderr, "message:", mesag );
+    _gsti_dump_bstring( "message:", mesag );
     _gsti_bstring_free( mesag );
 
     if( _gsti_buf_getbstr( buf, &lang ) )
         goto leave;
-    dump_bstring( stderr, "language:", lang );
+    _gsti_dump_bstring( "language:", lang );
     _gsti_bstring_free( lang );
     
 
 leave:
     msglen = _gsti_buf_getlen( buf );
     if( msglen )
-	log_info( "print_msg_debug: %lu bytes remaining\n", (u32)msglen );
+	_gsti_log_info( "print_msg_debug: %lu bytes remaining\n",
+                        (u32)msglen );
 }
 
 
@@ -209,28 +211,28 @@ _gsti_packet_read( GSTIHD hd )
     /* read the first block so we can decipher the packet length */
     rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer, blocksize );
     if( rc )
-	return debug_rc( rc, "error reading packet header" );
+	return _gsti_log_rc( rc, "error reading packet header" );
 
     if( hd->decrypt_hd ) {
 	rc = gcry_cipher_decrypt( hd->decrypt_hd,
 				  hd->pkt.packet_buffer, blocksize,
                                   NULL, 0 );
 	if( rc )
-	    return debug_rc( rc, "error decrypting first block" );
+	    return _gsti_log_rc( rc, "error decrypting first block" );
     }
 
-    dump_hexbuf(stderr, "begin of packet: ", hd->pkt.packet_buffer, blocksize);
+    _gsti_dump_hexbuf( "begin of packet: ", hd->pkt.packet_buffer, blocksize );
 
     pktlen = buftou32( hd->pkt.packet_buffer );
     /* FIXME: It should be 16 but NEWKEYS has 12 for some reason */
     if( pktlen < 12 ) /* minimum packet size as per secsh draft */
-	return debug_rc( GSTI_TOO_SHORT, "received pktlen %lu", (u32)pktlen );
+	return _gsti_log_rc(GSTI_TOO_SHORT, "received pktlen %lu",(u32)pktlen);
     if( pktlen > MAX_PKTLEN )
-	return debug_rc( GSTI_TOO_LARGE, "received pktlen %lu", (u32)pktlen );
+	return _gsti_log_rc(GSTI_TOO_LARGE, "received pktlen %lu",(u32)pktlen);
 
     padlen = hd->pkt.packet_buffer[4];
     if( padlen < 4 )
-	return debug_rc(GSTI_TOO_SHORT, "received padding is %lu",(u32)padlen);
+	return _gsti_log_rc(GSTI_TOO_SHORT, "received padding is %lu",(u32)padlen);
 
     hd->pkt.packet_len = pktlen;
     hd->pkt.padding_len = padlen;
@@ -238,7 +240,7 @@ _gsti_packet_read( GSTIHD hd )
 
     n = 5 + paylen + padlen;
     if( (n % blocksize) )
-	debug_rc( GSTI_INV_PKT, "length packet is not a "
+	_gsti_log_rc( GSTI_INV_PKT, "length packet is not a "
                   "multiple of the blocksize" );
 
     /* read the rest of the packet */
@@ -249,35 +251,36 @@ _gsti_packet_read( GSTIHD hd )
 	n = 0; /* oops: rest of packet is too short */
 
 #if 0
-    log_info( "packet_len=%lu padding=%lu payload=%lu maclen=%lu n=%lu\n",
+    _gsti_log_info("packet_len=%lu padding=%lu payload=%lu maclen=%lu n=%lu\n",
               (u32)hd->pkt.packet_len, (u32)hd->pkt.padding_len,
               (u32)hd->pkt.payload_len, (u32)maclen, (u32)n );
 #endif
 
     rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer+blocksize, n );
     if( rc )
-	return debug_rc( rc,"error reading rest of packet" );
+	return _gsti_log_rc( rc,"error reading rest of packet" );
     n -= maclen; /* don't want the maclen anymore */
     if( hd->decrypt_hd ) {
 	rc = gcry_cipher_decrypt( hd->decrypt_hd,
 				  hd->pkt.packet_buffer+blocksize, n,
                                   NULL, 0 );
 	if( rc )
-	    return debug_rc( rc,"decrypt failed" );
+	    return _gsti_log_rc( rc,"decrypt failed" );
 	/* note: there is no reason to decrypt the padding, but we do
 	 * it anyway becuase this is easier
          */
-        dump_hexbuf( stderr, "rest of  packet: ",
-                     hd->pkt.packet_buffer+blocksize, n );
+        _gsti_dump_hexbuf( "rest of packet: ",
+                           hd->pkt.packet_buffer+blocksize, n );
     }
 
     if( hd->recv_mac && !verify_mac( hd, seqno ) )
-	return debug_rc( GSTI_INV_MAC, "wrong MAC" );
+	return _gsti_log_rc( GSTI_INV_MAC, "wrong MAC" );
 
     /* todo: uncompress if needed */
 
     hd->pkt.type = *hd->pkt.payload;
-    log_info( "received packet %lu of type %d\n", (u32)seqno, hd->pkt.type );
+    _gsti_log_info( "received packet %lu of type %d\n",
+                    (u32)seqno, hd->pkt.type );
 
     if( hd->pkt.type == SSH_MSG_IGNORE )
 	goto again;
@@ -317,7 +320,8 @@ _gsti_packet_write( GSTIHD hd )
     hd->pkt.payload[0] = hd->pkt.type;
     hd->pkt.packet_len = 1 + hd->pkt.payload_len + hd->pkt.padding_len;
 
-    log_info( "sending packet %lu of type %d\n", (u32)seqno, hd->pkt.type );
+    _gsti_log_info( "sending packet %lu of type %d\n",
+                    (u32)seqno, hd->pkt.type );
 
     /* fixme: compress if needed */
 

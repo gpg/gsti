@@ -28,6 +28,8 @@ extern "C" {
 #endif
 #endif
 
+#include <stdarg.h>
+
 /*
  * The version of this header should match the one of the library
  * It should not be used by a program because gcry_check_version()
@@ -64,6 +66,13 @@ enum gsti_ctl_cmds {
     GSTI_SECMEM_INIT     = 2,
     GSTI_SECMEM_RELEASE  = 3,
 };
+
+enum {
+    GSTI_LOG_NONE   = 0,
+    GSTI_LOG_DEBUG  = 1,
+    GSTI_LOG_INFO   = 2
+};
+
 
 enum gsti_hmac_algos {
     GSTI_HMAC_SHA1    = 0,
@@ -122,6 +131,9 @@ int gsti_set_service( GSTIHD hd, const char *svcname );
 int gsti_read( GSTIHD hd, void *buffer, size_t *length );
 int gsti_write( GSTIHD hd, const void *buffer, size_t length );
 int gsti_set_hostkey_file( GSTIHD hd, const char *file );
+void gsti_set_log_handler( void (*logf)( void *, int, const char *, va_list ),
+                           void *opaque );
+void gsti_set_log_level( int level );
 const char *gsti_strerror( int ec );    
 
 

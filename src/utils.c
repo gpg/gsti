@@ -139,25 +139,25 @@ cmp_bstring( BSTRING a, BSTRING b )
 
 
 void
-gsti_print_string( FILE *fp, const char *string, size_t n )
+_gsti_print_string( FILE *fp, const char *string, size_t n )
 {
     const byte *p = string;
 
     for( ; n; n--, p++ ) {
 	if( iscntrl( *p ) ) {
-	    putc('\\', fp);
+	    putc( '\\', fp );
 	    if( *p == '\n' )
-		putc('n', fp);
+		putc( 'n', fp );
 	    else if( *p == '\r' )
-		putc('r', fp);
+		putc( 'r', fp );
 	    else if( *p == '\f' )
-		putc('f', fp);
+		putc( 'f', fp );
 	    else if( *p == '\v' )
-		putc('v', fp);
+		putc( 'v', fp );
 	    else if( *p == '\b' )
-		putc('b', fp);
+		putc( 'b', fp );
 	    else if( !*p )
-		putc('0', fp);
+		putc( '0', fp );
 	    else
 		fprintf( fp, "x%02x", *p );
 	}
@@ -168,64 +168,47 @@ gsti_print_string( FILE *fp, const char *string, size_t n )
 
 
 void
-dump_hexbuf( FILE *fp, const char *prefix, const byte *buf, size_t len )
+_gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
+                   size_t len )
 {
-    fputs( prefix, fp );
-    for( ; len ; len--, buf++ )
-	fprintf( fp, "%02X ", *buf );
-    putc( '\n', fp );
+    if( _gsti_get_log_level() != GSTI_LOG_DEBUG )
+        return;
+    switch( type ) {
+    case TYPE_HEXBUF:
+    {
+        byte *buf = opaque;
+        fputs( prefix, fp );
+        for( ; len ; len--, buf++ )
+            fprintf( fp, "%02X ", *buf );
+        putc( '\n', fp );
+        break;
+    }
+    case TYPE_STRLIST:
+    {
+        STRLIST list = opaque;
+        int i;
+        for( i = 0 ; list ; list = list->next, i++ )
+            fprintf( fp, "%s[%d]: `%s'\n", prefix, i, list->d );
+        break;
+    }
+    case TYPE_MPI:
+    {
+        GCRY_MPI a = opaque;
+        byte buf[400];
+        size_t n = sizeof buf;
+        if( gcry_mpi_print( GCRYMPI_FMT_HEX, buf, &n, a ) )
+            strcpy( buf,"[can't print value]" );
+        fprintf( fp, "%s%s\n", prefix, buf );
+        break;
+    }
+    case TYPE_BSTRING:
+    {
+        BSTRING a = opaque;
+        fputs( prefix, fp );
+        if( a )
+            _gsti_print_string( fp, a->d, a->len );
+        putc( '\n', fp );
+        break;
+    }
+    }
 }
-
-void
-dump_strlist( FILE *fp, const char *prefix, STRLIST list )
-{
-    int i;
-    for( i = 0 ; list ; list = list->next, i++ )
-	fprintf( fp, "%s[%d]: `%s'\n", prefix, i, list->d );
-}
-
-
-void
-dump_mpi( FILE *fp, const char *prefix, GCRY_MPI a )
-{
-    byte buf[400];
-    size_t n = sizeof buf;
-
-    if( gcry_mpi_print( GCRYMPI_FMT_HEX, buf, &n, a ) )
-	strcpy( buf,"[can't print value]" );
-    fprintf( fp, "%s%s\n", prefix, buf );
-}
-
-void
-dump_bstring( FILE *fp, const char *prefix, BSTRING a )
-{
-    fputs( prefix, fp );
-    if( a )
-	gsti_print_string( fp, a->d, a->len );
-    putc( '\n', fp );
-}
-
-int
-debug_rc( int rc, const char *format, ... )
-{
-    va_list arg_ptr;
-
-    va_start( arg_ptr, format ) ;
-    vfprintf( stderr, format, arg_ptr );
-    va_end( arg_ptr );
-    fprintf( stderr,": rc=%d\n", rc );
-    return rc;
-}
-
-void
-log_info( const char *format, ... )
-{
-    va_list arg_ptr;
-
-    /* fixme: use a logging fd for it */
-    va_start( arg_ptr, format );
-    vfprintf( stderr, format, arg_ptr );
-    va_end( arg_ptr );
-}
-
-    

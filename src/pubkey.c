@@ -195,7 +195,7 @@ read_bstring( FILE *fp, int ismpi, BSTRING *r_a )
         buf[n] = fgetc( fp );
     len = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
     if( len > statbuf.st_size ) {
-        log_info( "read_bstring: %d: string larger than file.\n", len );
+        _gsti_log_info( "read_bstring: %d: string larger than file.\n", len );
         return GSTI_INV_OBJ;
     }
     a = _gsti_bstring_make( NULL, ismpi? len + 4: len );
@@ -208,7 +208,7 @@ read_bstring( FILE *fp, int ismpi, BSTRING *r_a )
     }
     else
         n = 0;
-    /*log_info( "got string with a length of %d\n", len );*/
+    /*_gsti_log_info( "got string with a length of %d\n", len );*/
     while( len-- )
         a->d[n++] = fgetc( fp );
     *r_a = a;
@@ -243,7 +243,7 @@ read_dss_key( FILE *fp, int keytype, GSTI_KEY ctx )
     if( rc )
         return rc;
     if( a->len != 7 || strncmp( a->d, "ssh-dss", 7 ) ) {
-        log_info( "read_dss_key: %s: not a dss key blob\n", a->d );
+        _gsti_log_info( "read_dss_key: %s: not a dss key blob\n", a->d );
         _gsti_bstring_free( a );
         return GSTI_INV_OBJ;
     }
@@ -506,13 +506,13 @@ _gsti_sig_encode( const char *file, const byte *hash  )
         return _gsti_bstring_make( NULL, 4 );
     rc = gsti_key_load( file, GSTI_PK_DSS, 1, &sk );
     if( rc ) {
-        log_info( "could not load secret key\n" );
+        _gsti_log_info( "could not load secret key\n" );
         return NULL;
     }
     rc = _gsti_dss_sign( sk, hash, sig );
     gsti_key_free( sk );
     if( rc ) {
-        log_info( "signing failed rc=%d\n", rc );
+        _gsti_log_info( "signing failed rc=%d\n", rc );
         return NULL;
     }
     p = get_sshkeyname( GSTI_PK_DSS, 0, &n );
