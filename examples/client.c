@@ -193,6 +193,7 @@ main (int argc, char **argv)
   err = gsti_set_client_key (ctx, SECKEY);
   log_rc (err, "set_client_key");
   err = gsti_set_client_user (ctx, "twoaday");
+  /*err = gsti_set_client_user (ctx, "root");*/
   log_rc (err, "set_client_user");
 
 #if 0

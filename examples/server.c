@@ -169,6 +169,44 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 }
 
 
+/* Example how to influence the authentication in depence of its values.
+   For example to reject one or more users system access or to perform checks
+   if the users public key is valid (too short, not expired, revoked or
+   whatever the local system policy is) */
+static gsti_error_t
+my_auth_cb (void * ctx, int authid, const void * buf, size_t buflen)
+{
+  FILE * fp;
+  unsigned char keybuf[512];
+  size_t n;
+  
+  switch (authid)
+    {
+    case GSTI_AUTHID_USER:
+      fprintf (stderr, "** auth callback user: id=%d val=%s (%d)\n",
+               authid, (const char*)buf, buflen);
+      /* do not allow root logins */
+      if (!memcmp (buf, "root", 4))
+        return gsti_error (GPG_ERR_INV_NAME);
+      break;
+
+    case GSTI_AUTHID_PUBKEY:
+      fprintf (stderr, "** auth callback pubkey: id=%d len=%d\n",
+               authid, buflen);
+      /* check against rsa.pub */
+      fp = fopen ("rsa.pub", "rb");
+      if (!fp)
+        return gsti_error_from_errno (errno);
+      n = fread (keybuf, 1, 512, fp);
+      fclose (fp);
+      if (n != buflen || memcmp (buf, keybuf, buflen))
+        return gsti_error (GPG_ERR_BAD_PUBKEY);
+      break;
+    }
+
+  return 0;
+}
+
 
 int
 main (int argc, char **argv)
@@ -205,6 +243,9 @@ main (int argc, char **argv)
   /* Register our read/write functions. */
   gsti_set_readfnc (ctx, myread, &fd);
   gsti_set_writefnc (ctx, mywrite, &fd);
+
+  /* Register our auth callback function */
+  gsti_set_auth_callback (ctx, my_auth_cb, NULL);
 
 #if 0
   rc = gsti_set_service (ctx, "log-lines@gnu.org,dummy@gnu.org");
