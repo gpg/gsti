@@ -25,6 +25,7 @@
 #include <gcrypt.h>
 
 #include "ssh.h"
+#include "types.h"
 
 #define MAX_PKTLEN 40000	/* sanity limit */
 #define PKTBUFSIZE 50000	/* somewhat large size of a packet buffer */

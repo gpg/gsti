@@ -1,3 +1,7 @@
+2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
+
+	* packet.h: Include "types.h".
+
 2004-06-09  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (read_bstring): Add error handling.
