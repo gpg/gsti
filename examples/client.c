@@ -122,8 +122,6 @@ main( int argc, char **argv )
     int rc, i;
     GSTIHD hd;
     GSTI_PKTDESC pkt;
-    char buffer[100];
-    size_t nbytes;
 
     if( argc ) {
         argc--;
@@ -137,6 +135,7 @@ main( int argc, char **argv )
     gsti_set_readfnc( hd, myread );
     gsti_set_writefnc( hd, mywrite );
     gsti_set_client_key( hd, SECKEY );
+    gsti_set_client_user( hd, "twoaday" );
 #if 0
     rc = gsti_set_service( hd, "log-lines@gnu.org" );
        log_rc( rc, "set-service" );
@@ -154,7 +153,7 @@ main( int argc, char **argv )
         rc = gsti_put_packet( hd, NULL );
         log_rc( rc, "flush_packet" );
 
-        printf( "seqno %d\n", pkt.seqno );
+        printf( "seqno %lu\n", pkt.seqno );
     }
     
     

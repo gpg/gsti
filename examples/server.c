@@ -152,8 +152,6 @@ main( int argc, char **argv )
     int rc, i;
     GSTIHD hd;
     GSTI_PKTDESC pkt;
-    char buffer[100];
-    size_t nbytes;
 
     if( argc ) {
         argc--;
