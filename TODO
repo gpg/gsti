@@ -2,8 +2,6 @@
     * find a way to handle the first packet to establish a connection.
       2002-10-01: partly done. but it's not really clean.
       
-    * add some code to set preferred algorithms (mac, cipher, compress).  
-
     * implement all code for sections which are marked with 'fixme' or 'todo'
 
     * we need a way to merge BSTRING and BUFFER together. They do the

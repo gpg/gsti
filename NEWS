@@ -5,6 +5,9 @@ Noteworthy changes in version 0.3.0 (unreleased)
 
 * Modernized the entire configuration systems.
  
+* RSA support for digital signatures.
+
+* Set user defined preferred cipher and/or hmac algorithms.
 
 
 Noteworthy changes in version 0.2.0
