@@ -23,7 +23,7 @@ You may need the Libgcrypt 1.1.8 version from ftp.gnupg.org
 
 
 Some parts of the lib design are still in flux and the code need more
-tests. So please consider the library as beta version!
+tests. So please consider the library as a beta version!
 
 
 

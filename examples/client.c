@@ -55,21 +55,21 @@ make_connection( const char *host )
 
     conn_fd = socket(PF_INET, SOCK_STREAM, 0 );
     if( conn_fd == -1 ) {
-        fprintf( stderr, PGMNAME "socket() failed: %s\n", strerror(errno) );
-        exit(2);
+        fprintf( stderr, PGMNAME "socket() failed: %s\n", strerror( errno ) );
+        exit( 2 );
     }
 
     hostinfo = gethostbyname(host);
     if( !hostinfo ) {
         fprintf( stderr, PGMNAME "unknown host `%s'\n", host );
-        exit(1);
+        exit( 1 );
     }
     name.sin_family = AF_INET;
-    name.sin_port = htons(9000);
+    name.sin_port = htons( 9000 );
     name.sin_addr = *(struct in_addr*)hostinfo->h_addr;
     if( connect( conn_fd, (struct sockaddr*)&name, sizeof name) ) {
-        fprintf( stderr, PGMNAME "connect() failed: %s\n", strerror(errno) );
-        exit(2);
+        fprintf( stderr, PGMNAME "connect() failed: %s\n", strerror( errno ) );
+        exit( 2 );
     }
 
 }
@@ -136,10 +136,9 @@ main( int argc, char **argv )
     gsti_set_writefnc( hd, mywrite );
     gsti_set_client_key( hd, SECKEY );
     gsti_set_client_user( hd, "twoaday" );
-#if 0
-    rc = gsti_set_service( hd, "log-lines@gnu.org" );
-       log_rc( rc, "set-service" );
-#endif
+
+    /*rc = gsti_set_service( hd, "log-lines@gnu.org" );*/
+    /*log_rc( rc, "set-service" );*/
 
     make_connection( argc? *argv: "localhost" );
 
@@ -155,7 +154,6 @@ main( int argc, char **argv )
 
         printf( "seqno %lu\n", pkt.seqno );
     }
-    
     
     gsti_deinit( hd );
     gsti_control( GSTI_SECMEM_RELEASE );

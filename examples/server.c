@@ -65,7 +65,7 @@ wait_connection( void )
 {
     struct sockaddr_in name;
     struct sockaddr_in peer_name;
-    int    namelen;
+    int namelen;
     int one = 1;
 
     if( listen_fd != -1 )
@@ -101,7 +101,8 @@ wait_connection( void )
         fprintf( stderr, PGMNAME "accept() failed: %s\n", strerror(errno) );
         exit(2);
     }
-    close( listen_fd ); listen_fd = -1; /* not needed anymore */
+    close( listen_fd );
+    listen_fd = -1; /* not needed anymore */
 }
 
 
@@ -114,7 +115,7 @@ myread( GSTIHD hd, void *buffer, size_t *nbytes )
         n = read( conn_fd, buffer, *nbytes );
     } while( n == -1 && errno == EINTR );
     if( n == -1 ) {
-        fprintf( stderr, PGMNAME "myread: error: %s\n", strerror(errno) );
+        fprintf( stderr, PGMNAME "myread: error: %s\n", strerror( errno ) );
         return GSTI_READ_ERROR;
     }
     /*dump_hexbuf( stderr, "myread: ", buffer, n );*/
@@ -164,10 +165,9 @@ main( int argc, char **argv )
     gsti_set_hostkey( hd, SECKEY );
     gsti_set_readfnc( hd, myread );
     gsti_set_writefnc( hd, mywrite );
-#if 0
-    rc = gsti_set_service( hd, "log-lines@gnu.org,dummy@gnu.org" );
-    log_rc( rc, "set-service" );
-#endif
+
+    /*rc = gsti_set_service( hd, "log-lines@gnu.org,dummy@gnu.org" );*/
+    /*log_rc( rc, "set-service" );*/
 
     wait_connection();
 
@@ -177,7 +177,6 @@ main( int argc, char **argv )
         if( !rc )
             dump_hexbuf( stderr, "got packet: ", pkt.data, pkt.datalen );
     }
-    
 
     gsti_control( GSTI_SECMEM_RELEASE );
     rc = gsti_deinit( hd );
