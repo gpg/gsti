@@ -240,6 +240,7 @@ gsti_error_t gsti_set_service (gsti_ctx_t ctx, const char *svcname);
 gsti_error_t gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length);
 gsti_error_t gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length);
 gsti_error_t gsti_set_hostkey (gsti_ctx_t ctx, const char *file);
+gsti_key_t   gsti_get_hostkey (gsti_ctx_t ctx);
 gsti_error_t gsti_set_client_key (gsti_ctx_t ctx, const char *file);
 gsti_error_t gsti_set_client_key_blob (gsti_ctx_t ctx,
                                        const unsigned char *key, size_t keylen,

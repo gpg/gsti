@@ -1,3 +1,7 @@
+2004-07-02  Werner Koch  <wk@gnupg.org>
+
+	* main.c (gsti_get_hostkey): New.
+
 2004-07-01  Werner Koch  <wk@gnupg.org>
 
 	* main.c (gsti_set_client_key): Release an existing key.

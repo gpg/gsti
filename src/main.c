@@ -296,6 +296,15 @@ gsti_set_hostkey (gsti_ctx_t ctx, const char *file)
 }
 
 
+gsti_key_t
+gsti_get_hostkey (gsti_ctx_t ctx)
+{
+  if (!ctx)
+    return NULL;
+  return ctx->hostkey;
+}
+
+
 gsti_error_t
 gsti_set_client_key (gsti_ctx_t ctx, const char *file)
 {
