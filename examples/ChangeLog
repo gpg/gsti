@@ -1,3 +1,7 @@
+2004-06-30  Werner Koch  <wk@gnupg.org>
+
+	* server.c, client.c: Add a few comments.
+
 2004-06-09  Timo Schulz  <twoaday@g10code.de>
 
 	* client.c (main): Add parameter for gsti_init().

@@ -279,6 +279,8 @@ gsti_error_t gsti_auth_new (gsti_auth_t * r_ath);
 void gsti_auth_free (gsti_auth_t ath);
 
 
+/*-- channel.c --*/
+
 /* This callback is invoked when data arrives on the channel.  */
 typedef void (*gsti_channel_read_cb_t)
      (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *read_cb_value,
