@@ -211,14 +211,14 @@ _gsti_packet_read( GSTIHD hd )
     /* read the first block so we can decipher the packet length */
     rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer, blocksize );
     if( rc )
-	return _gsti_log_rc( rc, "error reading packet header" );
+	return _gsti_log_rc( rc, "error reading packet header\n" );
 
     if( hd->decrypt_hd ) {
 	rc = gcry_cipher_decrypt( hd->decrypt_hd,
 				  hd->pkt.packet_buffer, blocksize,
                                   NULL, 0 );
 	if( rc )
-	    return _gsti_log_rc( rc, "error decrypting first block" );
+	    return _gsti_log_rc( rc, "error decrypting first block\n" );
     }
 
     _gsti_dump_hexbuf( "begin of packet: ", hd->pkt.packet_buffer, blocksize );
@@ -226,13 +226,16 @@ _gsti_packet_read( GSTIHD hd )
     pktlen = buftou32( hd->pkt.packet_buffer );
     /* FIXME: It should be 16 but NEWKEYS has 12 for some reason */
     if( pktlen < 12 ) /* minimum packet size as per secsh draft */
-	return _gsti_log_rc(GSTI_TOO_SHORT, "received pktlen %lu",(u32)pktlen);
+	return _gsti_log_rc( GSTI_TOO_SHORT, "received pktlen %l \n",
+                            (u32)pktlen );
     if( pktlen > MAX_PKTLEN )
-	return _gsti_log_rc(GSTI_TOO_LARGE, "received pktlen %lu",(u32)pktlen);
+	return _gsti_log_rc( GSTI_TOO_LARGE, "received pktlen %lu\n",
+                             (u32)pktlen );
 
     padlen = hd->pkt.packet_buffer[4];
     if( padlen < 4 )
-	return _gsti_log_rc(GSTI_TOO_SHORT, "received padding is %lu",(u32)padlen);
+	return _gsti_log_rc( GSTI_TOO_SHORT, "received padding is %lu\n",
+                             (u32)padlen );
 
     hd->pkt.packet_len = pktlen;
     hd->pkt.padding_len = padlen;
@@ -241,7 +244,7 @@ _gsti_packet_read( GSTIHD hd )
     n = 5 + paylen + padlen;
     if( (n % blocksize) )
 	_gsti_log_rc( GSTI_INV_PKT, "length packet is not a "
-                  "multiple of the blocksize" );
+                      "multiple of the blocksize\n" );
 
     /* read the rest of the packet */
     n = 4 + pktlen + maclen;
@@ -250,31 +253,30 @@ _gsti_packet_read( GSTIHD hd )
     else
 	n = 0; /* oops: rest of packet is too short */
 
-#if 0
-    _gsti_log_info("packet_len=%lu padding=%lu payload=%lu maclen=%lu n=%lu\n",
-              (u32)hd->pkt.packet_len, (u32)hd->pkt.padding_len,
-              (u32)hd->pkt.payload_len, (u32)maclen, (u32)n );
-#endif
+    _gsti_log_debug( "packet_len=%lu padding=%lu payload=%lu "
+                     "maclen=%lu n=%lu\n",
+                     (u32)hd->pkt.packet_len, (u32)hd->pkt.padding_len,
+                     (u32)hd->pkt.payload_len, (u32)maclen, (u32)n );
 
     rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer+blocksize, n );
     if( rc )
-	return _gsti_log_rc( rc,"error reading rest of packet" );
+	return _gsti_log_rc( rc,"error reading rest of packet\n" );
     n -= maclen; /* don't want the maclen anymore */
     if( hd->decrypt_hd ) {
 	rc = gcry_cipher_decrypt( hd->decrypt_hd,
 				  hd->pkt.packet_buffer+blocksize, n,
                                   NULL, 0 );
 	if( rc )
-	    return _gsti_log_rc( rc,"decrypt failed" );
+	    return _gsti_log_rc( rc,"decrypt failed\n" );
 	/* note: there is no reason to decrypt the padding, but we do
 	 * it anyway becuase this is easier
          */
         _gsti_dump_hexbuf( "rest of packet: ",
-                           hd->pkt.packet_buffer+blocksize, n );
+                           hd->pkt.packet_buffer + blocksize, n );
     }
 
     if( hd->recv_mac && !verify_mac( hd, seqno ) )
-	return _gsti_log_rc( GSTI_INV_MAC, "wrong MAC" );
+	return _gsti_log_rc( GSTI_INV_MAC, "wrong MAC\n" );
 
     /* todo: uncompress if needed */
 

@@ -121,23 +121,6 @@ _gsti_algolist_find( STRLIST list, const char *algo )
 }
 
 
-int
-cmp_bstring( BSTRING a, BSTRING b )
-{
-    int rc = 0;
-
-    /* fixme: do we really need it? maybe it's a good idea to move
-       this function to kex.c because it's the only file it uses it. */
-    if ( a->len < b->len )
-        rc = -1;
-    else if ( a->len > b->len )
-        rc = 1;
-    else if ( a->len == b->len )
-        rc = memcmp( a->d, b->d, a->len );
-    return rc;
-}
-
-
 void
 _gsti_print_string( FILE *fp, const char *string, size_t n )
 {

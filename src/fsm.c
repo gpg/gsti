@@ -153,7 +153,7 @@ new_state( GSTIHD hd )
 
         case SSH_MSG_KEXDH_INIT: 
             if( !hd->we_are_server ) { 
-                rc = _gsti_log_rc( GSTI_PROT_VIOL, "client got KEXDH_INIT" );
+                rc = _gsti_log_rc( GSTI_PROT_VIOL, "client got KEXDH_INIT\n" );
                 break; 
             } 
             rc = kex_proc_kexdh_init( hd );
@@ -305,8 +305,8 @@ fsm_loop( GSTIHD hd, int want_read )
             break;
 
         case FSM_send_service_request:
-            /*_gsti_log_info( "local service =%d\n",
-              hd->local_services? 1 : 0 );*/
+            _gsti_log_info( "is local service? (%d)\n",
+                            hd->local_services? 1 : 0 );
             rc = kex_send_service_request( hd, hd->local_services?
                                            hd->local_services->d
                                            : "ssh-userauth" );
@@ -490,4 +490,3 @@ fsm_user_write( GSTIHD hd )
     pkt.datalen = hd->user_write_bufsize;
     return gsti_put_packet( hd, &pkt );
 }
-

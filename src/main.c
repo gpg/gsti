@@ -91,7 +91,8 @@ _gsti_logv( int level, const char *fmt, va_list arg_ptr )
         log_handler( log_handler_value, level, fmt, arg_ptr );
     else {
         switch( level ) {
-        case GSTI_LOG_DEBUG: fputs( "DBG:", stderr ); break;
+        case GSTI_LOG_INFO: break;
+        case GSTI_LOG_DEBUG: fputs( "DBG: ", stderr ); break;
         case GSTI_LOG_NONE: return;
         }
         vfprintf( stderr, fmt, arg_ptr );
@@ -116,8 +117,23 @@ _gsti_log_info( const char *fmt, ... )
 {
     va_list arg;
 
+    if( log_level != GSTI_LOG_INFO )
+        return;
     va_start( arg, fmt );
     _gsti_logv( GSTI_LOG_INFO, fmt, arg );
+    va_end( arg );
+}
+
+
+void
+_gsti_log_debug( const char *fmt, ... )
+{
+    va_list arg;
+    
+    if( log_level != GSTI_LOG_DEBUG )
+        return;
+    va_start( arg, fmt );
+    _gsti_logv( GSTI_LOG_DEBUG, fmt, arg );
     va_end( arg );
 }
 

@@ -43,20 +43,18 @@ _gsti_dump_object( (stderr), (prefix), TYPE_BSTRING, (str), 0 )
 _gsti_dump_object( (stderr), (prefix), TYPE_HEXBUF, (buf), (len) )
 
 #define _gsti_dump_mpi( prefix, mpi ) \
-_gsti_dump_object( (stderr), (prefix), TYPE_MPI, (mpi) )
+_gsti_dump_object( (stderr), (prefix), TYPE_MPI, (mpi), 0 )
 
 #define _gsti_dump_strlist( prefix, list ) \
-_gsti_dump_object( (stderr), (prefix), TYPE_STRLIST, (list) )
-
-int  cmp_bstring( BSTRING a, BSTRING b );
+_gsti_dump_object( (stderr), (prefix), TYPE_STRLIST, (list), 0 )
 
 void _gsti_print_string( FILE *fp, const char *string, size_t n );
-
 
 /*-- main.c --*/
 void _gsti_log_info( const char *fmt, ... );
 int _gsti_log_rc( int rc, const char *fmt, ... );
 int _gsti_get_log_level( void );
+void _gsti_log_debug( const char *fmt, ... );
 
 #endif /* GSTI_UTILS_H */
 

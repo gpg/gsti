@@ -69,6 +69,7 @@ struct gsti_context {
         BSTRING mac_e;	    /* Mac client to server */
         BSTRING mac_f;	    /* Mac server to client */
     } kex;
+    byte cookie[16];
     int sent_newkeys;
 
     GCRY_MPI secret_x;  /* temporary use only */

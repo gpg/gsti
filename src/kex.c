@@ -68,6 +68,22 @@ static algorithm_list cipher_list[] = {
     {0}
 };
 
+
+static int
+cmp_bstring( BSTRING a, BSTRING b )
+{
+    int rc = 0;
+    
+    if ( a->len < b->len )
+        rc = -1;
+    else if ( a->len > b->len )
+        rc = 1;
+    else if ( a->len == b->len )
+        rc = memcmp( a->d, b->d, a->len );
+    return rc;    
+}
+
+
 int
 kex_send_version( GSTIHD hd )
 {
@@ -160,7 +176,8 @@ free_msg_kexinit( MSG_kexinit *kex )
  * Rteurns: 0 on success or an errorcode.
  */
 static int
-parse_msg_kexinit( MSG_kexinit *kex, const byte *msg, size_t msglen )
+parse_msg_kexinit( MSG_kexinit *kex, int we_are_server, byte *old_cookie,
+                   const byte *msg, size_t msglen )
 {
     STRLIST algolist[10] = {NULL};
     BUFFER buf = NULL;
@@ -177,7 +194,16 @@ parse_msg_kexinit( MSG_kexinit *kex, const byte *msg, size_t msglen )
         rc = GSTI_BUG;
         goto leave;
     }
-    _gsti_buf_getraw( buf, kex->cookie, 16 );
+    if( we_are_server )
+        _gsti_buf_getraw( buf, kex->cookie, 16 );
+    else {
+        /* We skip the cookie the server sent to us. This makes sure both
+           sides can calculate the same key data. Instead we use the one
+           we generated. */
+        for( i = 0; i < 16; i++ )
+            _gsti_buf_getc( buf );
+        memcpy( kex->cookie, old_cookie, 16 );
+    }
 
     /* get 10 strings */
     for( i = 0; i < 10; i++ ) {
@@ -280,8 +306,7 @@ build_msg_kexinit( MSG_kexinit *kex, struct packet_buffer_s *pkt )
 static void
 dump_msg_kexinit( MSG_kexinit *kex )
 {
-#if 0
-    _gsti_log_info( "MSG_kexinit:\n" );
+    _gsti_log_debug( "MSG_kexinit:\n" );
     _gsti_dump_hexbuf( "cookie: ", kex->cookie, 16 );
     _gsti_dump_strlist( "kex_algorithm", kex->kex_algorithm );
     _gsti_dump_strlist( "server_host_key_algorithms",
@@ -293,9 +318,8 @@ dump_msg_kexinit( MSG_kexinit *kex )
     _gsti_dump_strlist( "compr_algos_c2s", kex->compr_algos_c2s );
     _gsti_dump_strlist( "compr_algos_s2c", kex->compr_algos_s2c );
     if( kex->first_kex_packet_follows )
-        _gsti_log_info( "fist_kex_packet_follows\n" );
-    _gsti_log_info( "\n" );
-#endif
+        _gsti_log_debug( "fist_kex_packet_follows\n" );
+    _gsti_log_debug( "\n" );
 }
 
 
@@ -371,11 +395,9 @@ leave:
 static void
 dump_msg_kexdh_init( MSG_kexdh_init *kexdh )
 {
-#if 0
-    _gsti_log_info( "MSG_kexdh_init:\n" );
+    _gsti_log_debug( "MSG_kexdh_init:\n" );
     _gsti_dump_mpi( "e=", kexdh->e );
-    _gsti_log_info( "\n" );
-#endif
+    _gsti_log_debug( "\n" );
 }
 
 
@@ -471,13 +493,11 @@ leave:
 static void
 dump_msg_kexdh_reply( MSG_kexdh_reply *dhr )
 {
-#if 0
-    _gsti_log_info( "MSG_kexdh_reply:\n" );
+    _gsti_log_debug( "MSG_kexdh_reply:\n" );
     _gsti_dump_bstring( "k_s=", dhr->k_s );
     _gsti_dump_mpi( "f=", dhr->f );
     _gsti_dump_bstring( "sig_h=", dhr->sig_h );
-    _gsti_log_info( "\n" );
-#endif
+    _gsti_log_debug( "\n" );
 }
 
 
@@ -566,6 +586,7 @@ calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
                     BSTRING k_s, GCRY_MPI e,  GCRY_MPI f )
 {
     GCRY_MD_HD md;
+    BSTRING pp;
     const char *ver = host_version_string;
     int algo = GCRY_MD_SHA1, dlen;
 
@@ -574,14 +595,12 @@ calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
         return map_gcry_rc( gcry_errno() );
 
     if( hd->we_are_server ) {
-        BSTRING pp;
         hash_bstring( md, hd->peer_version_string );
         pp = _gsti_bstring_make( ver, strlen( ver ) );
         hash_bstring( md, pp );
         _gsti_free( pp );
     }
     else {
-        BSTRING pp;
         pp = _gsti_bstring_make( ver, strlen( ver ) );
         hash_bstring( md, pp );
         _gsti_free( pp );
@@ -667,14 +686,14 @@ construct_keys( GSTIHD hd )
     hd->kex.mac_e = construct_one_key( hd, md, algo, "\x45", maclen );
     hd->kex.mac_f = construct_one_key( hd, md, algo, "\x46", maclen );
     gcry_md_close( md );
-#if 0
+
     _gsti_dump_hexbuf( "key A=", hd->kex.iv_a->d, hd->kex.iv_a->len );
     _gsti_dump_hexbuf( "key B=", hd->kex.iv_b->d, hd->kex.iv_b->len );
     _gsti_dump_hexbuf( "key C=", hd->kex.key_c->d, hd->kex.key_c->len );
     _gsti_dump_hexbuf( "key D=", hd->kex.key_d->d, hd->kex.key_d->len );
     _gsti_dump_hexbuf( "key E=", hd->kex.mac_e->d, hd->kex.mac_e->len );
     _gsti_dump_hexbuf( "key F=", hd->kex.mac_f->d, hd->kex.mac_f->len );
-#endif
+
     return 0;
 }
 
@@ -718,8 +737,11 @@ kex_send_init_packet( GSTIHD hd )
 
     /* first send our kexinit packet */
     memset( &kex, 0, sizeof kex );
-    memset( kex.cookie, 'w', 16 ); /* fixme: send a random one */
 
+    /* we need the cookie later, so store it */
+    gcry_randomize( kex.cookie, 16, GCRY_STRONG_RANDOM );
+    memcpy( hd->cookie, kex.cookie, 16 );
+    
     kex.kex_algorithm = _gsti_strlist_insert( NULL,
                                               "diffie-hellman-group1-sha1" );
     kex.server_host_key_algorithms = _gsti_strlist_insert( NULL, "ssh-dss" );
@@ -759,10 +781,8 @@ choose_mac_algo( GSTIHD hd, STRLIST cli, STRLIST srv )
             continue;
         for( i = 0; (s = hmac_list[i].name); i++ ) {
             if( !strcmp( s, l->d ) ) {
-#if 0
-                _gsti_log_info( "chosen mac: %s (len %d)\n",
-                                hmac_list[i].name, hmac_list[i].len );
-#endif
+                _gsti_log_debug( "chosen mac: %s (len %d)\n",
+                                 hmac_list[i].name, hmac_list[i].len );
                 hd->mac_algo = hmac_list[i].algid;
                 hd->mac_len = hmac_list[i].len;
                 return 0;
@@ -788,12 +808,10 @@ choose_cipher_algo( GSTIHD hd, STRLIST cli, STRLIST srv )
             continue;
         for( i = 0; (s = cipher_list[i].name); i++ ) {
             if( !strcmp( s, l->d ) ) {
-#if 0
-                _gsti_log_info( "choosen cipher: %s (blklen %d, keylen %d)\n",
-                                cipher_list[i].name,
-                                cipher_list[i].blklen,
-                                cipher_list[i].len );
-#endif
+                _gsti_log_debug( "choosen cipher: %s (blklen %d, keylen %d)\n",
+                                 cipher_list[i].name,
+                                 cipher_list[i].blklen,
+                                 cipher_list[i].len );
                 hd->ciph_blksize = cipher_list[i].blklen;
                 hd->ciph_algo = cipher_list[i].algid;
                 hd->ciph_mode = cipher_list[i].mode;
@@ -816,7 +834,8 @@ kex_proc_init_packet( GSTIHD hd )
 
     if( hd->pkt.type != SSH_MSG_KEXINIT )
         return GSTI_BUG;  /* oops */
-    rc = parse_msg_kexinit( &kex, hd->pkt.payload, hd->pkt.payload_len );
+    rc = parse_msg_kexinit( &kex, hd->we_are_server, hd->cookie,
+                            hd->pkt.payload, hd->pkt.payload_len );
     if( rc )
         return rc;
     rc = choose_mac_algo( hd, kex.mac_algos_c2s, kex.mac_algos_s2c );
@@ -825,6 +844,18 @@ kex_proc_init_packet( GSTIHD hd )
     rc = choose_cipher_algo( hd, kex.encr_algos_c2s, kex.encr_algos_s2c );
     if( rc )
         return rc;
+
+    if( !hd->we_are_server ) {
+        /* We replace the cookie inside with the right cookie to
+           calculate a valid message digest. */
+        memcpy( hd->pkt.packet_buffer + 6, hd->cookie, 16 );
+        hd->pkt.payload = hd->pkt.packet_buffer + 5;
+    }
+    else {
+        /* The server still has its own cookie in the host data, we
+           need to replace this with the received (client) cookie. */
+        memcpy( hd->host_kexinit_data->d + 1, kex.cookie, 16 );
+    }
     /* make a copy of the received payload which we will need later */
     hd->peer_kexinit_data = _gsti_bstring_make( hd->pkt.payload,
                                                 hd->pkt.payload_len );
@@ -1008,7 +1039,7 @@ kex_send_newkeys( GSTIHD hd )
         }
     }
     if( rc )
-        return _gsti_log_rc( rc, "setup encryption keys failed" );
+        return _gsti_log_rc( rc, "setup encryption keys failed\n" );
     return rc;
 }
 
@@ -1068,7 +1099,7 @@ kex_proc_newkeys( GSTIHD hd )
     }
 
     if( rc )
-        return _gsti_log_rc( rc,"setup decryption keys failed" );
+        return _gsti_log_rc( rc,"setup decryption keys failed\n" );
     return rc;
 }
 
@@ -1213,7 +1244,7 @@ kex_proc_service_request( GSTIHD hd )
 
     /* store the servicename, so that it can later be answered */
     if( hd->service_name )
-        return _gsti_log_rc( GSTI_BUG, "a service is already in use");
+        return _gsti_log_rc( GSTI_BUG, "a service is already in use\n" );
 
     hd->service_name = svcname;
     return rc;
@@ -1250,11 +1281,11 @@ kex_proc_service_accept( GSTIHD hd )
         return rc;
 
     if( !hd->service_name )
-        return _gsti_log_rc( GSTI_BUG, "no service request sent");
+        return _gsti_log_rc( GSTI_BUG, "no service request sent\n" );
     rc = cmp_bstring( hd->service_name, svcname );
     _gsti_free( svcname );
     if( rc )
         return _gsti_log_rc( GSTI_PROT_VIOL,
-                             "service name does not match requested one" );
+                             "service name does not match requested one\n" );
     return 0;
 }
