@@ -48,6 +48,67 @@ buftou32 (const byte * buf)
 }
 
 
+static const char *
+msg_id_to_str (int msg_id)
+{
+  const char *s;
+
+  switch (msg_id)
+    {
+    case SSH_MSG_DISCONNECT:    s = "disconnect"; break;
+    case SSH_MSG_IGNORE:        s = "ignore"; break;
+    case SSH_MSG_UNIMPLEMENTED: s = "unimplemented"; break;
+    case SSH_MSG_DEBUG:         s = "debug"; break;
+    case SSH_MSG_SERVICE_REQUEST: s = "service_request"; break;
+    case SSH_MSG_SERVICE_ACCEPT: s = "service_accept"; break;
+
+    case SSH_MSG_KEXINIT:        s = "kexinit"; break;
+    case SSH_MSG_NEWKEYS:        s = "newkeys"; break;
+
+      /* Duplicated value:
+         case SSH_MSG_KEXDH_INIT:     s = "kexdh_init"; break;
+         case SSH_MSG_KEXDH_REPLY:    s = "kexdh_reply"; break; */
+
+    case SSH_MSG_KEX_DH_GEX_REQUEST_OLD: s = "kex_dh_gex_request_old"; break;
+    case SSH_MSG_KEX_DH_GEX_GROUP:   s = "kex_dh_gex_group"; break;
+    case SSH_MSG_KEX_DH_GEX_INIT:    s = "kex_dh_gex_init"; break;
+    case SSH_MSG_KEX_DH_GEX_REPLY:   s = "kex_dh_gex_reply"; break;
+    case SSH_MSG_KEX_DH_GEX_REQUEST: s = "kex_dh_gex_request"; break;
+
+    case SSH_MSG_USERAUTH_REQUEST: s = "userauth_request"; break;
+    case SSH_MSG_USERAUTH_FAILURE: s = "userauth_failure"; break;
+    case SSH_MSG_USERAUTH_SUCCESS: s = "userauth_success"; break;
+    case SSH_MSG_USERAUTH_BANNER:  s = "userauth_banner"; break;
+
+      /* Duplicated value:
+        case SSH_MSG_USERAUTH_PK_OK:   s = "userauth_pk_ok"; break;*/
+
+    case SSH_MSG_USERAUTH_PASSWORD_CHANGEREQ:
+                                   s = "userauth_password_changereq"; break;
+
+    case SSH_MSG_GLOBAL_REQUEST:  s = "global_request"; break;
+    case SSH_MSG_REQUEST_SUCCESS: s = "request_success"; break;
+    case SSH_MSG_REQUEST_FAILURE: s = "request_failure"; break;
+    case SSH_MSG_CHANNEL_OPEN:    s = "channel_open"; break;
+    case SSH_MSG_CHANNEL_OPEN_CONFIRMATION:
+                                        s = "channel_open_confirmation"; break;
+    case SSH_MSG_CHANNEL_OPEN_FAILURE:  s = "channel_open_failure"; break;
+    case SSH_MSG_CHANNEL_WINDOW_ADJUST: s = "channel_window_adjust"; break;
+    case SSH_MSG_CHANNEL_DATA:          s = "channel_data"; break;
+    case SSH_MSG_CHANNEL_EXTENDED_DATA: s = "channel_extended_data"; break;
+    case SSH_MSG_CHANNEL_EOF:           s = "channel_eof"; break;
+    case SSH_MSG_CHANNEL_CLOSE:         s = "channel_close"; break;
+    case SSH_MSG_CHANNEL_REQUEST:       s = "channel_request"; break;
+    case SSH_MSG_CHANNEL_SUCCESS:       s = "channel_success"; break;
+    case SSH_MSG_CHANNEL_FAILURE:       s = "channel_failure"; break;
+      
+    default: s = "?"; break;
+    }
+  return s;
+}
+
+
+
 static void
 print_disconnect_msg (const byte * msg, size_t msglen)
 {
@@ -330,8 +391,8 @@ again:
   /* TODO: Do the uncompressions.  */
 
   ctx->pkt.type = *ctx->pkt.payload;
-  _gsti_log_info (ctx, "received packet %lu of type %d\n",
-		  (u32) seqno, ctx->pkt.type);
+  _gsti_log_info (ctx, "received packet %lu of type %d (%s)\n",
+		  (u32) seqno, ctx->pkt.type, msg_id_to_str (ctx->pkt.type));
   if (!ctx->pktbuf)
     err = gsti_buf_alloc (&ctx->pktbuf);
   if (!err)
@@ -387,8 +448,8 @@ _gsti_packet_write (gsti_ctx_t ctx)
   ctx->pkt.payload[0] = ctx->pkt.type;
   ctx->pkt.packet_len = 1 + ctx->pkt.payload_len + ctx->pkt.padding_len;
 
-  _gsti_log_info (ctx, "sending packet %lu of type %d\n",
-		  (u32) seqno, ctx->pkt.type);
+  _gsti_log_info (ctx, "sending packet %lu of type %d (%s)\n",
+		  (u32) seqno, ctx->pkt.type, msg_id_to_str (ctx->pkt.type));
 
   if (ctx->zlib.use && !ctx->zlib.init)
     {
