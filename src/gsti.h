@@ -1,6 +1,3 @@
-#define GPG_ERR_PROT_VIOL 1
-#define GPG_ERR_INV_MAC 2
-
 /* gsti.h -  GNU Secure Transport Initiative (gsti)
    Copyright (C) 1999, 2000 Werner Koch
    Copyright (C) 2002 Timo Schulz
