@@ -93,7 +93,7 @@ int
 main (int argc, char **argv)
 {
   gcry_mpi_t sig[2];
-  GSTI_KEY key;
+  gsti_key_t key;
   unsigned char *fpr;
   int rc, md_arr[2], i;
 
@@ -115,8 +115,8 @@ main (int argc, char **argv)
   md_arr[1] = GSTI_DIGEST_SHA1;
   for (i = 0; i < 2; i++)
     {
-      fpr = gsti_key_fingerprint (key, md_arr[i]);
-      if (!fpr)
+      rc = gsti_key_fingerprint (key, md_arr[i], &fpr);
+      if (rc)
 	printf ("could not get fingerprint.\n");
       else
         {
@@ -138,8 +138,8 @@ main (int argc, char **argv)
   md_arr[1] = GSTI_DIGEST_SHA1;
   for (i=0; i < 2; i++)
     {
-      fpr = gsti_key_fingerprint (key, md_arr[i]);
-      if (!fpr)
+      rc = gsti_key_fingerprint (key, md_arr[i], &fpr);
+      if (rc)
         printf ("could not get fngerprint.\n");
       else
         {

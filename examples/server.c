@@ -185,7 +185,7 @@ main (int argc, char **argv)
 
   memset (&fd, 0, sizeof fd);
   gsti_control (GSTI_SECMEM_INIT);
-  ctx = gsti_init ();
+  gsti_init (&ctx);
   gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
   gsti_set_hostkey (ctx, SECKEY);
   gsti_set_readfnc (ctx, myread, &fd);

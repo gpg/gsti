@@ -1,3 +1,9 @@
+2004-06-09  Timo Schulz  <twoaday@g10code.de>
+
+	* client.c (main): Add parameter for gsti_init().
+	* server.c (main): Likewise.
+	* keytool.c (main): Remove all old context names.
+	
 2004-06-07  Timo Schulz  <twoaday@g10code.de>
 
 	Everywhere: Change GSTI_PKTDESC to gsti_pktdesc_s ctx.
