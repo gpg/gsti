@@ -163,7 +163,7 @@ main( int argc, char **argv )
     gsti_control( GSTI_SECMEM_INIT );
     gsti_set_log_level( GSTI_LOG_DEBUG );
     hd = gsti_init();
-    gsti_set_hostkey_file( hd, SECKEY );
+    gsti_set_hostkey( hd, SECKEY );
     gsti_set_readfnc( hd, myread );
     gsti_set_writefnc( hd, mywrite );
 #if 0

@@ -33,6 +33,7 @@
 #include <gsti.h>
 
 #define PGMNAME "ex-client: "
+#define SECKEY "dsa.sec"
 
 static int conn_fd = -1;
 
@@ -135,6 +136,7 @@ main( int argc, char **argv )
     hd = gsti_init();
     gsti_set_readfnc( hd, myread );
     gsti_set_writefnc( hd, mywrite );
+    gsti_set_client_key( hd, SECKEY );
 #if 0
     rc = gsti_set_service( hd, "log-lines@gnu.org" );
        log_rc( rc, "set-service" );

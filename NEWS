@@ -1,10 +1,13 @@
 Noteworthy changes in version 0.2.0
 -----------------------------------
 
-* Most of the global functions have unique and prefixed names.
+* All global functions now have a unique (prefixed) name.
 
-* Basic code to establish a secure channel works.
+* The code to establish a secure channel basically works without
+  any known flaws (protocol violations).
 
-* The code supports a host key and DSS signature handling.
+* Implemented all required algorithms from the draft.
+  Digital signatures: DSS.
+  User authentication: publickey.
+  Cipher: 3DES.
 
-* Support for the random cookie.
