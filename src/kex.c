@@ -159,14 +159,16 @@ kex_wait_on_version( GSTIHD hd )
 static void
 free_msg_kexinit( MSG_kexinit *kex )
 {
-    _gsti_strlist_free( kex->kex_algorithm );
-    _gsti_strlist_free( kex->server_host_key_algorithms );
-    _gsti_strlist_free( kex->encr_algos_c2s );
-    _gsti_strlist_free( kex->encr_algos_s2c );
-    _gsti_strlist_free( kex->mac_algos_c2s );
-    _gsti_strlist_free( kex->mac_algos_s2c );
-    _gsti_strlist_free( kex->compr_algos_c2s );
-    _gsti_strlist_free( kex->compr_algos_s2c );
+    if( kex ) {
+        _gsti_strlist_free( kex->kex_algorithm );
+        _gsti_strlist_free( kex->server_host_key_algorithms );
+        _gsti_strlist_free( kex->encr_algos_c2s );
+        _gsti_strlist_free( kex->encr_algos_s2c );
+        _gsti_strlist_free( kex->mac_algos_c2s );
+        _gsti_strlist_free( kex->mac_algos_s2c );
+        _gsti_strlist_free( kex->compr_algos_c2s );
+        _gsti_strlist_free( kex->compr_algos_s2c );
+    }
 }
 
 

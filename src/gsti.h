@@ -59,6 +59,7 @@ enum {
     GSTI_PROT_VIOL     = 14,       /* protocol violation detected */
     GSTI_BAD_SIGNATURE = 15,
     GSTI_FILE          = 16,
+    GSTI_NOT_IMPL      = 17,       /* not implemented */
 };
 
 enum gsti_ctl_cmds {
@@ -99,6 +100,11 @@ enum gsti_pk_algos {
     GSTI_PK_DSS = 1
 };
 
+enum gsti_auth_methods {
+    GSTI_AUTH_SIMPLE    = 0, /* no additional authentication! */
+    GSTI_AUTH_PUBLICKEY = 1
+};
+
     
 /* Our handle type */
 struct gsti_context;
@@ -130,7 +136,10 @@ int gsti_set_writefnc( GSTIHD hd, GSTI_WRITE_FNC writefnc );
 int gsti_set_service( GSTIHD hd, const char *svcname );
 int gsti_read( GSTIHD hd, void *buffer, size_t *length );
 int gsti_write( GSTIHD hd, const void *buffer, size_t length );
-int gsti_set_hostkey_file( GSTIHD hd, const char *file );
+int gsti_set_hostkey( GSTIHD hd, const char *file );
+int gsti_set_client_key( GSTIHD hd, const char *file );
+int gsti_set_client_user( GSTIHD hd, const char *user );
+int gsti_set_auth_method( GSTIHD hd, int methd );
 void gsti_set_log_handler( void (*logf)( void *, int, const char *, va_list ),
                            void *opaque );
 void gsti_set_log_level( int level );

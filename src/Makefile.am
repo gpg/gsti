@@ -34,6 +34,7 @@ lib_LTLIBRARIES = libgsti.la
 libgsti_la_LDFLAGS = #-version-info 0:0:0
 libgsti_la_SOURCES = \
 	gsti.h \
+	auth.c \
 	api.h \
 	types.h \
 	pubkey.c \

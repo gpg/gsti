@@ -29,7 +29,15 @@
 #include "pubkey.h"
 #include "buffer.h"
 #include "utils.h"
-     
+
+static int
+check_auth_id( const char *buf )
+{
+    if( !strncmp( buf, "publickey", 9 ) )
+        return GSTI_AUTH_PUBLICKEY;
+    return -1; /* not supported */
+}
+
 static int
 build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
 {
@@ -41,7 +49,7 @@ build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
     _gsti_buf_init( &buf );
     _gsti_buf_putstr( buf, ath->user->d, ath->user->len );
     _gsti_buf_putstr( buf, ath->svcname->d, ath->svcname->len );
-    _gsti_buf_putstr( buf, ath->methd->d, ath->methd->len );
+    _gsti_buf_putstr( buf, ath->method->d, ath->method->len );
     _gsti_buf_putc( buf, ath->false );
     _gsti_buf_putstr( buf, ath->pkalgo->d, ath->pkalgo->len );
     _gsti_buf_putstr( buf, ath->key->d, ath->key->len );
@@ -60,17 +68,19 @@ build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
 static void
 free_auth_request( MSG_auth_request *ath )
 {
-    _gsti_bstring_free( ath->user );
-    _gsti_bstring_free( ath->svcname );
-    _gsti_bstring_free( ath->methd );
-    _gsti_bstring_free( ath->pkalgo );
-    _gsti_bstring_free( ath->key );
-    _gsti_bstring_free( ath->sig );
+    if( ath ) {
+        _gsti_bstring_free( ath->user );
+        _gsti_bstring_free( ath->svcname );
+        _gsti_bstring_free( ath->method );
+        _gsti_bstring_free( ath->pkalgo );
+        _gsti_bstring_free( ath->key );
+        _gsti_bstring_free( ath->sig );
+    }
 }
 
 static int
 init_auth_request( MSG_auth_request *ath, const char *user, int false,
-                   GSTI_KEY pk, const byte *sigblob, size_t siglen )
+                   GSTI_KEY pk )
 {
     const char *s;
     byte *p;
@@ -80,14 +90,15 @@ init_auth_request( MSG_auth_request *ath, const char *user, int false,
     s = "ssh-userauth";
     ath->svcname = _gsti_bstring_make( s, strlen( s ) );
     s = "publickey";
-    ath->methd = _gsti_bstring_make( s, strlen( s ) );
+    ath->method = _gsti_bstring_make( s, strlen( s ) );
     ath->false = false;
     p = _gsti_ssh_get_pkname( pk->type, 0, &n );
     ath->pkalgo = _gsti_bstring_make( p, n );
     _gsti_free( p );
     ath->key = _gsti_key_getblob( pk );
-    if( sigblob )
-        ath->sig = _gsti_bstring_make( sigblob, siglen );
+    
+    /* Due to the fact we need to hash the packet first before we
+       can sign, we always add the signature later and not here. */
 
     return 0;
 }
@@ -99,7 +110,7 @@ dump_auth_request( MSG_auth_request *ath )
     _gsti_log_debug( "MSG_auth_request:\n" );
     _gsti_dump_bstring( "user: ", ath->user );
     _gsti_dump_bstring( "service: ", ath->svcname );
-    _gsti_dump_bstring( "method: ", ath->methd );
+    _gsti_dump_bstring( "method: ", ath->method );
     _gsti_log_debug( "false=%d\n", ath->false );
     _gsti_dump_bstring( "key: ", ath->key );
     _gsti_dump_bstring( "signature: ", ath->sig );
@@ -107,13 +118,37 @@ dump_auth_request( MSG_auth_request *ath )
 }
 
 int
-auth_send_init_packet( GSTIHD hd, const char *user, GSTI_KEY pk )
+auth_send_accept_packet( GSTIHD hd )
+{
+    struct packet_buffer_s *pkt = &hd->pkt;
+    int rc;
+    
+    pkt->type = SSH_MSG_USERAUTH_SUCCESS;
+    pkt->payload_len = 1;
+    rc = _gsti_packet_write( hd );
+
+    return rc;
+}
+
+int
+auth_proc_accept_packet( GSTIHD hd )
+{
+    struct packet_buffer_s *pkt = &hd->pkt;
+    
+    if( pkt->type != SSH_MSG_USERAUTH_SUCCESS )
+        return GSTI_BUG;
+    return 0;
+}
+
+
+int
+auth_send_init_packet( GSTIHD hd )
 {
     MSG_auth_request ath;
     int rc;
     
     memset( &ath, 0, sizeof ath );
-    rc = init_auth_request( &ath, user, 0, pk, NULL, 0 );
+    rc = init_auth_request( &ath, hd->auth.user, 0, hd->auth.key );
     if( !rc )
         rc = build_auth_request( &ath, &hd->pkt );
     if( !rc )
@@ -124,12 +159,23 @@ auth_send_init_packet( GSTIHD hd, const char *user, GSTI_KEY pk )
 }
 
 
+static BSTRING
+read_bstring( BUFFER buf )
+{
+    BSTRING dst = NULL;
+    size_t n;
+    byte *p = _gsti_buf_getstr( buf, &n );
+    if( p )
+        dst = _gsti_bstring_make( p, n );
+    _gsti_free( p );
+    return dst;
+}
+
+
 static int
 parse_auth_request( MSG_auth_request *ath, const byte *msg, size_t msglen )
 {
     BUFFER buf;
-    byte *p;
-    size_t n;
     int rc = 0;
     
     memset( ath, 0, sizeof *ath );
@@ -142,32 +188,14 @@ parse_auth_request( MSG_auth_request *ath, const byte *msg, size_t msglen )
         rc = GSTI_BUG;
         goto leave;
     }
-    p = _gsti_buf_getstr( buf, &n );
-    if( p )
-        ath->user = _gsti_bstring_make( p, n );
-    _gsti_free( p );
-
-    p = _gsti_buf_getstr( buf, &n );
-    if( p )
-        ath->svcname = _gsti_bstring_make( p, n );
-    _gsti_free( p );
-
-    p = _gsti_buf_getstr( buf, &n );
-    if( p )
-        ath->methd = _gsti_bstring_make( p, n );
-    _gsti_free( p );
-
+    ath->user = read_bstring( buf );
+    ath->svcname = read_bstring( buf );
+    ath->method = read_bstring( buf );
     ath->false = _gsti_buf_getc( buf );
-
-    p = _gsti_buf_getstr( buf, &n );
-    if( p )
-        ath->pkalgo = _gsti_bstring_make( p, n );
-    _gsti_free( p );
-
-    p = _gsti_buf_getstr( buf, &n );
-    if( p )
-        ath->key = _gsti_bstring_make( p, n );
-    _gsti_free( p );
+    ath->pkalgo = read_bstring( buf );
+    ath->key = read_bstring( buf );
+    if( _gsti_buf_getlen( buf ) )
+        ath->sig = read_bstring( buf );
 
     if( _gsti_buf_getlen( buf ) )
         rc = GSTI_INV_PKT;
@@ -191,18 +219,20 @@ auth_proc_init_packet( GSTIHD hd )
     rc = parse_auth_request( &ath, hd->pkt.payload, hd->pkt.payload_len );
     if( rc )
         return rc;
+    if( check_auth_id( ath.method->d ) == -1 ) {
+        free_auth_request( &ath );
+        return GSTI_NOT_IMPL;
+    }
     hd->auth.user = _gsti_strdup( ath.user->d );
-    hd->auth.peer_pk = _gsti_key_fromblob( ath.key );
+    hd->auth.key = _gsti_key_fromblob( ath.key );
     
     dump_auth_request( &ath );
-
-    free_auth_request( &ath );
-    
+    free_auth_request( &ath );    
     return rc;
 }
 
 
-int
+static int
 calc_sig_hash( BSTRING sessid, MSG_auth_request *ath, BSTRING *r_digest )
 {
     GCRY_MD_HD md;
@@ -215,7 +245,7 @@ calc_sig_hash( BSTRING sessid, MSG_auth_request *ath, BSTRING *r_digest )
     gcry_md_putc( md, SSH_MSG_USERAUTH_REQUEST );
     _gsti_bstring_hash( md, ath->user );
     _gsti_bstring_hash( md, ath->svcname );
-    _gsti_bstring_hash( md, ath->methd );
+    _gsti_bstring_hash( md, ath->method );
     gcry_md_putc( md, 1 );
     _gsti_bstring_hash( md, ath->pkalgo );
     _gsti_bstring_hash( md, ath->key );
@@ -229,18 +259,18 @@ calc_sig_hash( BSTRING sessid, MSG_auth_request *ath, BSTRING *r_digest )
     
 
 int
-auth_send_second_packet( GSTIHD hd, const char *user, GSTI_KEY sk )
+auth_send_second_packet( GSTIHD hd )
 {
     MSG_auth_request ath;
     BSTRING sig = NULL, hash;
     int rc;
 
     memset( &ath, 0, sizeof ath );
-    rc = init_auth_request( &ath, user, 1, sk, NULL, 0 );
+    rc = init_auth_request( &ath, hd->auth.user, 1, hd->auth.key );
     if( !rc )
         rc = calc_sig_hash( hd->session_id, &ath, &hash );
     if( !rc )
-        sig = _gsti_sig_encode( sk, hash->d );
+        sig = _gsti_sig_encode( hd->auth.key, hash->d );
     if( sig )
         ath.sig = sig;
     else
@@ -258,4 +288,22 @@ auth_send_second_packet( GSTIHD hd, const char *user, GSTI_KEY sk )
     return rc;
 }
 
-    
+
+int
+auth_proc_second_packet( GSTIHD hd )
+{
+    MSG_auth_request ath;
+    BSTRING hash;
+    int rc;
+
+    rc = parse_auth_request( &ath, hd->pkt.payload, hd->pkt.payload_len );
+    if( !rc )
+        rc = calc_sig_hash( hd->session_id, &ath, &hash );
+    if( !rc )
+        rc = _gsti_sig_decode( ath.key, ath.sig, hash->d, NULL );
+
+    _gsti_bstring_free( hash );    
+    free_auth_request( &ath );
+    return rc;
+}
+

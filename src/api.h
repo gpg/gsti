@@ -96,12 +96,11 @@ struct gsti_context {
     const byte *user_write_buffer;
     size_t user_write_bufsize;
 
-    char *hostkey_file;
     GSTI_KEY hostkey;
 
     struct {
-        unsigned int used:1;
-        GSTI_KEY peer_pk;
+        int method;
+        GSTI_KEY key;
         char *user;
     } auth;
 
@@ -116,5 +115,14 @@ int map_gcry_rc( int rc );
 int fsm_user_read( GSTIHD hd );
 int fsm_user_write( GSTIHD hd );
 
+/*-- auth.c --*/
+int auth_send_accept_packet( GSTIHD hd );
+int auth_proc_accept_packet( GSTIHD hd );
+
+int auth_send_init_packet( GSTIHD hd );
+int auth_proc_init_packet( GSTIHD hd );
+
+int auth_send_second_packet( GSTIHD hd );
+int auth_proc_second_packet( GSTIHD hd );
 
 #endif /* GSTI_API_H */

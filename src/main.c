@@ -207,12 +207,23 @@ gsti_init( void )
 }
 
 
+static void
+_gsti_free_auth( GSTIHD hd )
+{
+    if( hd ) {
+        _gsti_free( hd->auth.user );
+        gsti_key_free( hd->auth.key );
+    }
+}
+
+
 int
 gsti_deinit( GSTIHD hd )
 {
     if( !hd )
         return GSTI_INV_ARG;
-    
+
+    _gsti_free_auth( hd );
     _gsti_read_stream_free( hd->read_stream );
     _gsti_write_stream_free( hd->write_stream );
     _gsti_strlist_free( hd->local_services );
@@ -231,8 +242,6 @@ gsti_deinit( GSTIHD hd )
     gcry_cipher_close( hd->encrypt_hd );
     gcry_cipher_close( hd->decrypt_hd );
     gsti_key_free( hd->hostkey );
-    gsti_key_free( hd->auth.peer_pk );
-    _gsti_free( hd->auth.user );
     _gsti_packet_free( hd );
     _gsti_free( hd );
     return 0;
@@ -337,7 +346,7 @@ gsti_write( GSTIHD hd, const void *buffer, size_t length )
 
 
 int
-gsti_set_hostkey_file( GSTIHD hd, const char *file )
+gsti_set_hostkey( GSTIHD hd, const char *file )
 {
     struct stat statbuf;
     int rc;
@@ -346,13 +355,52 @@ gsti_set_hostkey_file( GSTIHD hd, const char *file )
         return GSTI_INV_ARG;
     if( stat( file, &statbuf ) )
         return GSTI_FILE;
-    _gsti_free( hd->hostkey_file );
-    hd->hostkey_file = _gsti_strdup( file );
     rc = gsti_key_load( file, GSTI_PK_DSS, 1, &hd->hostkey );
     
     return rc;
 }
 
+
+int
+gsti_set_client_key( GSTIHD hd, const char *file )
+{
+    struct stat statbuf;
+    int rc;
+
+    if( !hd )
+        return GSTI_INV_ARG;
+    if( stat( file, &statbuf ) )
+        return GSTI_FILE;
+    rc = gsti_key_load( file, GSTI_PK_DSS, 1, &hd->auth.key );
+
+    return rc;
+}
+
+
+int
+gsti_set_client_user( GSTIHD hd, const char *user )
+{
+    if( !hd )
+        return GSTI_INV_ARG;
+    _gsti_free( hd->auth.user );
+    hd->auth.user = _gsti_strdup( user );
+    return 0;
+}
+
+
+int
+gsti_set_auth_method( GSTIHD hd, int methd )
+{
+    if( !hd )
+        return GSTI_INV_ARG;
+    switch( methd ) {
+    case GSTI_AUTH_SIMPLE: /* disable authentication */
+    case GSTI_AUTH_PUBLICKEY: hd->auth.method = methd; break;
+    default: return GSTI_PROT_VIOL;
+    }
+    return 0;
+}
+        
 
 void
 gsti_set_log_handler( void (*logf)( void *, int, const char *, va_list ),
@@ -398,6 +446,7 @@ gsti_strerror( int ec )
     case GSTI_PROT_VIOL:     return "protocol violation";
     case GSTI_BAD_SIGNATURE: return "bad signature";
     case GSTI_FILE:          return strerror( errno );
+    case GSTI_NOT_IMPL:      return "not implemented";
 
     default:
         sprintf( buf, "code=%d", ec );

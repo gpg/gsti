@@ -2,9 +2,17 @@
 
 	* kex.c (kex_send_init_packet): Fixed memory leak.
 	* main.c (gsti_deinit): Free auth struct.
+	(gsti_set_client_key): New.
+	(gsti_set_client_user): New.
+	(gsti_set_auth_method): New.
+	(_gsti_free_auth): New.
 	* api.h: Added auth struct to the GSTI struct.
 	* auth.c (auth_send_init_packet): New.
 	(auth_proc_init_packet): New.
+	(auth_send_accept_packet): New.
+	(auth_proc_accept_packet): New.
+	(auth_send_second_packet): New.
+	(auth_proc_second_packet): New.
 	* utils.c (_gsti_bstring_hash): Moved from kex.c and
 	renamed from hash_bstring. Now it's global.
 	

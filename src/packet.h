@@ -119,7 +119,7 @@ typedef struct {
 typedef struct {
     BSTRING user;
     BSTRING svcname;
-    BSTRING methd;
+    BSTRING method;
     unsigned false:1;
     BSTRING pkalgo;
     BSTRING key;

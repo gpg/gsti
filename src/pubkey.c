@@ -487,7 +487,7 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
  leave:
     _gsti_free( p );
     _gsti_buf_free( buf );
-    if( !rc )
+    if( !rc && r_pk )
         *r_pk = pk;
     return rc;
 } /* _gsti_sig_decode */
