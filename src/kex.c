@@ -1,4 +1,4 @@
-/* kex.c  -  connect, key exchange and service request
+/* kex.c - connect, key exchange and service request
  *	Copyright (C) 1999 Free Software Foundation, Inc.
  *      Copyright (C) 2002 Timo Schulz
  *
@@ -34,7 +34,7 @@
 #include "pubkey.h"
 
 static const char host_version_string[] =
-	"SSH-2.0-GSTI_0.0 GNU Transport Library";
+	"SSH-2.0-GSTI_0.2 GNU Transport Library";
 
 static const byte diffie_hellman_group1_prime[130] = { 0x04, 0x00,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
@@ -161,7 +161,7 @@ free_msg_kexinit( MSG_kexinit *kex )
 {
     if( kex ) {
         _gsti_strlist_free( kex->kex_algorithm );
-        _gsti_strlist_free( kex->server_host_key_algorithms );
+        _gsti_strlist_free( kex->server_host_key_algos );
         _gsti_strlist_free( kex->encr_algos_c2s );
         _gsti_strlist_free( kex->encr_algos_s2c );
         _gsti_strlist_free( kex->mac_algos_c2s );
@@ -222,7 +222,7 @@ parse_msg_kexinit( MSG_kexinit *kex, int we_are_server, byte *old_cookie,
         _gsti_free( p );
     }
     kex->kex_algorithm = algolist[0];
-    kex->server_host_key_algorithms = algolist[1];
+    kex->server_host_key_algos = algolist[1];
     kex->encr_algos_c2s = algolist[2];
     kex->encr_algos_s2c = algolist[3];
     kex->mac_algos_c2s = algolist[4];
@@ -272,7 +272,7 @@ build_msg_kexinit( MSG_kexinit *kex, struct packet_buffer_s *pkt )
     p += 16; length -= 16;
     /* put 10 strings */
     algolist[0] = kex->kex_algorithm;
-    algolist[1] = kex->server_host_key_algorithms;
+    algolist[1] = kex->server_host_key_algos;
     algolist[2] = kex->encr_algos_c2s;
     algolist[3] = kex->encr_algos_s2c;
     algolist[4] = kex->mac_algos_c2s;
@@ -311,8 +311,7 @@ dump_msg_kexinit( MSG_kexinit *kex )
     _gsti_log_debug( "MSG_kexinit:\n" );
     _gsti_dump_hexbuf( "cookie: ", kex->cookie, 16 );
     _gsti_dump_strlist( "kex_algorithm", kex->kex_algorithm );
-    _gsti_dump_strlist( "server_host_key_algorithms",
-                        kex->server_host_key_algorithms );
+    _gsti_dump_strlist( "server_host_key_algos", kex->server_host_key_algos );
     _gsti_dump_strlist( "encr_algos_c2s", kex->encr_algos_c2s );
     _gsti_dump_strlist( "encr_algos_s2c", kex->encr_algos_s2c );
     _gsti_dump_strlist( "mac_algos_c2s", kex->mac_algos_c2s );
@@ -377,6 +376,7 @@ build_msg_kexdh_init( MSG_kexdh_init *kexdh, struct packet_buffer_s *pkt )
     assert( pkt->size > 100 );
 
     _gsti_buf_init( &buf );
+    _gsti_buf_putc( buf, 0 );
     rc = _gsti_buf_putmpi( buf, kexdh->e );
     if( rc )
         goto leave;
@@ -384,8 +384,8 @@ build_msg_kexdh_init( MSG_kexdh_init *kexdh, struct packet_buffer_s *pkt )
     if( len > pkt->size - 1 )
         return GSTI_TOO_LARGE;
     pkt->type = SSH_MSG_KEXDH_INIT;
-    pkt->payload_len = len + 1;
-    memcpy( pkt->payload + 1, _gsti_buf_getptr( buf ), len );
+    pkt->payload_len = len;
+    memcpy( pkt->payload, _gsti_buf_getptr( buf ), len );
 
 leave:
     _gsti_buf_free( buf );
@@ -577,7 +577,7 @@ calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
     int algo = GCRY_MD_SHA1, dlen;
 
     md = gcry_md_open( algo, 0 );
-    if( md == NULL )
+    if( !md )
         return map_gcry_rc( gcry_errno() );
 
     if( hd->we_are_server ) {
@@ -604,15 +604,14 @@ calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
     if( !hd->session_id ) /* initialize the session id the first time */
         hd->session_id = _gsti_bstring_make( gcry_md_read( md, algo ), dlen );
     gcry_md_close( md );
-    /*_gsti_dump_hexbuf( "SesID=", hd->session_id->d, hd->session_id->len );*/
+    _gsti_dump_hexbuf( "SesID=", hd->session_id->d, hd->session_id->len );
     return 0;
 }
 
 
 /* Hmm. We need to have a new_kex structure so that the old
- * kex data can be used until we have send the NEWKEYs msg
- * Well, doesn't matter for now.
- */
+   kex data can be used until we have send the NEWKEYs msg
+   Well, doesn't matter for now. */
 static BSTRING
 construct_one_key( GSTIHD hd, GCRY_MD_HD md1, int algo,
 		   const byte *letter, size_t size )
@@ -655,7 +654,7 @@ construct_keys( GSTIHD hd )
         return 0;   /* already constructed */
 
     md = gcry_md_open( algo, 0 );
-    if( md == NULL )
+    if( !md )
         return map_gcry_rc( gcry_errno() );
 
     hash_mpi( md, hd->kex.k );
@@ -730,7 +729,7 @@ kex_send_init_packet( GSTIHD hd )
     
     kex.kex_algorithm = _gsti_strlist_insert( NULL,
                                               "diffie-hellman-group1-sha1" );
-    kex.server_host_key_algorithms = _gsti_strlist_insert( NULL, "ssh-dss" );
+    kex.server_host_key_algos = _gsti_strlist_insert( NULL, "ssh-dss" );
     build_cipher_list( hd, &kex.encr_algos_c2s, &kex.encr_algos_s2c );
     build_hmac_list( hd, &kex.mac_algos_c2s, &kex.mac_algos_s2c );
     kex.compr_algos_c2s = _gsti_strlist_insert( NULL, "none" );
@@ -987,7 +986,7 @@ kex_send_newkeys( GSTIHD hd )
     hd->encrypt_hd = gcry_cipher_open( hd->ciph_algo, hd->ciph_mode, 0 );
     if( !hd->ciph_blksize )
         hd->ciph_blksize = gcry_cipher_get_algo_blklen( hd->ciph_algo );
-    if( hd->encrypt_hd == NULL )
+    if( !hd->encrypt_hd )
         rc = map_gcry_rc( gcry_errno() );
     else if( hd->we_are_server ) {
         if( !rc )
@@ -999,7 +998,7 @@ kex_send_newkeys( GSTIHD hd )
         rc = map_gcry_rc( rc );
         if( !rc ) {
             hd->send_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( hd->send_mac == NULL )
+            if( !hd->send_mac )
                 rc = map_gcry_rc( gcry_errno() );
             if( !rc )
                 rc = gcry_md_setkey( hd->send_mac, hd->kex.mac_f->d,
@@ -1016,7 +1015,7 @@ kex_send_newkeys( GSTIHD hd )
         rc = map_gcry_rc( rc );
         if( !rc ) {
             hd->send_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( hd->send_mac == NULL )
+            if( !hd->send_mac )
                 rc = map_gcry_rc( gcry_errno() );
             if( !rc )
                 rc = gcry_md_setkey( hd->send_mac, hd->kex.mac_e->d,
@@ -1046,7 +1045,7 @@ kex_proc_newkeys( GSTIHD hd )
     hd->decrypt_hd = gcry_cipher_open( hd->ciph_algo, hd->ciph_mode, 0 );
     if( !hd->ciph_blksize )
         hd->ciph_blksize = gcry_cipher_get_algo_blklen( hd->ciph_algo );
-    if( hd->decrypt_hd == NULL )
+    if( !hd->decrypt_hd )
         rc = map_gcry_rc( gcry_errno() );
     else if( hd->we_are_server ) {
         if( !rc )
@@ -1058,7 +1057,7 @@ kex_proc_newkeys( GSTIHD hd )
         rc = map_gcry_rc( rc );
         if( !rc ) {
             hd->recv_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( hd->recv_mac == NULL )
+            if( !hd->recv_mac )
                 rc = map_gcry_rc( gcry_errno() );
             if( !rc )
                 rc = gcry_md_setkey( hd->recv_mac, hd->kex.mac_e->d,
@@ -1075,7 +1074,7 @@ kex_proc_newkeys( GSTIHD hd )
         rc = map_gcry_rc( rc );
         if( !rc ) {
             hd->recv_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( hd->recv_mac == NULL )
+            if( !hd->recv_mac )
                 rc = map_gcry_rc( gcry_errno() );
             if( !rc )
                 rc = gcry_md_setkey( hd->recv_mac, hd->kex.mac_f->d,

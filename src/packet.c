@@ -33,11 +33,11 @@ static u32
 buftou32( const byte *buffer )
 {
     u32 a;
-    a =    *buffer << 24;
+    a  = buffer[0] << 24;
     a |= buffer[1] << 16;
     a |= buffer[2] <<  8;
     a |= buffer[3];
-    return a;   
+    return a;
 }
 
 
@@ -94,7 +94,7 @@ print_debug_msg( const byte *msg, size_t msglen )
         goto leave;    
 
     display = _gsti_buf_getc( buf );
-    _gsti_log_info( "SSH_MSG_DEBUG:%s `", display? " (always display)":"" );
+    _gsti_log_info( "SSH_MSG_DEBUG:%s `", display? " (always display)": "" );
 
     if( _gsti_buf_getbstr( buf, &mesag ) )
         goto leave;
@@ -110,8 +110,7 @@ print_debug_msg( const byte *msg, size_t msglen )
 leave:
     msglen = _gsti_buf_getlen( buf );
     if( msglen )
-	_gsti_log_info( "print_msg_debug: %lu bytes remaining\n",
-                        (u32)msglen );
+	_gsti_log_info( "print_msg_debug: %lu bytes remaining\n",(u32)msglen );
 }
 
 
@@ -215,8 +214,7 @@ _gsti_packet_read( GSTIHD hd )
 
     if( hd->decrypt_hd ) {
 	rc = gcry_cipher_decrypt( hd->decrypt_hd,
-				  hd->pkt.packet_buffer, blocksize,
-                                  NULL, 0 );
+				  hd->pkt.packet_buffer, blocksize, NULL, 0 );
 	if( rc )
 	    return _gsti_log_rc( rc, "error decrypting first block\n" );
     }
@@ -258,9 +256,9 @@ _gsti_packet_read( GSTIHD hd )
                      (u32)hd->pkt.packet_len, (u32)hd->pkt.padding_len,
                      (u32)hd->pkt.payload_len, (u32)maclen, (u32)n );
 
-    rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer+blocksize, n );
+    rc = _gsti_stream_readn( rst, hd->pkt.packet_buffer + blocksize, n );
     if( rc )
-	return _gsti_log_rc( rc,"error reading rest of packet\n" );
+	return _gsti_log_rc( rc, "error reading rest of packet\n" );
     n -= maclen; /* don't want the maclen anymore */
     if( hd->decrypt_hd ) {
 	rc = gcry_cipher_decrypt( hd->decrypt_hd,
@@ -269,8 +267,7 @@ _gsti_packet_read( GSTIHD hd )
 	if( rc )
 	    return _gsti_log_rc( rc,"decrypt failed\n" );
 	/* note: there is no reason to decrypt the padding, but we do
-	 * it anyway becuase this is easier
-         */
+           it anyway becuase this is easier */
         _gsti_dump_hexbuf( "rest of packet: ",
                            hd->pkt.packet_buffer + blocksize, n );
     }

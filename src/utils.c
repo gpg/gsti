@@ -154,7 +154,7 @@ void
 _gsti_dump_object( FILE *fp, const char *prefix, int type, void *opaque,
                    size_t len )
 {
-    if( _gsti_get_log_level() != GSTI_LOG_DEBUG )
+    if( _gsti_get_log_level() < GSTI_LOG_DEBUG )
         return;
     if( !opaque )
         return;

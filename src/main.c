@@ -117,7 +117,7 @@ _gsti_log_info( const char *fmt, ... )
 {
     va_list arg;
 
-    if( log_level != GSTI_LOG_INFO )
+    if( log_level == GSTI_LOG_NONE )
         return;
     va_start( arg, fmt );
     _gsti_logv( GSTI_LOG_INFO, fmt, arg );
@@ -130,7 +130,7 @@ _gsti_log_debug( const char *fmt, ... )
 {
     va_list arg;
     
-    if( log_level != GSTI_LOG_DEBUG )
+    if( log_level < GSTI_LOG_DEBUG )
         return;
     va_start( arg, fmt );
     _gsti_logv( GSTI_LOG_DEBUG, fmt, arg );
@@ -394,7 +394,6 @@ gsti_set_auth_method( GSTIHD hd, int methd )
     if( !hd )
         return GSTI_INV_ARG;
     switch( methd ) {
-    case GSTI_AUTH_SIMPLE: /* disable authentication */
     case GSTI_AUTH_PUBLICKEY: hd->auth.method = methd; break;
     default: return GSTI_PROT_VIOL;
     }

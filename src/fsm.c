@@ -45,11 +45,21 @@ enum fsm_states {
     FSM_send_service_request = 10, 
     FSM_wait_service_accept  = 11, 
     FSM_send_service_accept  = 12, 
-    FSM_service_start        = 13, 
-    FSM_idle                 = 14,
-    FSM_kex_failed           = 15, 
-    FSM_not_implemented      = 16, 
-    FSM_quit                 = 17
+    FSM_service_start        = 13,
+    FSM_auth_start           = 14,
+    FSM_auth_wait            = 15,
+    FSM_auth_send_accept     = 16,
+    FSM_auth_wait_accept     = 17,
+    FSM_auth_send_request    = 18,
+    FSM_auth_wait_request    = 19,
+    FSM_auth_send_accept2    = 20,
+    FSM_auth_wait_accept2    = 21,
+    FSM_auth_done            = 22,
+    FSM_idle                 = 23,
+    FSM_kex_failed           = 24,
+    FSM_auth_failed          = 25,
+    FSM_not_implemented      = 26, 
+    FSM_quit                 = 27,
 }; 
 
 
@@ -92,7 +102,7 @@ handle_quit( GSTIHD hd )
 
 
  /**************** 
-  * We are in state FSMwrite: write the user supplied data 
+  * We are in state FSM_write: write the user supplied data 
   */ 
 static int 
 handle_write( GSTIHD hd ) 
@@ -104,215 +114,135 @@ handle_write( GSTIHD hd )
 } 
 
 
+static void
+log_error( GSTIHD hd )
+{
+    _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n",
+                    hd->state, hd->pkt.type );
+}   
+    
 
- /**************** 
-  * Determine a new state depending on the current one 
-  * and the received packet 
-  */ 
-static int 
-new_state( GSTIHD hd ) 
-{ 
-    int rc = 0; 
-
-    switch( hd->state ) {
-    case FSM_kex_start:
-        switch( hd->pkt.type ) {
-        case SSH_MSG_KEXINIT:
-            rc = kex_proc_init_packet( hd );
-            if( !rc ) {
-                if( hd->we_are_server )
-                    hd->state = FSM_kex_wait;
-                else {
-                    rc = kex_send_kexdh_init( hd ); 
-                    if( !rc ) 
-                        hd->state = FSM_kex_wait; 
-                } 
-            } 
-            break; 
-
-        default:
-            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                            hd->state, hd->pkt.type );
-            hd->state = FSM_kex_failed; 
-        } 
-        break; 
-
-    case FSM_kex_wait: 
-        switch( hd->pkt.type ) { 
-        case SSH_MSG_KEXDH_REPLY: 
-            if( hd->we_are_server ) { 
-                rc = _gsti_log_rc( GSTI_PROT_VIOL, "server got KEXDH_REPLY" );
-                break; 
-            } 
-            rc = kex_proc_kexdh_reply( hd );
-            if( !rc ) 
-                rc = kex_send_newkeys( hd ); 
-            if( !rc ) 
-                hd->state = FSM_kex_wait_newkeys; 
-            break; 
-
-        case SSH_MSG_KEXDH_INIT: 
-            if( !hd->we_are_server ) { 
-                rc = _gsti_log_rc( GSTI_PROT_VIOL, "client got KEXDH_INIT\n" );
-                break; 
-            } 
-            rc = kex_proc_kexdh_init( hd );
-            if( !rc ) 
-                rc = kex_send_kexdh_reply( hd );
-            if( !rc )
-                rc = kex_send_newkeys( hd );
-            if( !rc )
-                hd->state = FSM_kex_wait_newkeys;
-            break;
-
-        default:
-            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n",
-                            hd->state, hd->pkt.type ); 
-            hd->state = FSM_kex_failed; 
-        }
-        break; 
-
-    case FSM_kex_wait_newkeys:
-        switch( hd->pkt.type ) {
-        case SSH_MSG_NEWKEYS:
-            rc = kex_proc_newkeys( hd );
-            if( !rc )
-                hd->state = FSM_kex_done;
-            break;
-            
-        default: 
-            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                            hd->state, hd->pkt.type );
-            hd->state = FSM_kex_failed; 
-        }
-        break; 
-
-    case FSM_wait_service_accept:
-        switch( hd->pkt.type ) {
-        case SSH_MSG_SERVICE_ACCEPT:
-            rc = kex_proc_service_accept( hd ); 
-            if( !rc )
-                hd->state = FSM_service_start;
-            break;
-
-        default:
-            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                            hd->state, hd->pkt.type );
-            hd->state = FSM_kex_failed;
-        } 
-        break; 
-
-    case FSM_wait_service_request:
-        switch( hd->pkt.type ) {
-        case SSH_MSG_SERVICE_REQUEST:
-            rc = kex_proc_service_request( hd );
-            if( !rc )
-                hd->state = FSM_send_service_accept;
-            break;
-
-        default:
-            _gsti_log_info( "FSM: at new_state: state=%d, packet=%d\n", 
-                            hd->state, hd->pkt.type ); 
-            hd->state = FSM_kex_failed; 
-        }
-        break;
-
-    case FSM_read:
-        switch( hd->pkt.type ) {
-        case SSH_MSG_NEWKEYS: /* new key exchange requested  */
-            hd->state = FSM_not_implemented;
-            break;
-
-        default:
-            hd->state = FSM_idle;
-            break;
-        }
-        break;
-
-    default:
-        _gsti_log_info( "FSM: at new_state: invalid state %d\n", hd->state ); 
-        hd->state = GSTI_BUG; 
-    }
-
-    return rc; 
+static int
+request_packet( GSTIHD hd )
+{
+    int rc;
+    int pkttype = 0;
+    
+    do {
+        rc = _gsti_packet_read( hd );
+        if( rc )
+            _gsti_log_info( "FSM: read packet at state %d failed: %s\n",
+                            hd->state, gsti_strerror( rc ) );
+        else
+            pkttype = hd->pkt.type;
+    } while( !rc && (pkttype == SSH_MSG_DEBUG || pkttype == SSH_MSG_IGNORE) );
+    return rc;
 }
 
 
-#define skip_packet( type ) ( (type) == SSH_MSG_DEBUG \
-                              || (type) == SSH_MSG_IGNORE )
-
- /**************** 
-  * This is the main processing loop 
-  * 
-  * For now we use a simple switch based fsm. 
-  */ 
-int 
-fsm_loop( GSTIHD hd, int want_read ) 
-{ 
+static int
+fsm_server_loop( GSTIHD hd )
+{
     int rc = 0;
 
-    switch( hd->state ) { 
-    case FSM_init: rc = handle_init( hd, want_read ); break;
-    case FSM_idle: hd->state = want_read? FSM_read : FSM_write; break;
+    switch( hd->state ) {
+    case FSM_init: rc = handle_init( hd, 1 ); break;
+    case FSM_idle: hd->state = FSM_read; break;
     default:
-        _gsti_log_info( "FSM: start fsm_loop: invalid state %d\n", hd->state); 
+        _gsti_log_info( "FSM: start fsm_loop: invalid state %d\n", hd->state );
         rc = GSTI_BUG;
         break;
     }
-
-    while( !rc && hd->state != FSM_idle && hd->state != FSM_quit ) {
-        _gsti_log_info( "FSM: state is %d\n", hd->state );
-        switch( hd->state ) { 
+        
+    while( !rc && hd->state != FSM_quit && hd->state != FSM_idle ) {
+        _gsti_log_info( "** FSM (server) state=%d\n", hd->state );
+        switch( hd->state ) {
         case FSM_wait_on_version:
-            rc = kex_wait_on_version( hd ); 
-            if( rc ) 
-                ; 
-            else if( hd->we_are_server )
-                hd->state = FSM_send_version; 
-            else
-                hd->state = FSM_kex_start;
-            break; 
+            rc = kex_wait_on_version( hd );
+            if( !rc )
+                hd->state = FSM_send_version;
+            break;
 
         case FSM_send_version:
             rc = kex_send_version( hd );
-            if( rc )
-                ;
-            else if( hd->we_are_server )
+            if( !rc )
                 hd->state = FSM_kex_start;
-            else
-                hd->state = FSM_wait_on_version;
-            break; 
+            break;
 
         case FSM_kex_start:
-            /* in either case: send the version string out  */
             rc = kex_send_init_packet( hd );
             if( !rc )
-                hd->wait_packet = 1;
+                rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_KEXINIT:
+                    rc = kex_proc_init_packet( hd );
+                    if( !rc )
+                        hd->state = FSM_kex_wait;
+                    break;
+
+                default:
+                    log_error( hd );
+                    hd->state = FSM_kex_failed;
+                }
+            }
             break;
 
         case FSM_kex_wait:
-        case FSM_kex_wait_newkeys:
-            hd->wait_packet = 1; 
-            break; 
-
-        case FSM_kex_done:
-            if( hd->we_are_server ) {
-                hd->state = FSM_wait_service_request;
-                hd->wait_packet = 1;
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_KEXDH_REPLY:
+                    rc = _gsti_log_rc( GSTI_PROT_VIOL,
+                                       "server got KEXDH_REPLY\n" );
+                    break;
+            
+                case SSH_MSG_KEXDH_INIT:
+                    rc = kex_proc_kexdh_init( hd );
+                    if( !rc )
+                        rc = kex_send_kexdh_reply( hd );
+                    if( !rc )
+                        rc = kex_send_newkeys( hd );
+                    if( !rc )
+                        hd->state = FSM_kex_wait_newkeys;
+                    break;
+                }
             }
-            else
-                hd->state = FSM_send_service_request;
+            break;
+            
+        case FSM_kex_wait_newkeys:
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_NEWKEYS:
+                    rc = kex_proc_newkeys( hd );
+                    if( !rc )
+                        hd->state = FSM_kex_done;
+                    break;
+
+                default:
+                    log_error( hd );
+                    hd->state = FSM_kex_failed;
+                }
+            }
             break;
 
-        case FSM_send_service_request:
-            _gsti_log_info( "is local service? (%d)\n",
-                            hd->local_services? 1 : 0 );
-            rc = kex_send_service_request( hd, hd->local_services?
-                                           hd->local_services->d
-                                           : "ssh-userauth" );
-            if( !rc ) {
-                hd->state = FSM_wait_service_accept;
-                hd->wait_packet = 1;
+        case FSM_kex_done:
+            hd->state = FSM_wait_service_request;
+            rc = request_packet( hd );
+            break;
+
+        case FSM_wait_service_request:
+            switch( hd->pkt.type ) {
+            case SSH_MSG_SERVICE_REQUEST:
+                rc = kex_proc_service_request( hd );
+                if( !rc )
+                    hd->state = FSM_send_service_accept;
+                break;
+
+            default:
+                log_error( hd );
+                hd->state = FSM_kex_failed;
             }
             break;
 
@@ -326,22 +256,60 @@ fsm_loop( GSTIHD hd, int want_read )
             _gsti_log_info( "service `" );
             _gsti_print_string( stderr, hd->service_name->d,
                                 hd->service_name->len );
-            if( hd->we_are_server ) {
-                _gsti_log_info( "' has been started (server)\n" );
-                hd->state = FSM_read;
+            _gsti_log_info( "' has been started (server)\n" );
+            hd->state = FSM_auth_wait;
+            break;
+
+
+        case FSM_auth_wait:
+            _gsti_log_debug( "request packet... \n" );
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_USERAUTH_REQUEST:
+                    rc = auth_proc_init_packet( hd );
+                    if( !rc )
+                        hd->state = FSM_auth_send_accept;
+                    break;
+
+                default:
+                    log_error( hd );
+                    hd->state = FSM_auth_failed;
+                }
             }
-            else {
-                _gsti_log_info( "' has been started (client)\n" );
-                hd->state = FSM_write;
+            break;
+
+        case FSM_auth_send_accept:
+            rc = auth_send_accept_packet( hd );
+            if( !rc )
+                hd->state = FSM_auth_wait_request;
+            break;
+
+        case FSM_auth_wait_request:
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_USERAUTH_REQUEST:
+                    rc = auth_proc_second_packet( hd );
+                    if( !rc )
+                        hd->state = FSM_auth_send_accept2;
+                    break;
+                }
             }
+            break;
+
+        case FSM_auth_send_accept2:
+            rc = auth_send_accept_packet( hd );
+            if( !rc )
+                hd->state = FSM_auth_done;
+            break;
+
+        case FSM_auth_done:
+            hd->state = FSM_read;
             break;
 
         case FSM_read:
-            hd->wait_packet = 1;
-            break;
-
-        case FSM_write:
-            rc = handle_write( hd );
+            rc = request_packet( hd );
             if( !rc )
                 hd->state = FSM_idle;
             break;
@@ -356,30 +324,207 @@ fsm_loop( GSTIHD hd, int want_read )
             _gsti_log_info( "FSM: at fsm_loop: invalid state %d\n",hd->state );
             rc = GSTI_BUG;
         }
-        if( rc ) {
-            hd->wait_packet = 0;
-            _gsti_log_info( "FSM: error at state %d: %s\n",
-                            hd->state, gsti_strerror( rc ) );
-        }
+    }
+    return rc;
+}
 
-        if( hd->wait_packet ) {
-            hd->wait_packet = 0;
-            do {
-                rc = _gsti_packet_read( hd );
-                if( rc )
-                    _gsti_log_info("FSM: read packet at state %d failed: %s\n",
-                                   hd->state, gsti_strerror( rc ) );
-            } while( !rc && skip_packet( hd->pkt.type ) );
+
+int
+fsm_client_loop( GSTIHD hd )
+{
+    int rc = 0;
+    
+    switch( hd->state ) {
+    case FSM_init: rc = handle_init( hd, 0 ); break;
+    case FSM_idle: hd->state = FSM_write; break;
+    default:
+        _gsti_log_info( "FSM: start fsm_loop: invalid state %d\n", hd->state );
+        rc = GSTI_BUG;
+        break;
+    }
+
+    while( !rc && hd->state != FSM_quit && hd->state != FSM_idle ) {
+        _gsti_log_info( "** FSM (client) state=%d\n", hd->state );
+        switch( hd->state ) {
+        case FSM_send_version:
+            rc = kex_send_version( hd );
+            if( !rc )
+                hd->state = FSM_wait_on_version;
+            break;
+
+        case FSM_wait_on_version:
+            rc = kex_wait_on_version( hd );
+            if( !rc )
+                hd->state = FSM_kex_start;
+            break;
+
+        case FSM_kex_start:
+            rc = kex_send_init_packet( hd );
+            if( !rc )
+                rc = request_packet( hd );
+            if( !rc )
+                rc = kex_proc_init_packet( hd );
+            if( !rc )
+                rc = kex_send_kexdh_init( hd );
+            if( !rc )
+                hd->state = FSM_kex_wait;
+            break;
+
+        case FSM_kex_wait:
+            rc = request_packet( hd );
             if( !rc ) {
-                rc = new_state( hd );
-                if( rc ) {
-                    _gsti_log_info( "FSM: new_state at state %d failed: %s\n",
-                                    hd->state, gsti_strerror( rc ) );
-                    return rc;
+                switch( hd->pkt.type ) {
+                case SSH_MSG_KEXDH_INIT:
+                    rc =_gsti_log_rc(GSTI_PROT_VIOL,"client got KEXDH_INIT\n");
+                    break;
+
+                case SSH_MSG_KEXDH_REPLY:
+                    rc = kex_proc_kexdh_reply( hd );
+                    if( !rc )
+                        rc = kex_send_newkeys( hd );
+                    if( !rc )
+                        hd->state = FSM_kex_wait_newkeys;
+                    break;   
                 }
             }
+            break;
+        
+        case FSM_kex_wait_newkeys:
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_NEWKEYS:
+                    rc = kex_proc_newkeys( hd );
+                    if( !rc )
+                        hd->state = FSM_kex_done;
+                    break;
+
+                default:
+                    log_error( hd );
+                    hd->state = FSM_kex_failed;   
+                }
+            }
+            break;
+
+        case FSM_kex_done:
+            hd->state = FSM_send_service_request;
+            break;
+
+        case FSM_send_service_request:
+            _gsti_log_info( "is local service? (%d)\n",
+                            hd->local_services? 1 : 0 );
+            rc = kex_send_service_request( hd, hd->local_services?
+                                           hd->local_services->d
+                                           : "ssh-userauth" );
+            _gsti_log_info( "\n" );
+            if( !rc ) {
+                hd->state = FSM_wait_service_accept;
+                rc = request_packet( hd );
+            }
+            break;
+
+        case FSM_wait_service_accept:
+            switch( hd->pkt.type ) {
+            case SSH_MSG_SERVICE_ACCEPT:
+                rc = kex_proc_service_accept( hd );
+                if( !rc )
+                    hd->state = FSM_service_start;
+                break;
+
+            default:
+                log_error( hd );
+                hd->state = FSM_kex_failed;   
+            }
+            break;
+
+        case FSM_service_start:
+            _gsti_log_info( "service `" );
+            _gsti_print_string( stderr, hd->service_name->d,
+                                hd->service_name->len );
+            _gsti_log_info( "' has been started (client)\n" );
+            hd->state = FSM_auth_start;
+            break;
+
+        case FSM_auth_start:
+            rc = auth_send_init_packet( hd );
+            if( !rc )
+                hd->state = FSM_auth_wait_accept;
+            break;
+
+        case FSM_auth_wait_accept:
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_USERAUTH_SUCCESS:
+                    rc = auth_proc_accept_packet( hd );
+                    if( !rc )
+                        hd->state = FSM_auth_send_request;
+                    break;
+
+                default:
+                    log_error( hd );
+                    hd->state = FSM_auth_failed;
+                }
+            }
+            break;
+
+        case FSM_auth_send_request:
+            rc = auth_send_second_packet( hd );
+            if( !rc )
+                hd->state = FSM_auth_wait_accept2;
+            break;
+
+        case FSM_auth_wait_accept2:
+            rc = request_packet( hd );
+            if( !rc ) {
+                switch( hd->pkt.type ) {
+                case SSH_MSG_USERAUTH_SUCCESS:
+                    rc = auth_proc_accept_packet( hd );
+                    if( !rc )
+                        hd->state = FSM_auth_done;
+                    break;
+
+                default:
+                    log_error( hd );
+                    hd->state = FSM_auth_failed;
+                }
+            }
+            break;
+
+        case FSM_auth_done:
+            hd->state = FSM_write;
+            break;
+
+        case FSM_write:
+            rc = handle_write( hd );
+            if( !rc )
+                hd->state = FSM_idle;
+            break;
+
+        default:
+            _gsti_log_info( "FSM: at fsm_loop: invalid state %d\n",hd->state );
+            rc = GSTI_BUG;
         }
     }
+    
+    return rc;
+}
+
+
+/**************** 
+ * This is the main processing loop 
+ * 
+ * For now we use a simple switch based fsm. 
+ */
+int
+fsm_loop( GSTIHD hd, int want_read )
+{
+    int rc;
+
+    if( want_read )
+        rc = fsm_server_loop( hd );
+    else
+        rc = fsm_client_loop( hd );
     return rc;
 }
 

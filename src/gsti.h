@@ -70,8 +70,8 @@ enum gsti_ctl_cmds {
 
 enum {
     GSTI_LOG_NONE   = 0,
-    GSTI_LOG_DEBUG  = 1,
-    GSTI_LOG_INFO   = 2
+    GSTI_LOG_INFO   = 1,
+    GSTI_LOG_DEBUG  = 2,
 };
 
 
@@ -101,7 +101,6 @@ enum gsti_pk_algos {
 };
 
 enum gsti_auth_methods {
-    GSTI_AUTH_SIMPLE    = 0, /* no additional authentication! */
     GSTI_AUTH_PUBLICKEY = 1
 };
 

@@ -16,6 +16,16 @@
 	* utils.c (_gsti_bstring_hash): Moved from kex.c and
 	renamed from hash_bstring. Now it's global.
 	
+2002-10-06  Timo Schulz  (ts@winpt.org)
+
+	* fsm.c (fsm_server_loop): New.
+	(fsm_client_loop): New.
+	(new_state): Removed. The code is now in the functions above.
+	(fsm_loop): Now we use separate loops.
+	* auth.c (auth_send_accept_packet): Flush the packet.
+	(auth_send_init_packet): Ditto.
+	(auth_send_second_packet): Ditto.
+	
 	
 	
 	

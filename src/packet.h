@@ -93,7 +93,7 @@ typedef struct {
 typedef struct {
     byte cookie[16];
     STRLIST kex_algorithm;
-    STRLIST server_host_key_algorithms;
+    STRLIST server_host_key_algos;
     STRLIST encr_algos_c2s;
     STRLIST encr_algos_s2c;
     STRLIST mac_algos_c2s;

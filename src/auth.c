@@ -47,6 +47,7 @@ build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
     assert( pkt->size > 100 );
     
     _gsti_buf_init( &buf );
+    _gsti_buf_putc( buf, 0 );
     _gsti_buf_putstr( buf, ath->user->d, ath->user->len );
     _gsti_buf_putstr( buf, ath->svcname->d, ath->svcname->len );
     _gsti_buf_putstr( buf, ath->method->d, ath->method->len );
@@ -58,9 +59,9 @@ build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
 
     len = _gsti_buf_getlen( buf );
     pkt->type = SSH_MSG_USERAUTH_REQUEST;
-    pkt->payload_len = len + 1;
-    memcpy( pkt->payload + 1, _gsti_buf_getptr( buf ), len );
-    
+    pkt->payload_len = len;
+    memcpy( pkt->payload, _gsti_buf_getptr( buf ), len );
+
     _gsti_buf_free( buf );
     return 0;
 }
@@ -85,6 +86,9 @@ init_auth_request( MSG_auth_request *ath, const char *user, int false,
     const char *s;
     byte *p;
     size_t n;
+
+    if( !user )
+        return GSTI_INV_ARG;
     
     ath->user = _gsti_bstring_make( user, strlen( user ) );
     s = "ssh-userauth";
@@ -107,7 +111,7 @@ init_auth_request( MSG_auth_request *ath, const char *user, int false,
 static void
 dump_auth_request( MSG_auth_request *ath )
 {
-    _gsti_log_debug( "MSG_auth_request:\n" );
+    _gsti_log_debug( "\nMSG_auth_request:\n" );
     _gsti_dump_bstring( "user: ", ath->user );
     _gsti_dump_bstring( "service: ", ath->svcname );
     _gsti_dump_bstring( "method: ", ath->method );
@@ -126,6 +130,8 @@ auth_send_accept_packet( GSTIHD hd )
     pkt->type = SSH_MSG_USERAUTH_SUCCESS;
     pkt->payload_len = 1;
     rc = _gsti_packet_write( hd );
+    if( !rc )
+        rc = _gsti_packet_flush( hd );
 
     return rc;
 }
@@ -153,6 +159,8 @@ auth_send_init_packet( GSTIHD hd )
         rc = build_auth_request( &ath, &hd->pkt );
     if( !rc )
         rc = _gsti_packet_write( hd );
+    if( !rc )
+        rc = _gsti_packet_flush( hd );
 
     free_auth_request( &ath );
     return rc;
@@ -279,11 +287,12 @@ auth_send_second_packet( GSTIHD hd )
         rc = build_auth_request( &ath, &hd->pkt );
     if( !rc )
         rc = _gsti_packet_write( hd );
+    if( !rc )
+        rc = _gsti_packet_flush( hd );
 
  leave:
     free_auth_request( &ath );
     _gsti_bstring_free( hash );
-    _gsti_bstring_free( sig );
 
     return rc;
 }
