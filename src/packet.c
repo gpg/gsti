@@ -327,9 +327,12 @@ again:
   _gsti_log_info (ctx, "received packet %lu of type %d\n",
 		  (u32) seqno, ctx->pkt.type);
   if (!ctx->pktbuf)
-    /* FIXME: Handle error.  */
-    gsti_buf_alloc (&ctx->pktbuf);
-  gsti_buf_set (ctx->pktbuf, (char *) ctx->pkt.payload, ctx->pkt.payload_len);
+    err = gsti_buf_alloc (&ctx->pktbuf);
+  if (!err)
+    err = gsti_buf_set (ctx->pktbuf, (char *) ctx->pkt.payload,
+                        ctx->pkt.payload_len);
+  if (err)
+    return err;
 
   switch (ctx->pkt.type)
     {

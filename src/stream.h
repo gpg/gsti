@@ -67,13 +67,14 @@ struct write_stream_s
 #define _gsti_stream_eof(a)   ( (a)->start >= a->len && (a)->read_eof )
 #define _gsti_stream_error(a) ( (a)->error )
 
-read_stream_t _gsti_read_stream_new (gsti_read_fnc_t readfnc, void * fnc_ctx);
+gsti_error_t _gsti_read_stream_new (read_stream_t * r_shd,
+                                    gsti_read_fnc_t readfnc, void * fnc_ctx);
 void _gsti_read_stream_free (read_stream_t a);
 
 int _gsti_stream_getbyte (read_stream_t a);
 gsti_error_t _gsti_stream_readn (read_stream_t a, byte * buffer, size_t nbytes);
-
-write_stream_t _gsti_write_stream_new (gsti_write_fnc_t writefnc, void * fnc_ctx);
+gsti_error_t _gsti_write_stream_new (write_stream_t * r_shd,
+                                     gsti_write_fnc_t writefnc, void * fnc_ctx);
 void _gsti_write_stream_free (write_stream_t a);
 
 int _gsti_stream_putbyte (write_stream_t a, int c);

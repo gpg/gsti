@@ -80,8 +80,14 @@ handle_init (gsti_ctx_t ctx, int want_read)
   if (!ctx->readfnc || !ctx->writefnc)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  ctx->read_stream = _gsti_read_stream_new (ctx->readfnc, ctx->readctx);
-  ctx->write_stream = _gsti_write_stream_new (ctx->writefnc, ctx->writectx);
+  err = _gsti_read_stream_new (&ctx->read_stream,
+                               ctx->readfnc, ctx->readctx);
+  if (err)
+      return err;
+  err = _gsti_write_stream_new (&ctx->write_stream,
+                                ctx->writefnc, ctx->writectx);
+  if (err)
+      return err;
   if (want_read)
     {
       /* Be the server side.  */

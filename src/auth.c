@@ -176,6 +176,23 @@ dump_auth_request (gsti_ctx_t ctx, MSG_auth_request * ath)
 
 
 gsti_error_t
+auth_send_failure_packet (gsti_ctx_t ctx)
+{
+  packet_buffer_t pkt = &ctx->pkt;
+  unsigned char tmp[4] = {0};
+
+  /* FIXME send packet with empty string */
+  pkt->type = SSH_MSG_USERAUTH_FAILURE;
+  pkt->payload_len = 5;
+  memcpy (pkt->payload, tmp, 4);
+  pkt->payload[5] = 0;
+
+  return 0;
+}
+
+  
+  
+gsti_error_t
 auth_send_accept_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err;
@@ -265,8 +282,9 @@ parse_auth_request (MSG_auth_request * ath, const gsti_buffer_t buf)
   ath->user = read_bstring (buf);
   ath->svcname = read_bstring (buf);
   ath->method = read_bstring (buf);
-  /* FIXME: Handle error.  */
-  gsti_buf_getbool (buf, &val);
+  err = gsti_buf_getbool (buf, &val);
+  if (err)
+      return err;
   ath->false = val;
   ath->pkalgo = read_bstring (buf);
   ath->key = read_bstring (buf);
@@ -326,11 +344,10 @@ calc_sig_hash (gsti_bstr_t sessid, MSG_auth_request *ath,
   _gsti_bstring_hash (md, ath->key);
 
   gcry_md_final (md);
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (r_digest, gcry_md_read (md, 0), dlen);
+  err = gsti_bstr_make (r_digest, gcry_md_read (md, 0), dlen);
   gcry_md_close (md);
 
-  return 0;
+  return err;
 }
 
 
@@ -508,8 +525,8 @@ auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 gsti_error_t
 auth_proc_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 {
-  gsti_error_t err;
   MSG_auth_request ath;
+  gsti_error_t err;
   gsti_bstr_t hash;
 
   err = parse_auth_request (&ath, ctx->pktbuf);

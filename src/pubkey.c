@@ -725,6 +725,8 @@ _gsti_key_getblob (gsti_key_t pk, gsti_bstr_t * r_blob)
   if (!pk || pk->type > SSH_PK_LAST)
     {
       err = gsti_bstr_make (r_blob, NULL, 4);
+      if (!err)
+          err = gsti_error (GPG_ERR_NO_SECKEY);
       return err;
     }
   err = gsti_buf_alloc (&buf);

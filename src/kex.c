@@ -69,8 +69,8 @@ static algorithm_list hmac_list[] =
     { SSH_MAC_HMAC_MD5, SSH_HMAC_MD5, 0, 0, 16 },
     { SSH_MAC_HMAC_MD5_96, SSH_HMAC_MD5, 0, 0, 12 },
 
-    /* FIXME: This does not seem to be officially defined.  */
-    { "hmac-ripemd160", SSH_HMAC_RMD160, 0, 0, 20 },
+    /* Local defined extension */
+    { "hmac-ripemd160@g10code.com", SSH_HMAC_RMD160, 0, 0, 20 },
 
     { 0 }
   };
@@ -123,9 +123,8 @@ _gsti_kex_set_defaults (gsti_ctx_t ctx)
 {
   ctx->gex.min = MIN_GROUPSIZE;
   ctx->gex.n = 2048;
-  ctx->gex.max = MAX_GROUPSIZE;
+  ctx->gex.max = MAX_GROUPSIZE;  
 }
-
 
 
 gsti_error_t
@@ -153,6 +152,7 @@ kex_send_version (gsti_ctx_t ctx)
 gsti_error_t
 kex_wait_on_version (gsti_ctx_t ctx)
 {
+  gsti_error_t err;
   read_stream_t rst = ctx->read_stream;
   char version[300];
   int any = 0, pos = 0;
@@ -202,10 +202,9 @@ kex_wait_on_version (gsti_ctx_t ctx)
   version[pos] = 0;
   _gsti_free (ctx->peer_version_string);
 
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ctx->peer_version_string, version, strlen (version));
+  err = gsti_bstr_make (&ctx->peer_version_string, version, strlen (version));
 
-  return 0;
+  return err;
 }
 
 
@@ -244,7 +243,6 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
   if (gsti_buf_readable (buf) < (1 + 16 + 10 * 4 + 1 + 4))
     return gsti_error (GPG_ERR_TOO_SHORT);
 
-  /* FIXME: Handle error.  */
   err = gsti_buf_getc (buf, &val);
   if (err)
     goto leave;
@@ -665,15 +663,17 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   if (ctx->we_are_server)
     {
       _gsti_bstring_hash (md, ctx->peer_version_string);
-      /* FIXME: Handle error.  */
-      gsti_bstr_make (&pp, ver, strlen (ver));
+      err = gsti_bstr_make (&pp, ver, strlen (ver));
+      if (err)
+        return err;
       _gsti_bstring_hash (md, pp);
       _gsti_free (pp);
     }
   else
     {
-      /* FIXME: Handle error.  */
-      gsti_bstr_make (&pp, ver, strlen (ver));
+      err = gsti_bstr_make (&pp, ver, strlen (ver));
+      if (err)
+        return err;
       _gsti_bstring_hash (md, pp);
       _gsti_free (pp);
       _gsti_bstring_hash (md, ctx->peer_version_string);
@@ -686,15 +686,18 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   hash_mpi (md, ctx->kex.k);
 
   dlen = gcry_md_get_algo_dlen (algo);
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ctx->kex.h, gcry_md_read (md, algo), dlen);
+  err = gsti_bstr_make (&ctx->kex.h, gcry_md_read (md, algo), dlen);
+  if (err)
+    {
+      gcry_md_close (md);
+      return err;
+    }
   if (!ctx->session_id)		/* initialize the session id the first time */
-    /* FIXME: Handle error.  */
-    gsti_bstr_make (&ctx->session_id, gcry_md_read (md, algo), dlen);
+    err = gsti_bstr_make (&ctx->session_id, gcry_md_read (md, algo), dlen);
   gcry_md_close (md);
   _gsti_dump_hexbuf ("SesID=", gsti_bstr_data (ctx->session_id),
 		     gsti_bstr_length (ctx->session_id));
-  return 0;
+  return err;
 }
 
 
@@ -705,14 +708,19 @@ static gsti_bstr_t
 construct_one_key (gsti_ctx_t ctx, gcry_md_hd_t md1, int algo,
 		   const byte * letter, size_t size)
 {
+  gsti_error_t err;
   gsti_bstr_t hash;
   gcry_md_hd_t md;
   size_t n, n1;
 
   if (gcry_md_copy (&md, md1))
     abort ();
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&hash, NULL, size);
+  err = gsti_bstr_make (&hash, NULL, size);
+  if (err)
+    {
+      gcry_md_close (md);
+      return NULL;
+    }
   gcry_md_write (md, letter, 1);
   gcry_md_write (md, gsti_bstr_data (ctx->session_id),
 		 gsti_bstr_length (ctx->session_id));
@@ -882,9 +890,9 @@ kex_send_init_packet (gsti_ctx_t ctx)
     }
   /* Must do it here because write_packet fills in the packet type.  */
   p = ctx->pkt.payload;
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ctx->host_kexinit_data, p, ctx->pkt.payload_len);
-  err = _gsti_packet_flush (ctx);
+  err = gsti_bstr_make (&ctx->host_kexinit_data, p, ctx->pkt.payload_len);
+  if (!err)
+    err = _gsti_packet_flush (ctx);
   return err;
 }
 
@@ -1007,12 +1015,11 @@ kex_proc_init_packet (gsti_ctx_t ctx)
       memcpy (gsti_bstr_data (ctx->host_kexinit_data) + 1, kex.cookie, 16);
     }
   /* Make a copy of the received payload which we will need later.  */
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ctx->peer_kexinit_data, ctx->pkt.payload,
+  err = gsti_bstr_make (&ctx->peer_kexinit_data, ctx->pkt.payload,
 		  ctx->pkt.payload_len);
 
   dump_msg_kexinit (ctx, &kex);
-  return 0;
+  return err;
 }
 
 
@@ -1398,10 +1405,10 @@ kex_send_service_request (gsti_ctx_t ctx, const char *name)
 {
   gsti_error_t err;
 
-  /* FIXME: Handle error.  */
-  gsti_bstr_make (&ctx->service_name, name, strlen (name));
-  err = build_msg_service (ctx->service_name,
-			   &ctx->pkt, SSH_MSG_SERVICE_REQUEST);
+  err = gsti_bstr_make (&ctx->service_name, name, strlen (name));
+  if (!err)
+    err = build_msg_service (ctx->service_name,
+                             &ctx->pkt, SSH_MSG_SERVICE_REQUEST);
   if (!err)
     err = _gsti_packet_write (ctx);
   if (!err)

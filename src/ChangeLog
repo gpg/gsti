@@ -1,3 +1,22 @@
+2004-06-14  Timo Schulz  <twoaday@g10code.de>
+
+        * stream.c (_gsti_read_new_stream): Return error code
+        and not the context itself. Changed all callers.
+        (_gsti_write_new_stream): Likewise.
+
+        * auth.c (parse_auth_request): Handle possible errors.
+        (calc_sig_hash): Likewise.
+        (auth_send_failure_packet): New.
+
+        * pubkey.c (_gsti_key_getblob): Return 'No Seckey' if
+        the key context is invalid.
+
+        * kex.c (wait_on_version): Handle possible errors.
+        (calc_exchange_hash): Likewise.
+        (construct_one_key): Likewise.
+        (kex_proc_init_packet): Likewise.
+        * packet.c (_gsti_packet_read): Ditto.
+	
 2004-06-14  Werner Koch  <wk@gnupg.org>
 
 	* api.h (_gsti_handle_channel_packet): Include prototype.

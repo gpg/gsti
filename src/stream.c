@@ -36,8 +36,9 @@
 #define STREAM_BUFSIZE 512
 
 /* Create a new read stream.  */
-read_stream_t
-_gsti_read_stream_new (gsti_read_fnc_t readfnc, void * fnc_ctx)
+gsti_error_t
+_gsti_read_stream_new (read_stream_t * r_shd,
+                       gsti_read_fnc_t readfnc, void * fnc_ctx)
 {
   read_stream_t a;
 
@@ -45,7 +46,9 @@ _gsti_read_stream_new (gsti_read_fnc_t readfnc, void * fnc_ctx)
   a->readfnc = readfnc;
   a->fnc_ctx = fnc_ctx;
   a->size = STREAM_BUFSIZE;
-  return a;
+  *r_shd = a;
+  
+  return 0;
 }
 
 
@@ -114,8 +117,9 @@ _gsti_stream_readn (read_stream_t a, byte * buffer, size_t nbytes)
 }
 
 
-write_stream_t
-_gsti_write_stream_new (gsti_write_fnc_t writefnc, void * fnc_ctx)
+gsti_error_t
+_gsti_write_stream_new (write_stream_t * r_shd,
+                        gsti_write_fnc_t writefnc, void * fnc_ctx)
 {
   write_stream_t a;
 
@@ -123,7 +127,9 @@ _gsti_write_stream_new (gsti_write_fnc_t writefnc, void * fnc_ctx)
   a->writefnc = writefnc;
   a->fnc_ctx = fnc_ctx;
   a->size = STREAM_BUFSIZE;
-  return a;
+  *r_shd = a;
+  
+  return 0;
 }
 
 
