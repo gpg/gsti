@@ -6,3 +6,5 @@ Noteworthy changes in version 0.2.0
 * Basic code to establish a secure channel works.
 
 * The code supports a host key and DSS signature handling.
+
+* Support for the random cookie.
