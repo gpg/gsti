@@ -219,6 +219,8 @@ typedef struct gsti_key_s *gsti_key_t;
 const char *gsti_check_version (const char *req_version);
 void gsti_control (enum gsti_ctl_cmds ctl);
 
+gsti_key_t gsti_get_auth_key (gsti_ctx_t ctx);
+
 /* api */
 gsti_error_t gsti_init (gsti_ctx_t * r_ctx);
 void gsti_deinit (gsti_ctx_t ctx);

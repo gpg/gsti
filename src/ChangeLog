@@ -1,5 +1,8 @@
 2004-06-30  Marcus Brinkmann  <marcus@g10code.de>
 
+	* gsti.h (gsti_get_auth_key): Add prototype.
+	* main.c (gsti_get_auth_key): New function.
+	
 	* gsti.h (gsti_channel_close): Add prototype.
 
 2004-06-29  Marcus Brinkmann  <marcus@g10code.de>

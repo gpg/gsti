@@ -373,3 +373,10 @@ gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
 
   return 0;
 }
+
+
+gsti_key_t
+gsti_get_auth_key (gsti_ctx_t ctx)
+{
+  return ctx->auth->key;
+}
