@@ -75,14 +75,28 @@
 	DH group exchange method.
 	
 	
+2002-10-19  Timo Schulz  (ts@winpt.org)
+
+	* packet.h: Added DH group numbers.
+	* kex.c (build_gex_request): New.
+	(kex_send_gex_request): New.
+	(parse_gex_request): New.
+	(kex_proc_gex_request): New.
+	(select_dh_modulus): New.
+	(choose_dh_size): New.
+	(kex_send_gex_group): New.
 	
-	
-	
-	
-	
-	
-	
-	
+2002-10-20  Timo Schulz  (ts@winpt.org)
+
+	* api.h: Use a BUFFER to read from the payload.
+	* kex.c (parse_xxx): Use a BUFFER as the input.
+	Changed all callers.
+	(build_kex_list): New.
+	(build_pkalgo_list): New.
+	(choose_kex_algo): New.
+	* auth.c (parse_xxx): Some as kex.c
+	* main.c (init_gex_default): New.
+	(gsti_init): Use it here.
 	
 	
 	

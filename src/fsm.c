@@ -23,13 +23,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h> 
- 
+
+#include "types.h"
+#include "utils.h"
+#include "buffer.h"
 #include "api.h" 
 #include "memory.h" 
 #include "stream.h" 
 #include "packet.h" 
-#include "utils.h" 
 #include "kex.h" 
+
+#define logrc _gsti_log_rc
 
 enum fsm_states { 
     FSM_init                 =  0, 
@@ -97,21 +101,7 @@ handle_quit( GSTIHD hd )
     int rc = 0; 
 
     return rc; 
-} 
-
-
-
-/**************** 
- * We are in state FSM_write: write the user supplied data 
- */ 
-static int 
-handle_write( GSTIHD hd ) 
-{ 
-    int rc; 
-
-    rc = _gsti_packet_write( hd ); 
-    return rc; 
-} 
+}
 
 
 static void
@@ -193,8 +183,7 @@ fsm_server_loop( GSTIHD hd )
             if( !rc ) {
                 switch( hd->pkt.type ) {
                 case SSH_MSG_KEXDH_REPLY:
-                    rc = _gsti_log_rc( GSTI_PROT_VIOL,
-                                       "server got KEXDH_REPLY\n" );
+                    rc = logrc( GSTI_PROT_VIOL, "server got KEXDH_REPLY\n" );
                     break;
             
                 case SSH_MSG_KEXDH_INIT:
@@ -372,7 +361,7 @@ fsm_client_loop( GSTIHD hd )
             if( !rc ) {
                 switch( hd->pkt.type ) {
                 case SSH_MSG_KEXDH_INIT:
-                    rc =_gsti_log_rc(GSTI_PROT_VIOL,"client got KEXDH_INIT\n");
+                    rc = logrc( GSTI_PROT_VIOL,"client got KEXDH_INIT\n" );
                     break;
 
                 case SSH_MSG_KEXDH_REPLY:
@@ -492,7 +481,7 @@ fsm_client_loop( GSTIHD hd )
             break;
 
         case FSM_write:
-            rc = handle_write( hd );
+            rc = _gsti_packet_write( hd );
             if( !rc )
                 hd->state = FSM_idle;
             break;

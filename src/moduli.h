@@ -1,6 +1,30 @@
+/* moduli.h - Prefabricated values for the DH Group Exchange
+ *      Copyright (C) 2002 Timo Schulz
+ *
+ * This file is part of GSTI.
+ *
+ * GSTI is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * GSTI is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+ */
+
 #ifndef GSTI_MODULI_H
 #define GSTI_MODULI_H
 
+#define MIN_GROUPSIZE 1023
+#define MAX_GROUPSIZE 4094
+
+/* Taken from /etc/ssh/moduli. The generator is always "2" */
 
 static unsigned char mpi_array_1023[] = {
 0x44, 0x43, 0x46, 0x41, 0x43, 0x34, 0x45, 0x46, 0x45, 0x38, 0x39, 0x46, 0x35, 

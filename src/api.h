@@ -54,6 +54,7 @@ struct gsti_context {
     BSTRING service_name;
 
     struct packet_buffer_s pkt;
+    BUFFER pktbuf;
 
     BSTRING session_id;     /* the exchange hash from the first KEX */
     u32 send_seqno;
@@ -68,6 +69,15 @@ struct gsti_context {
         BSTRING mac_e;	    /* Mac client to server */
         BSTRING mac_f;	    /* Mac server to client */
     } kex;
+
+    int kex_type;
+    
+    struct {
+        unsigned int min;
+        unsigned int max;
+        unsigned int n;
+    } gex;
+        
     byte cookie[16];
     int sent_newkeys;
 

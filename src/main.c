@@ -28,9 +28,12 @@
 #include <sys/stat.h>
 #include <gcrypt.h>
 
-#include "api.h"
+#include "types.h"
+#include "buffer.h"
 #include "memory.h"
 #include "packet.h"
+#include "api.h"
+#include "moduli.h"
 
 
 static GSTI_LOG_FNC log_handler = NULL;
@@ -201,6 +204,15 @@ gsti_control( enum gsti_ctl_cmds ctl )
 }
 
 
+static void
+init_gex_default( GSTIHD hd )
+{
+    hd->gex.min = MIN_GROUPSIZE;
+    hd->gex.n = 2048;
+    hd->gex.max = MAX_GROUPSIZE;   
+}
+    
+
 GSTIHD
 gsti_init( void )
 {
@@ -208,6 +220,7 @@ gsti_init( void )
 
     hd = _gsti_xcalloc( 1, sizeof *hd );
     _gsti_packet_init( hd );
+    init_gex_default( hd );
     return hd;
 }
 
@@ -436,6 +449,21 @@ gsti_set_compression( GSTIHD hd, int val )
 #endif
 }
 
+int
+gsti_set_dhgex( GSTIHD hd, unsigned int min, unsigned int n, unsigned int max )
+{
+    if( !hd )
+        return GSTI_INV_ARG;
+    if( n < min || n > max )
+        return GSTI_INV_ARG;
+    
+    hd->gex.min = min;
+    hd->gex.n = n;
+    hd->gex.max = max;
+
+    return 0;
+}
+    
 
 int
 _gsti_get_log_level( void )

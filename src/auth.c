@@ -23,12 +23,13 @@
 #include <stdio.h>
 
 #include "types.h"
+#include "utils.h"
+#include "buffer.h"
 #include "api.h"
 #include "packet.h"
 #include "memory.h"
 #include "pubkey.h"
-#include "buffer.h"
-#include "utils.h"
+
 
 static int
 check_auth_id( const char *buf )
@@ -37,6 +38,7 @@ check_auth_id( const char *buf )
         return GSTI_AUTH_PUBLICKEY;
     return -1; /* not supported */
 }
+
 
 static int
 build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
@@ -66,6 +68,7 @@ build_auth_request( MSG_auth_request *ath, struct packet_buffer_s *pkt )
     return 0;
 }
 
+
 static void
 free_auth_request( MSG_auth_request *ath )
 {
@@ -79,11 +82,12 @@ free_auth_request( MSG_auth_request *ath )
     }
 }
 
+
 static int
 init_auth_request( MSG_auth_request *ath, const char *user, int false,
                    GSTI_KEY pk )
 {
-    const char *s;
+    const char *svc = "ssh-userauth", *mthd = "publickey";
     byte *p;
     size_t n;
 
@@ -91,10 +95,8 @@ init_auth_request( MSG_auth_request *ath, const char *user, int false,
         return GSTI_INV_ARG;
     
     ath->user = _gsti_bstring_make( user, strlen( user ) );
-    s = "ssh-userauth";
-    ath->svcname = _gsti_bstring_make( s, strlen( s ) );
-    s = "publickey";
-    ath->method = _gsti_bstring_make( s, strlen( s ) );
+    ath->svcname = _gsti_bstring_make( svc, strlen( svc ) );
+    ath->method = _gsti_bstring_make( mthd, strlen( mthd ) );
     ath->false = false;
     p = _gsti_ssh_get_pkname( pk->type, 0, &n );
     ath->pkalgo = _gsti_bstring_make( p, n );
@@ -144,7 +146,7 @@ auth_proc_accept_packet( GSTIHD hd )
     
     if( pkt->type != SSH_MSG_USERAUTH_SUCCESS )
         return GSTI_BUG;
-    if( pkt->payload_len > 1 )
+    if( pkt->payload_len != 1 )
         return GSTI_INV_PKT;
     return 0;
 }
@@ -184,21 +186,15 @@ read_bstring( BUFFER buf )
 
 
 static int
-parse_auth_request( MSG_auth_request *ath, const byte *msg, size_t msglen )
+parse_auth_request( MSG_auth_request *ath, const BUFFER buf )
 {
-    BUFFER buf;
     int rc = 0;
     
     memset( ath, 0, sizeof *ath );
-    if( msglen < (4+4+4+1+4+4) )
+    if( _gsti_buf_getlen( buf ) < (4+4+4+1+4+4) )
         return GSTI_TOO_SHORT;
-
-    _gsti_buf_init( &buf );
-    _gsti_buf_putraw( buf, msg, msglen );
-    if( _gsti_buf_getc( buf ) != SSH_MSG_USERAUTH_REQUEST ) {
-        rc = GSTI_BUG;
-        goto leave;
-    }
+    if( _gsti_buf_getc( buf ) != SSH_MSG_USERAUTH_REQUEST )
+        return GSTI_BUG;
     ath->user = read_bstring( buf );
     ath->svcname = read_bstring( buf );
     ath->method = read_bstring( buf );
@@ -207,13 +203,9 @@ parse_auth_request( MSG_auth_request *ath, const byte *msg, size_t msglen )
     ath->key = read_bstring( buf );
     if( _gsti_buf_getlen( buf ) )
         ath->sig = read_bstring( buf );
-
     if( _gsti_buf_getlen( buf ) )
         rc = GSTI_INV_PKT;
 
-leave:
-    _gsti_buf_free( buf );
-    
     return rc;
 }
 
@@ -227,7 +219,7 @@ auth_proc_init_packet( GSTIHD hd )
     if( hd->pkt.type != SSH_MSG_USERAUTH_REQUEST )
         return GSTI_BUG;
 
-    rc = parse_auth_request( &ath, hd->pkt.payload, hd->pkt.payload_len );
+    rc = parse_auth_request( &ath, hd->pktbuf );
     if( rc )
         return rc;
     if( check_auth_id( ath.method->d ) == -1 ) {
@@ -329,19 +321,16 @@ auth_send_pkok_packet( GSTIHD hd )
 
 
 static int
-parse_pkok_packet( MSG_auth_pkok *ok, struct packet_buffer_s *pkt )
+parse_pkok_packet( MSG_auth_pkok *ok, const BUFFER buf )
 {
-    BUFFER buf;
     byte *p;
     size_t n;
 
     memset( ok, 0, sizeof *ok );
-    _gsti_buf_init( &buf );
-    _gsti_buf_putraw( buf, pkt->payload, pkt->payload_len );
-    if( _gsti_buf_getc( buf ) != SSH_MSG_USERAUTH_PK_OK ) {
-        _gsti_buf_free( buf );
+    if( _gsti_buf_getlen( buf ) < (4+4) )
+        return GSTI_TOO_SHORT;
+    if( _gsti_buf_getc( buf ) != SSH_MSG_USERAUTH_PK_OK )
         return GSTI_INV_PKT;
-    }
     p = _gsti_buf_getstr( buf, &n );
     ok->pkalgo = _gsti_bstring_make( p, n );
     _gsti_free( p );
@@ -364,7 +353,7 @@ auth_proc_pkok_packet( GSTIHD hd )
     if( hd->pkt.type != SSH_MSG_USERAUTH_PK_OK )
         return GSTI_BUG;
 
-    rc = parse_pkok_packet( &ok, &hd->pkt );
+    rc = parse_pkok_packet( &ok, hd->pktbuf );
     if( rc )
         return rc;
     alg = ok.pkalgo;
@@ -420,7 +409,7 @@ auth_proc_second_packet( GSTIHD hd )
     BSTRING hash;
     int rc;
 
-    rc = parse_auth_request( &ath, hd->pkt.payload, hd->pkt.payload_len );
+    rc = parse_auth_request( &ath, hd->pktbuf );
     if( !rc )
         rc = calc_sig_hash( hd->session_id, &ath, &hash );
     if( !rc )

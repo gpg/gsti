@@ -9,6 +9,8 @@
     * we need a way to merge BSTRING and BUFFER together. They do the
       the same things so they are redundant.
 
+    * implement the rest of the compression code in packet.c
+
 After the code base is somewhat stable
 
     * integrate the SecureFTP code.

@@ -23,22 +23,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <gcrypt.h>
 
+#include "types.h"
+#include "buffer.h"
 #include "api.h"
 #include "memory.h"
 #include "stream.h"
 #include "packet.h"
-#include "buffer.h"
+
 
 static u32
-buftou32( const byte *buffer )
+buftou32( const byte *buf )
 {
     u32 a;
-    a  = buffer[0] << 24;
-    a |= buffer[1] << 16;
-    a |= buffer[2] <<  8;
-    a |= buffer[3];
-    return a;
+    a  = buf[0] << 24;
+    a |= buf[1] << 16;
+    a |= buf[2] <<  8;
+    a |= buf[3];
+    return a;    
 }
 
 
@@ -282,6 +285,8 @@ _gsti_packet_read( GSTIHD hd )
     hd->pkt.type = *hd->pkt.payload;
     _gsti_log_info( "received packet %lu of type %d\n",
                     (u32)seqno, hd->pkt.type );
+    _gsti_buf_free( hd->pktbuf );
+    _gsti_buf_set( &hd->pktbuf, hd->pkt.payload, hd->pkt.payload_len );
 
     switch( hd->pkt.type ) {
     case SSH_MSG_IGNORE:

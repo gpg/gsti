@@ -143,6 +143,8 @@ int gsti_set_client_key( GSTIHD hd, const char *file );
 int gsti_set_client_user( GSTIHD hd, const char *user );
 int gsti_set_auth_method( GSTIHD hd, int methd );
 int gsti_set_compression( GSTIHD hd, int val );
+int gsti_set_dhgex( GSTIHD hd, unsigned int min, unsigned int n,
+                    unsigned int max );
 
 /* logging */
 void gsti_set_log_handler( GSTI_LOG_FNC logfnc, void *opaque );

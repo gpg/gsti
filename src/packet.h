@@ -29,23 +29,30 @@
 
 enum {
     /* transport */
-    SSH_MSG_DISCONNECT	     =  1,
-    SSH_MSG_IGNORE	     =  2,
-    SSH_MSG_UNIMPLEMENTED    =  3,
-    SSH_MSG_DEBUG	     =  4,
-    SSH_MSG_SERVICE_REQUEST  =  5,
-    SSH_MSG_SERVICE_ACCEPT   =  6,
-    SSH_MSG_KEXINIT	     = 20,
-    SSH_MSG_NEWKEYS	     = 21,
-    SSH_MSG_KEXDH_INIT	     = 30,
-    SSH_MSG_KEXDH_REPLY      = 31,
+    SSH_MSG_DISCONNECT	      =  1,
+    SSH_MSG_IGNORE	      =  2,
+    SSH_MSG_UNIMPLEMENTED     =  3,
+    SSH_MSG_DEBUG	      =  4,
+    SSH_MSG_SERVICE_REQUEST   =  5,
+    SSH_MSG_SERVICE_ACCEPT    =  6,
+    SSH_MSG_KEXINIT	      = 20,
+    SSH_MSG_NEWKEYS	      = 21,
+    
+    SSH_MSG_KEXDH_INIT	      = 30,
+    SSH_MSG_KEXDH_REPLY       = 31,
+    SSH_MSG_KEX_DH_GEX_INIT   = 32,
+    SSH_MSG_KEX_DH_GEX_REPLY  = 33,
+
+    SSH_MSG_KEX_DH_GEX_REQUEST= 34,
+    SSH_MSG_KEX_DH_GEX_GROUP  = 31,
+    
     /* user auth */
-    SSH_MSG_USERAUTH_REQUEST = 50,
-    SSH_MSG_USERAUTH_FAILURE = 51,
-    SSH_MSG_USERAUTH_SUCCESS = 52,
-    SSH_MSG_USERAUTH_BANNER  = 53,
+    SSH_MSG_USERAUTH_REQUEST  = 50,
+    SSH_MSG_USERAUTH_FAILURE  = 51,
+    SSH_MSG_USERAUTH_SUCCESS  = 52,
+    SSH_MSG_USERAUTH_BANNER   = 53,
     /* key based */
-    SSH_MSG_USERAUTH_PK_OK   = 60,
+    SSH_MSG_USERAUTH_PK_OK    = 60,
 };
 
 enum {
@@ -81,6 +88,13 @@ enum {
 };
 
 
+enum {
+    SSH_KEX_NONE           = 0,
+    SSH_KEX_GROUP1         = 1,
+    SSH_KEX_GROUP_EXCHANGE = 2
+};
+
+
 typedef struct {
     const char *name;
     int algid;
@@ -102,6 +116,19 @@ typedef struct {
     STRLIST compr_algos_s2c;
     int first_kex_packet_follows;
 } MSG_kexinit;
+
+
+typedef struct {
+    unsigned int min;
+    unsigned int n;
+    unsigned int max;
+} MSG_gexdh_request;
+
+
+typedef struct {
+    GCRY_MPI p;
+    GCRY_MPI g;
+} MSG_gexdh_group;
 
 
 typedef struct {

@@ -41,4 +41,11 @@ int kex_proc_service_request( GSTIHD hd );
 int kex_send_service_accept( GSTIHD hd );
 int kex_proc_service_accept( GSTIHD hd );
 
+int kex_send_gex_request( GSTIHD hd );
+int kex_proc_gex_request( GSTIHD hd );
+
+int kex_send_gex_group( GSTIHD hd );
+int kex_proc_gex_group( GSTIHD hd );
+
+
 #endif /* GSTI_KEX_H */

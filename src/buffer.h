@@ -28,7 +28,8 @@ typedef struct buffer_s {
 } *BUFFER;
 
 
-int _gsti_buf_init( BUFFER *r_ctx );
+void _gsti_buf_init( BUFFER *r_ctx );
+void _gsti_buf_set( BUFFER *r_ctx, const byte *buf, size_t blen );
 void _gsti_buf_free( BUFFER ctx );
 size_t _gsti_buf_getlen( BUFFER ctx );
 void* _gsti_buf_getptr( BUFFER ctx );

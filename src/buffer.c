@@ -24,9 +24,10 @@
 #include <gcrypt.h>
 
 #include "types.h"
+#include "buffer.h"
 #include "api.h"
 #include "memory.h"
-#include "buffer.h"
+
 
 static void
 buffer_realloc( BUFFER ctx, size_t len )
@@ -37,7 +38,7 @@ buffer_realloc( BUFFER ctx, size_t len )
     }
 }
 
-int
+void
 _gsti_buf_init( BUFFER *r_ctx )
 {
     BUFFER ctx;
@@ -46,8 +47,14 @@ _gsti_buf_init( BUFFER *r_ctx )
     ctx->d = _gsti_xcalloc( 1, 4096 );
     ctx->size = 4096;
     *r_ctx = ctx;
+}
 
-    return 0;
+
+void
+_gsti_buf_set( BUFFER *r_ctx, const byte *buf, size_t blen )
+{
+    _gsti_buf_init( r_ctx );
+    _gsti_buf_putraw( *r_ctx, buf, blen );
 }
 
 

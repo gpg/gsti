@@ -24,10 +24,11 @@
 #include <gcrypt.h>
 
 #include "types.h"
+#include "buffer.h"
 #include "pubkey.h"
 #include "api.h"
 #include "memory.h"
-#include "buffer.h"
+
 
 static struct {
     const char *algname;
