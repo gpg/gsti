@@ -21,6 +21,9 @@
 #ifndef GSTI_KEX_H
 #define GSTI_KEX_H
 
+void _gsti_kex_set_defaults (gsti_ctx_t ctx);
+
+/* fixme: Internal function - prefix with _gsti. */
 gsti_error_t kex_send_version (gsti_ctx_t ctx);
 gsti_error_t kex_wait_on_version (gsti_ctx_t ctx);
 

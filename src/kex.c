@@ -117,6 +117,17 @@ cmp_bstring (gsti_bstr_t a, gsti_bstr_t b)
 }
 
 
+/* Initialize the GEX parameters to defaults. */
+void
+_gsti_kex_set_defaults (gsti_ctx_t ctx)
+{
+  ctx->gex.min = MIN_GROUPSIZE;
+  ctx->gex.n = 2048;
+  ctx->gex.max = MAX_GROUPSIZE;
+}
+
+
+
 gsti_error_t
 kex_send_version (gsti_ctx_t ctx)
 {

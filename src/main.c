@@ -36,8 +36,7 @@
 #include "memory.h"
 #include "packet.h"
 #include "api.h"
-#include "moduli.h"
-
+#include "kex.h"
 
 static const char *
 parse_version_number (const char *s, int *number)
@@ -133,15 +132,6 @@ gsti_control (enum gsti_ctl_cmds ctl)
 }
 
 
-static void
-init_gex_default (gsti_ctx_t ctx)
-{
-  ctx->gex.min = MIN_GROUPSIZE;
-  ctx->gex.n = 2048;
-  ctx->gex.max = MAX_GROUPSIZE;
-}
-
-
 gsti_error_t
 gsti_init (gsti_ctx_t * r_ctx)
 {
@@ -149,7 +139,7 @@ gsti_init (gsti_ctx_t * r_ctx)
 
   ctx = _gsti_xcalloc (1, sizeof *ctx);
   _gsti_packet_init (ctx);
-  init_gex_default (ctx);
+  _gsti_kex_set_defaults (ctx);
   gsti_auth_new (&ctx->auth);
   *r_ctx = ctx;
   return 0;
@@ -364,6 +354,7 @@ gsti_set_compression (gsti_ctx_t ctx, int val)
   return 0;
 #endif
 }
+
 
 
 gsti_error_t

@@ -171,4 +171,8 @@ gsti_error_t auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 gsti_error_t auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 gsti_error_t auth_proc_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
+/*-- channel.c --*/
+gsti_error_t _gsti_handle_channel_packet (gsti_ctx_t ctx);
+
+
 #endif	/* GSTI_API_H */

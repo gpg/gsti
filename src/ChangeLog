@@ -1,3 +1,11 @@
+2004-06-14  Werner Koch  <wk@gnupg.org>
+
+	* api.h (_gsti_handle_channel_packet): Include prototype.
+
+	* main.c: Don't include moduli.h.  Include kex.h.
+	(init_gex_default, gsti_init): Removed and changed to ..
+	* kex.c (_gsti_kex_set_defaults): .. new function.
+
 2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
 
 	* types.h (gsti_byte_t, gsti_uint32_t): Move to ...
