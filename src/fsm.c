@@ -167,6 +167,14 @@ log_error (gsti_ctx_t ctx)
 }
 
 
+static void
+log_state_error (gsti_ctx_t ctx)
+{
+  _gsti_log_info (ctx, "FSM: at fsm_loop: invalid state %d (pkt %d)\n",
+                  ctx->state, ctx->pkt.type);
+}
+  
+
 static gsti_error_t
 request_packet (gsti_ctx_t ctx)
 {
@@ -239,6 +247,17 @@ fsm_server_loop (gsti_ctx_t ctx)
 		    ctx->state = FSM_kex_wait;
 		  break;
 
+                case SSH_MSG_KEX_DH_GEX_REQUEST:
+                  err = kex_proc_gex_request (ctx);
+                  if (!err)
+                    err = kex_send_gex_group (ctx);
+                  if (!err)
+                    {
+                      ctx->gex.used = 1;
+                      ctx->state = FSM_kex_wait;
+                    }
+                  break;
+
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_kex_failed;
@@ -258,6 +277,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 		  break;
 
 		case SSH_MSG_KEXDH_INIT:
+                case SSH_MSG_KEX_DH_GEX_INIT:
 		  err = kex_proc_kexdh_init (ctx);
 		  if (!err)
 		    err = kex_send_kexdh_reply (ctx);
@@ -331,6 +351,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 		{
 		case SSH_MSG_USERAUTH_REQUEST:
 		  err = auth_proc_init_packet (ctx, ctx->auth);
+                  fprintf (stderr, "+++ DBG err=%d (%s)\n", err, gsti_strerror (err));
 		  if (!err)
 		    ctx->state = FSM_auth_send_pkok;
                   else
@@ -393,8 +414,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	  break;
 
 	default:
-	  _gsti_log_info (ctx, "FSM: at fsm_loop: invalid state %d\n",
-			  ctx->state);
+          log_state_error (ctx);
 	  err = gsti_error (GPG_ERR_BUG);
 	}
     }
@@ -441,7 +461,31 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_kex_start:
-	  err = kex_send_init_packet (ctx);
+          if (ctx->gex.used)
+            {
+              err = kex_send_gex_request (ctx);
+              if (!err)
+                {
+                  err = request_packet (ctx);
+                  if (!err)
+                    {
+                      switch (ctx->pkt.type)
+                        {
+                        case SSH_MSG_KEX_DH_GEX_GROUP:
+                          err = kex_proc_gex_group (ctx);
+                          break;
+
+                        default:
+                          err = logrc (ctx, gsti_error
+                                       (GPG_ERR_PROTOCOL_VIOLATION), "client "
+                                       "got wrong packet (!DH_GEX_GROUP)\n");
+                          break;
+                        }
+                    }
+                }
+            }
+          if (!err)
+            err = kex_send_init_packet (ctx);
 	  if (!err)
 	    err = request_packet (ctx);
 	  if (!err)
@@ -595,8 +639,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	default:
-	  _gsti_log_info (ctx, "FSM: at fsm_loop: invalid state %d\n",
-			  ctx->state);
+          log_state_error (ctx);
 	  err = gsti_error (GPG_ERR_BUG);
 	}
     }

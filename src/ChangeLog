@@ -1,3 +1,18 @@
+2004-07-06  Timo Schulz  <twoaday@g10code.de>
+
+	* pubkey.c (_gsti_key_fromblob): Return an error for
+	unknown pubkey algos and not a bug.
+	* fsm.c (fsm_server_loop): Implement DH group exchange.
+	* main.c (_gsti_kex_free): New.
+	* kex.c (build_msg_kexdh_reply): Likewise.
+	(build_msg_kexinit): Likewise.
+	(hash_32bit): New.
+	(kex_proc_gex_group): Store DH group values.
+	(kex_send_gex_group): Likewise.
+	(calc_dh_key): Support DH group exchange.
+	(calc_dh_secret): Likewise.
+	* auth.c (check_auth_id): Use the length of the table string.
+	
 2004-07-05  Timo Schulz  <twoaday@freakmail.de>
 
 	* packet.c (_gsti_packet_write): Use gcry_create_nonce to

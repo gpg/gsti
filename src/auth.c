@@ -51,7 +51,7 @@ check_auth_id (const char *buf)
 
   for (i=0; (s = valid_auth_methods[i].name); i++)
     {
-      if (!strncmp (buf, s, strlen (buf)))
+      if (!strncmp (buf, s, strlen (s)))
         return valid_auth_methods[i].id;
     }
   return -1; /* not supported */
@@ -329,6 +329,7 @@ auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   err = parse_auth_request (&ath, ctx->pktbuf);
   if (err)
     return err;
+  
   if (check_auth_id (gsti_bstr_data (ath.method)) == -1)
     {
       free_auth_request (&ath);

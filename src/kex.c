@@ -254,7 +254,8 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
   err = gsti_buf_getc (buf, &val);
   if (err)
     goto leave;
-  if (val != SSH_MSG_KEXINIT)
+  if (val != SSH_MSG_KEXINIT &&
+      val != SSH_MSG_KEX_DH_GEX_INIT)
     {
       err = gsti_error (GPG_ERR_BUG);
       goto leave;
@@ -322,7 +323,7 @@ leave:
 
 /* Build a KEX packet.  */
 static gsti_error_t
-build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
+build_msg_kexinit (MSG_kexinit * kex, int use_gex, packet_buffer_t pkt)
 {
   STRLIST algolist[10];
   byte *p = pkt->payload;
@@ -331,7 +332,7 @@ build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
 
   assert (length > 100);
 
-  pkt->type = SSH_MSG_KEXINIT;
+  pkt->type = use_gex? SSH_MSG_KEX_DH_GEX_INIT : SSH_MSG_KEXINIT;
   p++;
   length--;
   memcpy (p, kex->cookie, 16);
@@ -395,6 +396,8 @@ check_dh_mpi_range (gcry_mpi_t chk)
 {
   gsti_error_t err = 0;
   gcry_mpi_t p;
+
+  /* FIXME add DH group support */
   
   /* A value which is not in the range [1, p-1] is considered as a
      protocol violation.  */
@@ -426,7 +429,8 @@ parse_msg_kexdh_init (MSG_kexdh_init * kexdh, const gsti_buffer_t buf)
   if (err)
     goto leave;
 
-  if (val != SSH_MSG_KEXDH_INIT)
+  if (val != SSH_MSG_KEXDH_INIT &&
+      val != SSH_MSG_KEX_DH_GEX_INIT)
     {
       err = gsti_error (GPG_ERR_BUG);
       goto leave;
@@ -450,7 +454,7 @@ leave:
 
 /* Build a KEXDH packet.  */
 static gsti_error_t
-build_msg_kexdh_init (MSG_kexdh_init * kexdh, packet_buffer_t pkt)
+build_msg_kexdh_init (MSG_kexdh_init * kexdh, int use_gex, packet_buffer_t pkt)
 {
   gsti_error_t err;
   gsti_buffer_t buf = NULL;
@@ -471,7 +475,7 @@ build_msg_kexdh_init (MSG_kexdh_init * kexdh, packet_buffer_t pkt)
       len = gsti_buf_readable (buf);
       if (len > pkt->size - 1)
 	return gsti_error (GPG_ERR_TOO_LARGE);
-      pkt->type = SSH_MSG_KEXDH_INIT;
+      pkt->type = use_gex? SSH_MSG_KEX_DH_GEX_INIT : SSH_MSG_KEXDH_INIT;
       pkt->payload_len = len;
       err = gsti_buf_getraw (buf, pkt->payload, len);
       assert (!err);
@@ -509,7 +513,8 @@ parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, gsti_buffer_t buf)
   if (err)
     return err;
 
-  if (val != SSH_MSG_KEXDH_REPLY)
+  if (val != SSH_MSG_KEXDH_REPLY &&
+      val != SSH_MSG_KEX_DH_GEX_REPLY)
     {
       err = gsti_error (GPG_ERR_BUG);
       goto leave;
@@ -544,7 +549,7 @@ leave:
 
 /* Build a KEXDH_REPLY packet.  */
 static gsti_error_t
-build_msg_kexdh_reply (MSG_kexdh_reply * dhr, packet_buffer_t pkt)
+build_msg_kexdh_reply (MSG_kexdh_reply * dhr, int use_gex, packet_buffer_t pkt)
 {
   gsti_error_t err;
   gsti_buffer_t buf = NULL;
@@ -552,7 +557,7 @@ build_msg_kexdh_reply (MSG_kexdh_reply * dhr, packet_buffer_t pkt)
 
   assert (pkt->size > 100);
 
-  pkt->type = SSH_MSG_KEXDH_REPLY;
+  pkt->type = use_gex? SSH_MSG_KEX_DH_GEX_REPLY : SSH_MSG_KEXDH_REPLY;
 
   err = gsti_buf_alloc (&buf);
   if (err)
@@ -598,21 +603,27 @@ dump_msg_kexdh_reply (gsti_ctx_t ctx, MSG_kexdh_reply * dhr)
 /* Choose a random value x and calculate e = g^x mod p.  Returns e and
    if ret_x is not NULL x.  */
 static gcry_mpi_t
-calc_dh_secret (gcry_mpi_t * ret_x)
+calc_dh_secret (gcry_mpi_t gex_g, gcry_mpi_t gex_p, gcry_mpi_t * ret_x)
 {
   gcry_mpi_t e, g, x, prime;
   size_t n = sizeof diffie_hellman_group1_prime;
 
-  if (gcry_mpi_scan (&prime, GCRYMPI_FMT_STD,
-		     diffie_hellman_group1_prime, n, NULL))
+  if (gex_p)
+    prime = gcry_mpi_copy (gex_p);
+  else if (gcry_mpi_scan (&prime, GCRYMPI_FMT_STD,
+                          diffie_hellman_group1_prime, n, NULL))
     abort ();
-    /*_gsti_dump_mpi( "prime=", prime );*/
+  /*_gsti_dump_mpi( "prime=", prime );*/
 
-  g = gcry_mpi_set_ui (NULL, 2);
+  if (gex_g)
+    g = gcry_mpi_copy (gex_g);
+  else
+    g = gcry_mpi_set_ui (NULL, 2);
   x = gcry_mpi_snew (200);
   gcry_mpi_randomize (x, 200, GCRY_STRONG_RANDOM);
 
-  e = gcry_mpi_new (1024);
+  n = gcry_mpi_get_nbits (prime);
+  e = gcry_mpi_new (n+1);
   gcry_mpi_powm (e, g, x, prime);
   if (ret_x)
     *ret_x = x;
@@ -638,22 +649,38 @@ hash_mpi (gcry_md_hd_t md, gcry_mpi_t a)
 
 
 static gcry_mpi_t
-calc_dh_key (gcry_mpi_t f, gcry_mpi_t x)
+calc_dh_key (gcry_mpi_t gex_p, gcry_mpi_t f, gcry_mpi_t x)
 {
   gcry_mpi_t k, prime;
   size_t n = sizeof diffie_hellman_group1_prime;
 
-  if (gcry_mpi_scan (&prime, GCRYMPI_FMT_STD,
-		     diffie_hellman_group1_prime, n, NULL))
+  if (gex_p)
+      prime = gcry_mpi_copy (gex_p);
+  else if (gcry_mpi_scan (&prime, GCRYMPI_FMT_STD,
+                          diffie_hellman_group1_prime, n, NULL))
     abort ();
 
-  k = gcry_mpi_snew (1024);
+  n = gcry_mpi_get_nbits (prime);
+  k = gcry_mpi_snew (n+1);
   gcry_mpi_powm (k, f, x, prime);
   gcry_mpi_release (prime);
   return k;
 }
 
 
+static void
+hash_32bit (gcry_md_hd_t md, unsigned a)
+{
+  byte tmp[4];
+
+  tmp[0] = a >> 24;
+  tmp[1] = a >> 16;
+  tmp[2] = a >>  8;
+  tmp[3] = a >>  0;
+  gcry_md_write (md, tmp, 4);
+}
+
+  
 /* Calculate the exchange hash value and put it into the handle.  */
 static gsti_error_t
 calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
@@ -690,6 +717,14 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   _gsti_bstring_hash (md, i_c);
   _gsti_bstring_hash (md, i_s);
   _gsti_bstring_hash (md, k_s);
+  if (ctx->gex.used)
+    {
+      hash_32bit (md, ctx->gex.min);
+      hash_32bit (md, ctx->gex.n);
+      hash_32bit (md, ctx->gex.max);
+      hash_mpi (md, ctx->kex.p);
+      hash_mpi (md, ctx->kex.g);
+    } 
   hash_mpi (md, e);
   hash_mpi (md, f);
   hash_mpi (md, ctx->kex.k);
@@ -888,7 +923,7 @@ kex_send_init_packet (gsti_ctx_t ctx)
   build_cipher_list (ctx, &kex.encr_algos_c2s, &kex.encr_algos_s2c);
   build_hmac_list (ctx, &kex.mac_algos_c2s, &kex.mac_algos_s2c);
   build_compress_list (ctx, &kex.compr_algos_c2s, &kex.compr_algos_s2c);
-  err = build_msg_kexinit (&kex, &ctx->pkt);
+  err = build_msg_kexinit (&kex, ctx->gex.used, &ctx->pkt);
   if (!err)
     err = _gsti_packet_write (ctx);
   if (err)
@@ -1039,8 +1074,9 @@ kex_send_kexdh_init (gsti_ctx_t ctx)
   MSG_kexdh_init kexdh;
 
   memset (&kexdh, 0, sizeof kexdh);
-  kexdh.e = ctx->kexdh_e = calc_dh_secret (&ctx->secret_x);
-  err = build_msg_kexdh_init (&kexdh, &ctx->pkt);
+  kexdh.e = ctx->kexdh_e = calc_dh_secret (ctx->kex.g, ctx->kex.p,
+                                           &ctx->secret_x);
+  err = build_msg_kexdh_init (&kexdh, ctx->gex.used, &ctx->pkt);
   if (err)
     return err;
   err = _gsti_packet_write (ctx);
@@ -1058,6 +1094,8 @@ kex_proc_kexdh_init (gsti_ctx_t ctx)
   gsti_error_t err;
   MSG_kexdh_init kexdh;
 
+  if (ctx->gex.used && ctx->pkt.type != SSH_MSG_KEX_DH_GEX_INIT)
+    return gsti_error (GPG_ERR_BUG);
   if (ctx->pkt.type != SSH_MSG_KEXDH_INIT)
     return gsti_error (GPG_ERR_BUG);
 
@@ -1087,9 +1125,9 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
       return err;
 
   /* Generate our secret and the public value for it.  */
-  dhr.f = calc_dh_secret (&y);
+  dhr.f = calc_dh_secret (ctx->kex.g, ctx->kex.p, &y);
   /* Now we can calculate the shared secret.  */
-  ctx->kex.k = calc_dh_key (ctx->kexdh_e, y);
+  ctx->kex.k = calc_dh_key (ctx->kex.p, ctx->kexdh_e, y);
   gcry_mpi_release (y);
   /* And the hash.  */
   err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
@@ -1101,7 +1139,7 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
   err = _gsti_sig_encode (ctx->hostkey, gsti_bstr_data (ctx->kex.h),
                           &dhr.sig_h);
   if (!err)
-      err = build_msg_kexdh_reply (&dhr, &ctx->pkt);
+      err = build_msg_kexdh_reply (&dhr, ctx->gex.used, &ctx->pkt);
   if (!err)
     dump_msg_kexdh_reply (ctx, &dhr);
   if (!err)
@@ -1119,6 +1157,8 @@ kex_proc_kexdh_reply (gsti_ctx_t ctx)
   gsti_error_t err;
   MSG_kexdh_reply dhr;
 
+  if (ctx->gex.used && ctx->pkt.type != SSH_MSG_KEX_DH_GEX_REPLY)
+    return gsti_error (GPG_ERR_BUG);
   if (ctx->pkt.type != SSH_MSG_KEXDH_REPLY)
     return gsti_error (GPG_ERR_BUG);
 
@@ -1128,7 +1168,7 @@ kex_proc_kexdh_reply (gsti_ctx_t ctx)
 
   dump_msg_kexdh_reply (ctx, &dhr);
 
-  ctx->kex.k = calc_dh_key (dhr.f, ctx->secret_x);
+  ctx->kex.k = calc_dh_key (ctx->kex.p, dhr.f, ctx->secret_x);
   gcry_mpi_release (ctx->secret_x);
 
   err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
@@ -1711,7 +1751,12 @@ kex_send_gex_group (gsti_ctx_t ctx)
     err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
-  free_gex_group (&gex);
+  
+  /*free_gex_group (&gex);
+    We store the DH group exchange values for later use */
+  ctx->kex.p = gex.p;
+  ctx->kex.g = gex.g;
+  
   return err;
 }
 
@@ -1754,6 +1799,9 @@ kex_proc_gex_group (gsti_ctx_t ctx)
   err = parse_gex_group (&gex, ctx->pktbuf);
   if (err)
     return err;
-
+  
+  /* store the DH group exchange values for later use */
+  ctx->kex.p = gex.p;
+  ctx->kex.g = gex.g;
   return 0;
 }

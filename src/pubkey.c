@@ -748,7 +748,7 @@ _gsti_key_fromblob (gsti_bstr_t blob, gsti_key_t * r_key)
   if (check_pubalgo (p, strlen (p), &algid))
     {
       _gsti_free (p);
-      err = gsti_error (GPG_ERR_BUG);
+      err = gsti_error (GPG_ERR_PUBKEY_ALGO);
       goto leave;		/* not supported */
     }
   pk = _gsti_xcalloc (1, sizeof *pk);

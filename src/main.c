@@ -147,6 +147,23 @@ gsti_init (gsti_ctx_t * r_ctx)
 }
 
 
+static void
+_gsti_kex_free (gsti_kex_t kex)
+{
+  if (!kex)
+    return;
+  gcry_mpi_release (kex->p);
+  gcry_mpi_release (kex->g);
+  gsti_bstr_free (kex->h);
+  gsti_bstr_free (kex->iv_a);
+  gsti_bstr_free (kex->iv_b);
+  gsti_bstr_free (kex->key_c);
+  gsti_bstr_free (kex->key_d);
+  gsti_bstr_free (kex->mac_e);
+  gsti_bstr_free (kex->mac_f);
+}
+
+
 void
 gsti_deinit (gsti_ctx_t ctx)
 {
@@ -162,13 +179,7 @@ gsti_deinit (gsti_ctx_t ctx)
   gsti_bstr_free (ctx->peer_kexinit_data);
   _gsti_free (ctx->service_name);
   gsti_bstr_free (ctx->session_id);
-  gsti_bstr_free (ctx->kex.h);
-  gsti_bstr_free (ctx->kex.iv_a);
-  gsti_bstr_free (ctx->kex.iv_b);
-  gsti_bstr_free (ctx->kex.key_c);
-  gsti_bstr_free (ctx->kex.key_d);
-  gsti_bstr_free (ctx->kex.mac_e);
-  gsti_bstr_free (ctx->kex.mac_f);
+  _gsti_kex_free (&ctx->kex);
   gcry_cipher_close (ctx->encrypt_hd);
   gcry_cipher_close (ctx->decrypt_hd);
   gsti_key_free (ctx->hostkey);
@@ -412,6 +423,7 @@ gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
   ctx->gex.min = min;
   ctx->gex.n = n;
   ctx->gex.max = max;
+  ctx->gex.used = 1;
 
   return 0;
 }

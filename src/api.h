@@ -43,6 +43,8 @@ struct gsti_kex_s
 {
   gsti_bstr_t h;	/* current exchange hash */
   gcry_mpi_t k;		/* the shared secret */
+  gcry_mpi_t p;         /* safe prime (GEX only) */
+  gcry_mpi_t g;         /* generator for subgroup */
   gsti_bstr_t iv_a;	/* IV client to server */
   gsti_bstr_t iv_b;	/* IV server to client */
   gsti_bstr_t key_c;	/* Enc client to server */
@@ -98,6 +100,7 @@ struct gsti_context
     unsigned int min;
     unsigned int max;
     unsigned int n;
+    unsigned int used:1;
   } gex;
 
   byte cookie[16];
