@@ -492,14 +492,14 @@ dump_msg_kexdh_reply( MSG_kexdh_reply *dhr )
  * Choose a random value x and calculate e = g^x mod p.
  * Return: e and if ret_x is not NULL x.
  */
-static GCRY_MPI
-calc_dh_secret( GCRY_MPI *ret_x )
+static gcry_mpi_t
+calc_dh_secret( gcry_mpi_t *ret_x )
 {
-    GCRY_MPI e, g, x, prime;
+    gcry_mpi_t e, g, x, prime;
     size_t n = sizeof diffie_hellman_group1_prime;
 
     if( gcry_mpi_scan( &prime, GCRYMPI_FMT_STD,
-                       diffie_hellman_group1_prime, &n ) )
+                       diffie_hellman_group1_prime, n, NULL ) )
         abort();
     /*_gsti_dump_mpi( "prime=", prime );*/
 
@@ -520,26 +520,26 @@ calc_dh_secret( GCRY_MPI *ret_x )
 
 
 static void
-hash_mpi( GCRY_MD_HD md, GCRY_MPI a )
+hash_mpi( gcry_md_hd_t md, gcry_mpi_t a )
 {
     byte buf[512];
-    size_t n = sizeof buf - 1;
+    size_t n;
 
-    if( gcry_mpi_print( GCRYMPI_FMT_SSH, buf, &n, a ) )
+    if( gcry_mpi_print( GCRYMPI_FMT_SSH, buf, sizeof buf -1, &n, a ) )
         _gsti_log_info( "Oops: MPI too large for hashing\n" );
     else
         gcry_md_write( md, buf, n );
 }
 
 
-static GCRY_MPI
-calc_dh_key( GCRY_MPI f, GCRY_MPI x )
+static gcry_mpi_t
+calc_dh_key( gcry_mpi_t f, gcry_mpi_t x )
 {
-    GCRY_MPI k, prime;
+    gcry_mpi_t k, prime;
     size_t n = sizeof diffie_hellman_group1_prime;
 
     if( gcry_mpi_scan( &prime, GCRYMPI_FMT_STD,
-                       diffie_hellman_group1_prime, &n ) )
+                       diffie_hellman_group1_prime, n, NULL ) )
         abort();
 
     k = gcry_mpi_snew( 1024 );
@@ -554,16 +554,17 @@ calc_dh_key( GCRY_MPI f, GCRY_MPI x )
  */
 static int
 calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
-                    BSTRING k_s, GCRY_MPI e,  GCRY_MPI f )
+                    BSTRING k_s, gcry_mpi_t e,  gcry_mpi_t f )
 {
-    GCRY_MD_HD md;
+    gcry_md_hd_t md;
+    gpg_error_t err;
     BSTRING pp;
     const char *ver = host_version_string;
     int algo = GCRY_MD_SHA1, dlen;
 
-    md = gcry_md_open( algo, 0 );
-    if( !md )
-        return map_gcry_rc( gcry_errno() );
+    err = gcry_md_open(&md, algo, 0 );
+    if(err)
+      return err;
 
     if( hd->we_are_server ) {
         _gsti_bstring_hash( md, hd->peer_version_string );
@@ -598,13 +599,15 @@ calc_exchange_hash( GSTIHD hd, BSTRING i_c, BSTRING i_s,
    kex data can be used until we have send the NEWKEYs msg
    Well, doesn't matter for now. */
 static BSTRING
-construct_one_key( GSTIHD hd, GCRY_MD_HD md1, int algo,
+construct_one_key( GSTIHD hd, gcry_md_hd_t md1, int algo,
 		   const byte *letter, size_t size )
 {
     BSTRING hash;
-    GCRY_MD_HD md = gcry_md_copy( md1 );
+    gcry_md_hd_t md;
     size_t n, n1;
 
+    if ( gcry_md_copy(&md, md1 ) )
+      abort ();
     hash = _gsti_bstring_make( NULL, size );
     gcry_md_write( md, letter, 1 );
     gcry_md_write( md, hd->session_id->d, hd->session_id->len );
@@ -614,7 +617,8 @@ construct_one_key( GSTIHD hd, GCRY_MD_HD md1, int algo,
     memcpy( hash->d, gcry_md_read( md, algo ), n );
     while( n < size ) {
         gcry_md_close( md );
-        md = gcry_md_copy( md1 );
+        if ( gcry_md_copy(&md, md1 ))
+          abort (); /* Fixme: add an error return to this fucntion. */
         gcry_md_write( md, hash->d, n );
         n1 = gcry_md_get_algo_dlen( algo );
         if( n1 > size-n )
@@ -631,16 +635,17 @@ construct_one_key( GSTIHD hd, GCRY_MD_HD md1, int algo,
 static int
 construct_keys( GSTIHD hd )
 {
-    GCRY_MD_HD md;
+    gpg_error_t err;
+    gcry_md_hd_t md;
     int algo = GCRY_MD_SHA1;
     int keylen, blksize, maclen;
 
     if( hd->kex.iv_a )
         return 0;   /* already constructed */
 
-    md = gcry_md_open( algo, 0 );
-    if( !md )
-        return map_gcry_rc( gcry_errno() );
+    err = gcry_md_open(&md, algo, 0 );
+    if(err)
+        return err;
 
     hash_mpi( md, hd->kex.k );
     gcry_md_write( md, hd->kex.h->d, hd->kex.h->len );
@@ -940,7 +945,7 @@ kex_send_kexdh_reply( GSTIHD hd )
 {
     MSG_kexdh_reply dhr;
     int rc;
-    GCRY_MPI y;
+    gcry_mpi_t y;
 
     memset( &dhr, 0, sizeof dhr );
     dhr.k_s = _gsti_key_getblob( hd->hostkey );
@@ -1020,11 +1025,11 @@ kex_send_newkeys( GSTIHD hd )
         return rc;
 
     /* now we have to take the encryption keys into use */
-    hd->encrypt_hd = gcry_cipher_open( hd->ciph_algo, hd->ciph_mode, 0 );
+    rc = gcry_cipher_open(&hd->encrypt_hd, hd->ciph_algo, hd->ciph_mode, 0 );
     if( !hd->ciph_blksize )
         hd->ciph_blksize = gcry_cipher_get_algo_blklen( hd->ciph_algo );
-    if( !hd->encrypt_hd )
-        rc = map_gcry_rc( gcry_errno() );
+    if( rc )
+        ;
     else if( hd->we_are_server ) {
         if( !rc )
             rc = gcry_cipher_setkey( hd->encrypt_hd, hd->kex.key_d->d,
@@ -1034,9 +1039,7 @@ kex_send_newkeys( GSTIHD hd )
                                     hd->kex.iv_b->len );
         rc = map_gcry_rc( rc );
         if( !rc ) {
-            hd->send_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( !hd->send_mac )
-                rc = map_gcry_rc( gcry_errno() );
+            rc = gcry_md_open(&hd->send_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC );
             if( !rc )
                 rc = gcry_md_setkey( hd->send_mac, hd->kex.mac_f->d,
                                      hd->kex.mac_f->len );
@@ -1051,10 +1054,7 @@ kex_send_newkeys( GSTIHD hd )
                                     hd->kex.iv_a->len );
         rc = map_gcry_rc( rc );
         if( !rc ) {
-            hd->send_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( !hd->send_mac )
-                rc = map_gcry_rc( gcry_errno() );
-            if( !rc )
+           rc = gcry_md_open(&hd->send_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC );             if( !rc )
                 rc = gcry_md_setkey( hd->send_mac, hd->kex.mac_e->d,
                                      hd->kex.mac_e->len );
         }
@@ -1079,11 +1079,11 @@ kex_proc_newkeys( GSTIHD hd )
     if( rc )
         return rc;
 
-    hd->decrypt_hd = gcry_cipher_open( hd->ciph_algo, hd->ciph_mode, 0 );
+    rc = gcry_cipher_open(& hd->decrypt_hd, hd->ciph_algo, hd->ciph_mode, 0 );
     if( !hd->ciph_blksize )
         hd->ciph_blksize = gcry_cipher_get_algo_blklen( hd->ciph_algo );
-    if( !hd->decrypt_hd )
-        rc = map_gcry_rc( gcry_errno() );
+    if( rc )
+        ;
     else if( hd->we_are_server ) {
         if( !rc )
             rc = gcry_cipher_setkey( hd->decrypt_hd, hd->kex.key_c->d,
@@ -1091,11 +1091,8 @@ kex_proc_newkeys( GSTIHD hd )
         if( !rc )
             rc = gcry_cipher_setiv( hd->decrypt_hd, hd->kex.iv_a->d,
                                     hd->kex.iv_a->len );
-        rc = map_gcry_rc( rc );
         if( !rc ) {
-            hd->recv_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( !hd->recv_mac )
-                rc = map_gcry_rc( gcry_errno() );
+            rc = gcry_md_open(&hd->recv_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC );
             if( !rc )
                 rc = gcry_md_setkey( hd->recv_mac, hd->kex.mac_e->d,
                                      hd->kex.mac_e->len );
@@ -1110,9 +1107,7 @@ kex_proc_newkeys( GSTIHD hd )
                                     hd->kex.iv_b->len );
         rc = map_gcry_rc( rc );
         if( !rc ) {
-            hd->recv_mac = gcry_md_open( hd->mac_algo, GCRY_MD_FLAG_HMAC );
-            if( !hd->recv_mac )
-                rc = map_gcry_rc( gcry_errno() );
+            rc = gcry_md_open(&hd->recv_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC );
             if( !rc )
                 rc = gcry_md_setkey( hd->recv_mac, hd->kex.mac_f->d,
                                      hd->kex.mac_f->len );
@@ -1482,7 +1477,7 @@ kex_send_gex_group( GSTIHD hd )
     
     gex.g = gcry_mpi_set_ui( NULL, 2 );
     mod = select_dh_modulus( hd->gex.n, &n );
-    rc = map_gcry_rc( gcry_mpi_scan( &gex.p, GCRYMPI_FMT_USG, mod, &n ) );
+    rc = gcry_mpi_scan( &gex.p, GCRYMPI_FMT_USG, mod, n, NULL );
     if( !rc )
         rc = build_gex_group( &gex, &hd->pkt );
     if( !rc )

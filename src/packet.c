@@ -146,7 +146,7 @@ _gsti_packet_free( GSTIHD hd )
 static size_t
 generate_mac( GSTIHD hd, u32 seqno )
 {
-    GCRY_MD_HD md;
+    gcry_md_hd_t md;
     byte buf[4];
     byte *p = hd->pkt.packet_buffer;
     size_t n = 5 + hd->pkt.payload_len + hd->pkt.padding_len;
@@ -154,7 +154,8 @@ generate_mac( GSTIHD hd, u32 seqno )
     if( !hd->send_mac )
 	return 0; /* no MAC requested */
 
-    md = gcry_md_copy( hd->send_mac );
+    if ( gcry_md_copy (&md, hd->send_mac ) )
+      return 0;
     buf[0] = seqno >> 24;
     buf[1] = seqno >> 16;
     buf[2] = seqno >>  8;
@@ -173,13 +174,15 @@ generate_mac( GSTIHD hd, u32 seqno )
 static int
 verify_mac( GSTIHD hd, u32 seqno )
 {
-    GCRY_MD_HD md;
+    gcry_md_hd_t md;
     byte buf[4];
     byte *p = hd->pkt.packet_buffer;
     size_t n = 5 + hd->pkt.payload_len + hd->pkt.padding_len;
     int rc;
 
-    md = gcry_md_copy( hd->recv_mac );
+    rc = gcry_md_copy(&md, hd->recv_mac );
+    if (rc)
+      return rc;
     buf[0] = seqno >> 24;
     buf[1] = seqno >> 16;
     buf[2] = seqno >>  8;

@@ -42,27 +42,27 @@ static struct {
     {0},
 };
 
-GCRY_MPI
-get_mpissh( GCRY_MPI dat )
+gcry_mpi_t
+get_mpissh( gcry_mpi_t dat )
 {
-    GCRY_MPI a = NULL;
+    gcry_mpi_t a = NULL;
     byte buf[512+4];
-    size_t n = sizeof buf -5;
+    size_t n;
     int rc;
     
-    rc = gcry_mpi_print( GCRYMPI_FMT_SSH, buf, &n, dat );
+    rc = gcry_mpi_print( GCRYMPI_FMT_SSH, buf, sizeof buf, &n, dat );
     if( !rc )
-        rc = gcry_mpi_scan( &a, GCRYMPI_FMT_SSH, buf, &n );
+        rc = gcry_mpi_scan( &a, GCRYMPI_FMT_SSH, buf, n, NULL);
     if( !rc )
         gcry_mpi_release( dat );
     return a;
 }
 
 static int
-sexp_get_sshmpi( GCRY_SEXP s_sig, int pktype, GCRY_MPI sig[2] )
+sexp_get_sshmpi( gcry_sexp_t s_sig, int pktype, gcry_mpi_t sig[2] )
 {
-    GCRY_SEXP list;
-    GCRY_MPI tmp;
+    gcry_sexp_t list;
+    gcry_mpi_t tmp;
     size_t n = 0;
     const char *s;
     char name[2];
@@ -86,13 +86,13 @@ sexp_get_sshmpi( GCRY_SEXP s_sig, int pktype, GCRY_MPI sig[2] )
 }
 
 static int
-sexp_from_buffer( GCRY_SEXP *r_a, const byte *buf, size_t buflen )
+sexp_from_buffer( gcry_sexp_t *r_a, const byte *buf, size_t buflen )
 {
-    GCRY_SEXP s_a;
-    GCRY_MPI a;
+    gcry_sexp_t s_a;
+    gcry_mpi_t a;
     int rc;
 
-    rc = gcry_mpi_scan( &a, GCRYMPI_FMT_USG, buf, &buflen );
+    rc = gcry_mpi_scan( &a, GCRYMPI_FMT_USG, buf, buflen, NULL );
     if( !rc )
         rc = gcry_sexp_build( &s_a, NULL, "%m", a );
     if( !rc )
@@ -102,7 +102,7 @@ sexp_from_buffer( GCRY_SEXP *r_a, const byte *buf, size_t buflen )
 }
 
 static void
-free_mpi_array( GCRY_MPI *a, size_t na )
+free_mpi_array( gcry_mpi_t *a, size_t na )
 {
     size_t i;
     
@@ -115,9 +115,9 @@ free_mpi_array( GCRY_MPI *a, size_t na )
 }
 
 int
-_gsti_dss_sign( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] )
+_gsti_dss_sign( GSTI_KEY ctx, const byte *hash, gcry_mpi_t sig[2] )
 {
-    GCRY_SEXP s_hash = NULL, s_key = NULL, s_sig = NULL;
+    gcry_sexp_t s_hash = NULL, s_key = NULL, s_sig = NULL;
     int dlen = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
     int rc;
 
@@ -150,9 +150,9 @@ _gsti_dss_sign( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] )
 
 
 int
-_gsti_dss_verify( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] )
+_gsti_dss_verify( GSTI_KEY ctx, const byte *hash, gcry_mpi_t sig[2] )
 {
-    GCRY_SEXP s_key, s_md, s_sig;
+    gcry_sexp_t s_key, s_md, s_sig;
     int dlen = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
     int rc;
 
@@ -215,15 +215,14 @@ read_bstring( FILE *fp, int ismpi, BSTRING *r_a )
     return 0;
 }
 
-static GCRY_MPI
+static gcry_mpi_t
 bstring_to_sshmpi( BSTRING bstr )
 {
-    GCRY_MPI a;
-    size_t n = bstr->len;
+    gcry_mpi_t a;
     
     if( bstr->len < 5 )
         return NULL;
-    if( gcry_mpi_scan( &a, GCRYMPI_FMT_SSH, bstr->d, &n ) )
+    if( gcry_mpi_scan( &a, GCRYMPI_FMT_SSH, bstr->d, bstr->len, NULL ) )
         return NULL;
     return a;
 }
@@ -462,7 +461,8 @@ _gsti_key_getblob( GSTI_KEY pk )
 byte*
 gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo )
 {
-    GCRY_MD_HD hd;
+    gpg_error_t err;
+    gcry_md_hd_t hd;
     byte buf[512], *hash, *name;
     size_t n = sizeof buf -1;
     int i, dlen;
@@ -471,13 +471,13 @@ gsti_key_fingerprint( GSTI_KEY ctx, int mdalgo )
     if( !name )
         return NULL;
     dlen = gcry_md_get_algo_dlen( mdalgo );
-    hd = gcry_md_open( mdalgo, 0 );
-    if( !hd )
+    err = gcry_md_open (&hd, mdalgo, 0 );
+    if( err )
         return NULL;
     gcry_md_write( hd, name, n );
     for( i = 0; i < pkalgo_get_nkey( ctx->type, NULL ); i++ ) {
-        n = sizeof buf -1;
-        if( !gcry_mpi_print( GCRYMPI_FMT_SSH, buf, &n, ctx->key[i] ) )
+        if( !gcry_mpi_print( GCRYMPI_FMT_SSH, buf, sizeof buf - 1, &n,
+                             ctx->key[i] ) )
             gcry_md_write( hd, buf, n );
     }
     gcry_md_final( hd );
@@ -506,7 +506,7 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
 {
     BUFFER buf;
     GSTI_KEY pk;
-    GCRY_MPI _sig[2];
+    gcry_mpi_t _sig[2];
     byte *p = NULL;
     size_t n;
     int rc;
@@ -527,12 +527,11 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
         rc = GSTI_BUG;
         goto leave;
     }
-    /* there is no separation for the both mpis so we say the first
+    /* There is no separation for the both mpis so we say the first
        has a maximum of 160 bits (20 bytes). */
-    n = 20;
-    rc = gcry_mpi_scan( &_sig[0], GCRYMPI_FMT_USG, p, &n );
+    rc = gcry_mpi_scan( &_sig[0], GCRYMPI_FMT_USG, p, 20, &n );
     if( !rc )
-        rc = gcry_mpi_scan( &_sig[1], GCRYMPI_FMT_USG, p + n, &n );
+        rc = gcry_mpi_scan( &_sig[1], GCRYMPI_FMT_USG, p + n, n, NULL );
     if( !rc )
         rc = _gsti_dss_verify( pk, hash, _sig );
     free_mpi_array( _sig, 2 );
@@ -549,7 +548,7 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
 BSTRING
 _gsti_sig_encode( GSTI_KEY sk, const byte *hash  )
 {
-    GCRY_MPI sig[2];
+    gcry_mpi_t sig[2];
     BUFFER buf;
     BSTRING a;
     byte *p, buffer[128];
@@ -568,9 +567,11 @@ _gsti_sig_encode( GSTI_KEY sk, const byte *hash  )
     _gsti_buf_putstr( buf, p, n );
     n = sizeof buffer -1;
     n2 = sizeof buffer -1;
-    rc = gcry_mpi_print( GCRYMPI_FMT_USG, buffer, &n, sig[0] );
+    rc = gcry_mpi_print( GCRYMPI_FMT_USG, buffer, sizeof buffer -1, &n,
+                         sig[0] );
     if( !rc )
-        rc = gcry_mpi_print( GCRYMPI_FMT_USG, buffer + n, &n2, sig[1] );
+        rc = gcry_mpi_print( GCRYMPI_FMT_USG, buffer + n, sizeof buffer - 1,
+                             &n2, sig[1] );
     if( !rc )
         _gsti_buf_putstr( buf, buffer, n + n2 );
     free_mpi_array( sig, 2 );

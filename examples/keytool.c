@@ -19,7 +19,9 @@
  */
 
 #include <stdio.h>
-#include <malloc.h>
+#include <string.h>
+#include <stdlib.h>
+#include <malloc.h>  /* ????? fixme */
 
 #include "gsti.h"
 

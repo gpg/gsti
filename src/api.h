@@ -61,7 +61,7 @@ struct gsti_context {
     u32 recv_seqno;
     struct {
         BSTRING h;	    /* current exchange hash */
-        GCRY_MPI k;	    /* the shared secret */
+        gcry_mpi_t k;	    /* the shared secret */
         BSTRING iv_a;	    /* IV client to server */
         BSTRING iv_b;	    /* IV server to client */
         BSTRING key_c;	    /* Enc client to server */
@@ -81,21 +81,21 @@ struct gsti_context {
     byte cookie[16];
     int sent_newkeys;
 
-    GCRY_MPI secret_x;  /* temporary use only */
-    GCRY_MPI kexdh_e;   /* ditto */
-    GCRY_MPI secret_y;  /* fixme: we could reuse secret_x kexdh_e */
-    GCRY_MPI kexdh_f;   /* ditto */
+    gcry_mpi_t secret_x;  /* temporary use only */
+    gcry_mpi_t kexdh_e;   /* ditto */
+    gcry_mpi_t secret_y;  /* fixme: we could reuse secret_x kexdh_e */
+    gcry_mpi_t kexdh_f;   /* ditto */
 
     int ciph_blksize;
     int ciph_algo;
     int ciph_mode;
-    GCRY_CIPHER_HD encrypt_hd;
-    GCRY_CIPHER_HD decrypt_hd;
+    gcry_cipher_hd_t encrypt_hd;
+    gcry_cipher_hd_t decrypt_hd;
 
     int mac_algo;
     int mac_len;
-    GCRY_MD_HD send_mac;
-    GCRY_MD_HD recv_mac;
+    gcry_md_hd_t send_mac;
+    gcry_md_hd_t recv_mac;
 
     byte *user_read_buffer;
     size_t user_read_bufsize;

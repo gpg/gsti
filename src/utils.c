@@ -179,10 +179,11 @@ _gsti_dump_object( const char *prefix, int type, void *opaque, size_t len )
     }
     case TYPE_MPI:
     {
-        GCRY_MPI a = opaque;
+        gcry_mpi_t a = opaque;
         byte buf[400];
-        size_t n = sizeof buf;
-        if( gcry_mpi_print( GCRYMPI_FMT_HEX, buf, &n, a ) )
+        size_t n;
+
+        if( gcry_mpi_print( GCRYMPI_FMT_HEX, buf, sizeof buf, &n, a ) )
             strcpy( buf,"[can't print value]" );
         _gsti_log_info( "%s%s\n", prefix, buf );
         break;
@@ -210,7 +211,7 @@ _gsti_dump_object( const char *prefix, int type, void *opaque, size_t len )
 }
 
 void
-_gsti_bstring_hash( GCRY_MD_HD md, BSTRING a )
+_gsti_bstring_hash( gcry_md_hd_t md, BSTRING a )
 {
     byte buf[4];
     size_t n = a->len;

@@ -152,13 +152,13 @@ _gsti_buf_getstr( BUFFER ctx, size_t *r_n )
 
 
 int
-_gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a )
+_gsti_buf_putmpi( BUFFER ctx, gcry_mpi_t a )
 {
     byte buf[512];
-    size_t buflen = sizeof buf -1;
+    size_t buflen;
     int rc;
 
-    rc = gcry_mpi_print( GCRYMPI_FMT_SSH, buf, &buflen, a );
+    rc = gcry_mpi_print( GCRYMPI_FMT_SSH, buf, sizeof buf -1, &buflen, a );
     if( rc )
         return map_gcry_rc( rc );
     _gsti_buf_putraw( ctx, buf, buflen );
@@ -168,7 +168,7 @@ _gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a )
 
 
 int
-_gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
+_gsti_buf_getmpi( BUFFER ctx, gcry_mpi_t *ret_a, size_t *r_n )
 {
     byte buf[512+4];
     size_t buflen;
@@ -184,7 +184,7 @@ _gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
     buflen += 4;
     *r_n = buflen;
     _gsti_buf_getraw( ctx, buf + 4, buflen - 4 );
-    rc = gcry_mpi_scan( ret_a, GCRYMPI_FMT_SSH, buf, &buflen );
+    rc = gcry_mpi_scan( ret_a, GCRYMPI_FMT_SSH, buf, buflen, NULL );
     if( rc )
         return map_gcry_rc( rc );
 

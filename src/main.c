@@ -78,16 +78,7 @@ parse_version_string( const char *s, int *major, int *minor, int *micro )
 int
 map_gcry_rc( int rc )
 {
-    switch( rc ) {
-    case GCRYERR_SUCCESS:       return GSTI_SUCCESS;
-    case GCRYERR_INV_ARG:       return GSTI_INV_ARG;
-    case GCRYERR_INTERNAL:      return GSTI_BUG;
-    case GCRYERR_TOO_SHORT:     return GSTI_TOO_SHORT;
-    case GCRYERR_TOO_LARGE:     return GSTI_TOO_LARGE;
-    case GCRYERR_INV_OBJ:       return GSTI_INV_OBJ;
-    case GCRYERR_BAD_SIGNATURE: return GSTI_BAD_SIGNATURE;
-    default:                    return GSTI_GENERAL;
-    }
+  return rc;
 }
 
 

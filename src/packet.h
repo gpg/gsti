@@ -126,19 +126,19 @@ typedef struct {
 
 
 typedef struct {
-    GCRY_MPI p;
-    GCRY_MPI g;
+    gcry_mpi_t p;
+    gcry_mpi_t g;
 } MSG_gexdh_group;
 
 
 typedef struct {
-    GCRY_MPI e;
+    gcry_mpi_t e;
 } MSG_kexdh_init;
 
 
 typedef struct {
     BSTRING k_s;    /* servers public host key */
-    GCRY_MPI f;
+    gcry_mpi_t f;
     BSTRING sig_h;  /* signature of the hash */
 } MSG_kexdh_reply;
 

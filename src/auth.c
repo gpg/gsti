@@ -238,12 +238,13 @@ auth_proc_init_packet( GSTIHD hd )
 static int
 calc_sig_hash( BSTRING sessid, MSG_auth_request *ath, BSTRING *r_digest )
 {
-    GCRY_MD_HD md;
-    int dlen = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
+  gpg_error_t err;
+  gcry_md_hd_t md;
+  int dlen = gcry_md_get_algo_dlen( GCRY_MD_SHA1 );
 
-    md = gcry_md_open( GCRY_MD_SHA1, 0 );
-    if( !md )
-        return map_gcry_rc( gcry_errno() );
+    err = gcry_md_open (&md, GCRY_MD_SHA1, 0 );
+    if( err )
+        return map_gcry_rc( err );
     _gsti_bstring_hash( md, sessid );
     gcry_md_putc( md, SSH_MSG_USERAUTH_REQUEST );
     _gsti_bstring_hash( md, ath->user );

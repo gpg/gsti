@@ -27,14 +27,14 @@ enum {
 };
 
 struct gsti_key_s {
-    GCRY_MPI key[5];
+    gcry_mpi_t key[5];
     unsigned nkey;
     int type;
     unsigned int secret:1;  
 };
 
-int _gsti_dss_sign( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] );
-int _gsti_dss_verify( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] );
+int _gsti_dss_sign( GSTI_KEY ctx, const byte *hash, gcry_mpi_t sig[2] );
+int _gsti_dss_verify( GSTI_KEY ctx, const byte *hash, gcry_mpi_t sig[2] );
 
 BSTRING _gsti_key_getblob( GSTI_KEY pk );
 GSTI_KEY _gsti_key_fromblob( BSTRING blob );
