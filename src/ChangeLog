@@ -1,3 +1,16 @@
+2004-07-10  Timo Schulz  <twoaday@g10code.de>
+
+	* pubkey.c (gsti_key_fingerprint): Use _gsti_xmalloc.
+	* packet.c (_gsti_packet_free): Release pktbuf.
+	* kex.c (free_msg_kexdh_reply): New.
+	(kex_proc_kexdh_reply): Cleanup in the case of an error.
+	(_gsti_kex_proc_gex_group): Likewise.
+	* auth.c (auth_send_init_packet): Merged with...
+	(auth_send_second_packet): ...this function.
+	(read_bstring): Return an error code.
+	(auth_proc_second_packet): Merged with...
+	(auth_proc_init_packet): ...this function.
+	
 2004-07-09  Marcus Brinkmann  <marcus@g10code.de>
 
 	* ssh.h (ssh_msg_id_t): Add SSH_MSG_KEX_DH_GEX_REQUEST_OLD.

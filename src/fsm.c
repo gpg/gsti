@@ -222,19 +222,19 @@ fsm_server_loop (gsti_ctx_t ctx)
       switch (ctx->state)
 	{
 	case FSM_wait_on_version:
-	  err = kex_wait_on_version (ctx);
+	  err = _gsti_kex_wait_on_version (ctx);
 	  if (!err)
 	    ctx->state = FSM_send_version;
 	  break;
 
 	case FSM_send_version:
-	  err = kex_send_version (ctx);
+	  err = _gsti_kex_send_version (ctx);
 	  if (!err)
 	    ctx->state = FSM_kex_start;
 	  break;
 
 	case FSM_kex_start:
-	  err = kex_send_init_packet (ctx);
+	  err = _gsti_kex_send_init_packet (ctx);
 	  if (!err)
 	    err = request_packet (ctx);
 	  if (!err)
@@ -242,7 +242,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_KEXINIT:
-		  err = kex_proc_init_packet (ctx);
+		  err = _gsti_kex_proc_init_packet (ctx);
 		  if (!err)
 		    ctx->state = FSM_kex_wait;
 		  break;
@@ -358,11 +358,11 @@ fsm_server_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_REQUEST:
-		  err = auth_proc_init_packet (ctx, ctx->auth);
+		  err = _gsti_auth_proc_init_packet (ctx, ctx->auth, 1);
 		  if (!err)
 		    ctx->state = FSM_auth_send_pkok;
                   else
-                    err = auth_send_failure_packet (ctx);
+                    err = _gsti_auth_send_failure_packet (ctx);
 		  break;
 
 		default:
@@ -374,7 +374,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_send_pkok:
-	  err = auth_send_pkok_packet (ctx, ctx->auth);
+	  err = _gsti_auth_send_pkok_packet (ctx, ctx->auth);
 	  if (!err)
 	    ctx->state = FSM_auth_wait_request;
 	  break;
@@ -386,7 +386,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_REQUEST:
-		  err = auth_proc_second_packet (ctx, ctx->auth);
+		  err = _gsti_auth_proc_init_packet (ctx, ctx->auth, 0);
 		  if (!err)
 		    ctx->state = FSM_auth_send_accept;
 		  break;
@@ -395,7 +395,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_send_accept:
-	  err = auth_send_accept_packet (ctx);
+	  err = _gsti_auth_send_accept_packet (ctx);
 	  if (!err)
 	    ctx->state = FSM_auth_done;
 	  break;
@@ -457,24 +457,24 @@ fsm_client_loop (gsti_ctx_t ctx)
       switch (ctx->state)
 	{
 	case FSM_send_version:
-	  err = kex_send_version (ctx);
+	  err = _gsti_kex_send_version (ctx);
 	  if (!err)
 	    ctx->state = FSM_wait_on_version;
 	  break;
 
 	case FSM_wait_on_version:
-	  err = kex_wait_on_version (ctx);
+	  err = _gsti_kex_wait_on_version (ctx);
 	  if (!err)
 	    ctx->state = FSM_kex_start;
 	  break;
 
 	case FSM_kex_start:
           if (!err)
-            err = kex_send_init_packet (ctx);
+            err = _gsti_kex_send_init_packet (ctx);
 	  if (!err)
 	    err = request_packet (ctx);
 	  if (!err)
-	    err = kex_proc_init_packet (ctx);
+	    err = _gsti_kex_proc_init_packet (ctx);
           if (!err && ctx->gex.used)
             {
               err = _gsti_kex_send_gex_request (ctx);
@@ -500,7 +500,7 @@ fsm_client_loop (gsti_ctx_t ctx)
                 }
             }
 	  if (!err)
-	    err = kex_send_kexdh_init (ctx);
+	    err = _gsti_kex_send_kexdh_init (ctx);
 	  if (!err)
 	    ctx->state = FSM_kex_wait;
 	  break;
@@ -590,7 +590,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_start:
-	  err = auth_send_init_packet (ctx, ctx->auth);
+	  err = _gsti_auth_send_init_packet (ctx, ctx->auth, 1);
 	  if (!err)
 	    ctx->state = FSM_auth_wait_pkok;
 	  break;
@@ -602,7 +602,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_PK_OK:
-		  err = auth_proc_pkok_packet (ctx, ctx->auth);
+		  err = _gsti_auth_proc_pkok_packet (ctx, ctx->auth);
 		  if (!err)
 		    ctx->state = FSM_auth_send_request;
 		  break;
@@ -616,7 +616,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_auth_send_request:
-	  err = auth_send_second_packet (ctx, ctx->auth);
+	  err = _gsti_auth_send_init_packet (ctx, ctx->auth, 0);
 	  if (!err)
 	    ctx->state = FSM_auth_wait_accept;
 	  break;
@@ -628,7 +628,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	      switch (ctx->pkt.type)
 		{
 		case SSH_MSG_USERAUTH_SUCCESS:
-		  err = auth_proc_accept_packet (ctx);
+		  err = _gsti_auth_proc_accept_packet (ctx);
 		  if (!err)
 		    ctx->state = FSM_auth_done;
 		  break;

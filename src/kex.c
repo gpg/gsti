@@ -198,7 +198,7 @@ _gsti_kex_check_alglist (int type, const unsigned short * buf, size_t n)
 
 
 gsti_error_t
-kex_send_version (gsti_ctx_t ctx)
+_gsti_kex_send_version (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   write_stream_t wst = ctx->write_stream;
@@ -220,7 +220,7 @@ kex_send_version (gsti_ctx_t ctx)
    reference.  If it does not find such a string it returns an
    error.  */
 gsti_error_t
-kex_wait_on_version (gsti_ctx_t ctx)
+_gsti_kex_wait_on_version (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   read_stream_t rst = ctx->read_stream;
@@ -663,6 +663,18 @@ dump_msg_kexdh_reply (gsti_ctx_t ctx, MSG_kexdh_reply * dhr)
 }
 
 
+static void
+free_msg_kexdh_reply (MSG_kexdh_reply * dhr)
+{
+  if (dhr)
+    {
+      gsti_bstr_free (dhr->k_s);
+      gcry_mpi_release (dhr->f);
+      gsti_bstr_free (dhr->sig_h);
+    }
+}
+
+
 /* Choose a random value x and calculate e = g^x mod p.  Returns e and
    if ret_x is not NULL x.  */
 static gcry_mpi_t
@@ -1010,7 +1022,7 @@ build_pkalgo_list (gsti_ctx_t ctx, gsti_strlist_t * lst)
 
 
 gsti_error_t
-kex_send_init_packet (gsti_ctx_t ctx)
+_gsti_kex_send_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
   MSG_kexinit * kex;
@@ -1130,7 +1142,7 @@ choose_kex_algo (gsti_ctx_t ctx, gsti_strlist_t peer)
 
 /* Process a received key init packet.  */
 gsti_error_t
-kex_proc_init_packet (gsti_ctx_t ctx)
+_gsti_kex_proc_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexinit kex;
@@ -1181,7 +1193,7 @@ kex_proc_init_packet (gsti_ctx_t ctx)
 
 /* Send a KEX init packet (we are in the client role).  */
 gsti_error_t
-kex_send_kexdh_init (gsti_ctx_t ctx)
+_gsti_kex_send_kexdh_init (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
   MSG_kexdh_init kexdh;
@@ -1277,7 +1289,7 @@ kex_proc_kexdh_reply (gsti_ctx_t ctx)
 
   err = parse_msg_kexdh_reply (&dhr, ctx->kex.p, ctx->pktbuf);
   if (err)
-    return err;
+    goto leave;
 
   dump_msg_kexdh_reply (ctx, &dhr);
 
@@ -1295,11 +1307,13 @@ kex_proc_kexdh_reply (gsti_ctx_t ctx)
   
   gcry_mpi_release (ctx->kexdh_e);
   if (err)
-    return err;
+    goto leave;
 
   err = _gsti_sig_decode (dhr.k_s, dhr.sig_h, gsti_bstr_data (ctx->kex.h),
 			  &ctx->hostkey);
 
+ leave:
+  free_msg_kexdh_reply (&dhr);
   return err;
 }
 
@@ -1923,7 +1937,10 @@ _gsti_kex_proc_gex_group (gsti_ctx_t ctx)
     return gsti_error (GPG_ERR_BUG);
   err = parse_gex_group (&gex, ctx->pktbuf);
   if (err)
-    return err;
+    {
+      free_gex_group (&gex);
+      return err;
+    }
 
   dump_gex_group (ctx, &gex);
   

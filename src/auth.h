@@ -1,4 +1,4 @@
-/* auth.h - SSH autentication
+/* auth.h - SSH authentication
    Copyright (C) 2004 g10 Code GmbH
  
    This file is part of GSTI.
@@ -28,18 +28,17 @@ struct gsti_auth_s
 };
 
 /*-- auth.c --*/
-gsti_error_t auth_send_accept_packet (gsti_ctx_t ctx);
-gsti_error_t auth_proc_accept_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_auth_send_accept_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_auth_proc_accept_packet (gsti_ctx_t ctx);
 
-gsti_error_t auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-gsti_error_t auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t _gsti_auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t _gsti_auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
-gsti_error_t auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-gsti_error_t auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t _gsti_auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth,
+                                          int trypk);
+gsti_error_t _gsti_auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth,
+                                          int trypk);
 
-gsti_error_t auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-gsti_error_t auth_proc_second_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-
-gsti_error_t auth_send_failure_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_auth_send_failure_packet (gsti_ctx_t ctx);
 
 #endif /*GSTI_AUTH_H*/

@@ -33,11 +33,13 @@
 #include "memory.h"
 #include "pubkey.h"
 
-struct valid_auth_method_s {
+struct valid_auth_method_s
+{
   const char * name;
   int id;
 }
-valid_auth_methods[] = {
+valid_auth_methods[] =
+{
   {SSH_AUTH_PUBLICKEY, GSTI_AUTH_PUBLICKEY},
   {NULL},
 };
@@ -59,7 +61,7 @@ check_auth_id (const char *buf)
 
 
 static gsti_error_t
-build_auth_request (MSG_auth_request * ath, struct packet_buffer_s *pkt)
+build_auth_request (MSG_auth_request * ath, packet_buffer_t pkt)
 {
   gsti_error_t err;
   gsti_buffer_t buf;
@@ -128,7 +130,6 @@ init_auth_request (MSG_auth_request * ath, const char *user, int false,
   if (!user || !pk)
     return gsti_error (GPG_ERR_INV_ARG);
 
-
   err = gsti_bstr_make (&ath->user, user, strlen (user));
   if (err)
     return err;
@@ -192,7 +193,7 @@ dump_auth_request (gsti_ctx_t ctx, MSG_auth_request * ath)
 
 
 gsti_error_t
-auth_send_failure_packet (gsti_ctx_t ctx)
+_gsti_auth_send_failure_packet (gsti_ctx_t ctx)
 {
   packet_buffer_t pkt = &ctx->pkt;
   gsti_error_t err;
@@ -213,7 +214,7 @@ auth_send_failure_packet (gsti_ctx_t ctx)
   
   
 gsti_error_t
-auth_send_accept_packet (gsti_ctx_t ctx)
+_gsti_auth_send_accept_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   packet_buffer_t pkt = &ctx->pkt;
@@ -228,7 +229,7 @@ auth_send_accept_packet (gsti_ctx_t ctx)
 
 
 gsti_error_t
-auth_proc_accept_packet (gsti_ctx_t ctx)
+_gsti_auth_proc_accept_packet (gsti_ctx_t ctx)
 {
   packet_buffer_t pkt = &ctx->pkt;
 
@@ -242,44 +243,21 @@ auth_proc_accept_packet (gsti_ctx_t ctx)
 }
 
 
-gsti_error_t
-auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth)
-{
-  gsti_error_t err;
-  MSG_auth_request ath;
-
-  memset (&ath, 0, sizeof ath);
-  err = init_auth_request (&ath, auth->user, 0, auth->key);
-  if (!err)
-    err = build_auth_request (&ath, &ctx->pkt);
-  if (!err)
-    err = _gsti_packet_write (ctx);
-  if (!err)
-    err = _gsti_packet_flush (ctx);
-
-  free_auth_request (&ath);
-  return err;
-}
-
-
-static gsti_bstr_t
-read_bstring (gsti_buffer_t buf)
+static gsti_error_t
+read_bstring (gsti_buffer_t buf, gsti_bstr_t * r_dst)
 {
   gsti_error_t err;
   char *p;
   size_t n;
-  gsti_bstr_t dst;
 
   err = gsti_buf_getstr (buf, &p, &n);
   if (err)
-    return NULL;
+    return err;
 
-  err = gsti_bstr_make (&dst, p, n);
+  err = gsti_bstr_make (r_dst, p, n);
   _gsti_free (p);
-  if (err)
-    return NULL;
 
-  return dst;
+  return err;
 }
 
 
@@ -299,47 +277,27 @@ parse_auth_request (MSG_auth_request * ath, const gsti_buffer_t buf)
   if (val != SSH_MSG_USERAUTH_REQUEST)
     return gsti_error (GPG_ERR_BUG);
 
-  ath->user = read_bstring (buf);
-  ath->svcname = read_bstring (buf);
-  ath->method = read_bstring (buf);
-  err = gsti_buf_getbool (buf, &val);
+  err = read_bstring (buf, &ath->user);
+  if (!err)
+    err = read_bstring (buf, &ath->svcname);
+  if (!err)
+    err = read_bstring (buf, &ath->method);
+  if (!err)
+    err = gsti_buf_getbool (buf, &val);
   if (err)
       return err;
   ath->false = val;
-  ath->pkalgo = read_bstring (buf);
-  ath->key = read_bstring (buf);
+
+  err = read_bstring (buf, &ath->pkalgo);
+  if (!err)
+    err = read_bstring (buf, &ath->key);
+  if (err)
+    return err;
   if (gsti_buf_readable (buf))
-    ath->sig = read_bstring (buf);
+    err = read_bstring (buf, &ath->sig);
   if (gsti_buf_readable (buf))
     err = gsti_error (GPG_ERR_INV_PACKET);
 
-  return err;
-}
-
-
-gsti_error_t
-auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth)
-{
-  gsti_error_t err;
-  MSG_auth_request ath;
-
-  if (ctx->pkt.type != SSH_MSG_USERAUTH_REQUEST)
-    return gsti_error (GPG_ERR_BUG);
-
-  err = parse_auth_request (&ath, ctx->pktbuf);
-  if (err)
-    return err;
-  
-  if (check_auth_id (gsti_bstr_data (ath.method)) == -1)
-    {
-      free_auth_request (&ath);
-      return gsti_error (GPG_ERR_NOT_IMPLEMENTED);
-    }
-  auth->user = _gsti_xstrdup (gsti_bstr_data (ath.user));
-  err = _gsti_key_fromblob (ath.key, &auth->key);
-
-  dump_auth_request (ctx, &ath);
-  free_auth_request (&ath);
   return err;
 }
 
@@ -368,6 +326,44 @@ calc_sig_hash (gsti_bstr_t sessid, MSG_auth_request *ath,
   err = gsti_bstr_make (r_digest, gcry_md_read (md, 0), dlen);
   gcry_md_close (md);
 
+  return err;
+}
+
+
+gsti_error_t
+_gsti_auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth, int trypk)
+{
+  gsti_error_t err;
+  gsti_bstr_t hash = NULL;
+  MSG_auth_request ath;
+
+  if (ctx->pkt.type != SSH_MSG_USERAUTH_REQUEST)
+    return gsti_error (GPG_ERR_BUG);
+
+  err = parse_auth_request (&ath, ctx->pktbuf);
+  if (err)
+    return err;
+  
+  if (check_auth_id (gsti_bstr_data (ath.method)) == -1)
+    {
+      free_auth_request (&ath);
+      return gsti_error (GPG_ERR_NOT_IMPLEMENTED);
+    }
+  if (trypk == 1)
+    {
+      auth->user = _gsti_xstrdup (gsti_bstr_data (ath.user));
+      err = _gsti_key_fromblob (ath.key, &auth->key);
+    }
+  else
+    {
+      err = calc_sig_hash (ctx->session_id, &ath, &hash);
+      if (!err)
+        err = _gsti_sig_decode (ath.key, ath.sig, gsti_bstr_data (hash), NULL);
+    }
+
+  dump_auth_request (ctx, &ath);
+  gsti_bstr_free (hash);
+  free_auth_request (&ath);
   return err;
 }
 
@@ -413,7 +409,7 @@ build_pkok_packet (MSG_auth_pkok * ok, packet_buffer_t pkt)
 
 
 gsti_error_t
-auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
+_gsti_auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 {
   gsti_error_t err;
   gsti_key_t pk;
@@ -487,7 +483,7 @@ parse_pkok_packet (MSG_auth_pkok * ok, const gsti_buffer_t buf)
 
 
 gsti_error_t
-auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
+_gsti_auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 {
   MSG_auth_pkok ok;
   gsti_error_t err;
@@ -518,18 +514,21 @@ auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 
 
 gsti_error_t
-auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
+_gsti_auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth, int trypk)
 {
   gsti_error_t err;
+  gsti_bstr_t hash = NULL;
   MSG_auth_request ath;
-  gsti_bstr_t hash;
 
   memset (&ath, 0, sizeof ath);
-  err = init_auth_request (&ath, auth->user, 1, auth->key);
-  if (!err)
-    err = calc_sig_hash (ctx->session_id, &ath, &hash);
-  if (!err)
-    err = _gsti_sig_encode (auth->key, gsti_bstr_data (hash), &ath.sig);
+  err = init_auth_request (&ath, auth->user, trypk, auth->key);
+  if (trypk == 0)
+    {
+      if (!err)
+        err = calc_sig_hash (ctx->session_id, &ath, &hash);
+      if (!err)
+        err = _gsti_sig_encode (auth->key, gsti_bstr_data (hash), &ath.sig);
+    }
   if (!err)
     err = build_auth_request (&ath, &ctx->pkt);
   if (!err)
@@ -539,26 +538,6 @@ auth_send_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 
   free_auth_request (&ath);
   gsti_bstr_free (hash);
-
-  return err;
-}
-
-
-gsti_error_t
-auth_proc_second_packet (gsti_ctx_t ctx, gsti_auth_t auth)
-{
-  MSG_auth_request ath;
-  gsti_error_t err;
-  gsti_bstr_t hash;
-
-  err = parse_auth_request (&ath, ctx->pktbuf);
-  if (!err)
-    err = calc_sig_hash (ctx->session_id, &ath, &hash);
-  if (!err)
-    err = _gsti_sig_decode (ath.key, ath.sig, gsti_bstr_data (hash), NULL);
-
-  gsti_bstr_free (hash);
-  free_auth_request (&ath);
 
   return err;
 }
@@ -581,9 +560,10 @@ gsti_auth_new (gsti_auth_t * r_ath)
 void
 gsti_auth_free (gsti_auth_t ath)
 {
-  if (ath == NULL)
-    return;
-  _gsti_free (ath->user);
-  gsti_key_free (ath->key);
+  if (!ath)
+    {
+      _gsti_free (ath->user);
+      gsti_key_free (ath->key);
+    }
 }
 

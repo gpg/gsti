@@ -26,13 +26,13 @@ gsti_error_t _gsti_kex_check_alglist (int type, const
                                       unsigned short * buf, size_t n);
 
 /* fixme: Internal function - prefix with _gsti. */
-gsti_error_t kex_send_version (gsti_ctx_t ctx);
-gsti_error_t kex_wait_on_version (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_send_version (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_wait_on_version (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_init_packet (gsti_ctx_t ctx);
-gsti_error_t kex_proc_init_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_send_init_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_proc_init_packet (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_kexdh_init (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_send_kexdh_init (gsti_ctx_t ctx);
 gsti_error_t kex_proc_kexdh_init (gsti_ctx_t ctx);
 
 gsti_error_t kex_send_kexdh_reply (gsti_ctx_t ctx);

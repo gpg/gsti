@@ -174,6 +174,11 @@ _gsti_packet_free (gsti_ctx_t ctx)
       _gsti_free (ctx->pkt.packet_buffer);
       ctx->pkt.payload = NULL;
     }
+  if (ctx && ctx->pktbuf)
+    {
+      gsti_buf_free (ctx->pktbuf);
+      ctx->pktbuf = NULL;
+    }
 }
 
 /****************

@@ -846,7 +846,7 @@ gsti_key_fingerprint (gsti_key_t ctx, int mdalgo, byte ** r_fprbuf)
 	gcry_md_write (hd, buf, n);
     }
   gcry_md_final (hd);
-  hash = gcry_xmalloc (dlen + 1);
+  hash = _gsti_xmalloc (dlen + 1);
   hash[dlen] = 0;
   memcpy (hash, gcry_md_read (hd, 0), dlen);
   gcry_md_close (hd);
