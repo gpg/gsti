@@ -175,7 +175,7 @@ main (int argc, char **argv)
   int rc, i;
   struct sock_ctx_s fd;
   gsti_ctx_t ctx;
-  GSTI_PKTDESC pkt;
+  struct gsti_pktdesc_s pkt;
 
   if (argc)
     {
