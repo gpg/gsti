@@ -175,7 +175,8 @@ enum gsti_digest_algos
 
 enum gsti_pk_algos
 {
-  GSTI_PK_DSS = 1
+  GSTI_PK_DSS = 1,
+  GSTI_PK_RSA = 2,  
 };
 
 enum gsti_auth_methods

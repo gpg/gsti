@@ -1,5 +1,13 @@
 2004-05-28  Timo Schulz  <twoaday@freakmail.de>
 
+	* pubkey.c (gsti_key_load): Open file in binary mode.
+
+	Untested RSA support.
+
+	* pubkey.h: Removed unused prototypes.
+	
+2004-05-28  Timo Schulz  <twoaday@freakmail.de>
+
 	* pubkey.c: Change GSTI_KEY to gsti_key_t and some
 	cleanups.
 	

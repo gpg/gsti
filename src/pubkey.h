@@ -25,20 +25,16 @@ enum
 {
   SSH_PK_NONE = 0,
   SSH_PK_DSS = 1,
+  SSH_PK_RSA = 2,
 };
 
 struct gsti_key_s
 {
-  gcry_mpi_t key[5];
+  gcry_mpi_t key[6];
   unsigned nkey;
   int type;
   unsigned int secret:1;
 };
-
-gsti_error_t _gsti_dss_sign (GSTI_KEY ctx, const byte * hash,
-			     gcry_mpi_t sig[2]);
-gsti_error_t _gsti_dss_verify (GSTI_KEY ctx, const byte * hash,
-			       gcry_mpi_t sig[2]);
 
 BSTRING _gsti_key_getblob (GSTI_KEY pk);
 GSTI_KEY _gsti_key_fromblob (BSTRING blob);
