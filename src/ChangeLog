@@ -1,3 +1,8 @@
+2004-07-05  Timo Schulz  <twoaday@freakmail.de>
+
+	* packet.c (_gsti_packet_write): Use gcry_create_nonce to
+	make random generation faster.
+	
 2004-07-02  Werner Koch  <wk@gnupg.org>
 
 	* main.c (gsti_get_hostkey): New.

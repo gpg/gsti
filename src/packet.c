@@ -402,7 +402,7 @@ _gsti_packet_write (gsti_ctx_t ctx)
   ctx->pkt.packet_buffer[4] = ctx->pkt.padding_len;
   paylen = ctx->pkt.payload_len;
   padlen = ctx->pkt.padding_len;
-  gcry_randomize (ctx->pkt.payload + paylen, padlen, GCRY_WEAK_RANDOM);
+  gcry_create_nonce (ctx->pkt.payload + paylen, padlen);
 
   maclen = generate_mac (ctx, seqno);
 
