@@ -2,10 +2,15 @@
 
 noinst_PROGRAMS = server client keytool
 
+INCLUDES = -I$(top_srcdir)/src $(LIBGCRYPT_CFLAGS)
+
 client_SOURCES = client.c
 server_SOURCES = server.c
 keytool_SOURCES = keytool.c
 
-INCLUDES = -I$(top_srcdir)/src $(LIB_GCRYPT_CFLAGS)
-LDADD = ../src/libgsti.la $(LIB_GCRYPT_LIBS)
+client_LDADD = ../src/libgsti.la $(LIBGCRYPT_LIBS)
+server_LDADD = ../src/libgsti.la $(LIBGCRYPT_LIBS)
+keytool_LDADD = ../src/libgsti.la $(LIBGCRYPT_LIBS)
+
+
 

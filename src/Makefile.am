@@ -26,6 +26,7 @@ bin_SCRIPTS = gsti-config
 m4datadir = $(datadir)/aclocal
 m4data_DATA = gsti.m4
 
+INCLUDES = -I$(top_srcdir)/lib $(LIBGCRYPT_CFLAGS)
 include_HEADERS = gsti.h
 
 lib_LTLIBRARIES = libgsti.la
@@ -43,7 +44,6 @@ libgsti_la_SOURCES = \
 	stream.h stream.c \
 	packet.h packet.c \
 	kex.h kex.c \
-	buffer.c buffer.h		
+	buffer.c buffer.h
 
-INCLUDES = -I$(top_srcdir)/lib $(LIB_GCRYPT_CFLAGS)
-LDADD = $(LIB_GCRYPT_LIBS)
+LDADD = $(LIBGCRYPT_LIBS)
