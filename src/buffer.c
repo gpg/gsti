@@ -191,9 +191,6 @@ gsti_buf_putstr (gsti_buffer_t buf, const char *data, size_t amount)
 gpg_error_t
 gsti_buf_putbstr (gsti_buffer_t buf, gsti_bstr_t bstr)
 {
-  if (!bstr)
-    return 0;
-
   return gsti_buf_putstr (buf, gsti_bstr_data (bstr), gsti_bstr_length (bstr));
 }
 

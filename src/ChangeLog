@@ -1,5 +1,7 @@
 2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
 
+	* buffer.c (gsti_buf_putbstr): Remove check for BSTR.
+
 	* stream.c (_gsti_stream_readn): Return EOF if EOF is encountered
 	without any other error.
 
