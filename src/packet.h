@@ -26,6 +26,7 @@
 
 #include "ssh.h"
 #include "types.h"
+#include "buffer.h"
 
 #define MAX_PKTLEN 40000	/* sanity limit */
 #define PKTBUFSIZE 50000	/* somewhat large size of a packet buffer */
@@ -138,9 +139,12 @@ typedef struct
 
 void _gsti_packet_init (gsti_ctx_t ctx);
 void _gsti_packet_free (gsti_ctx_t ctx);
-gsti_error_t _gsti_packet_read (gsti_ctx_t ctx);
-gsti_error_t _gsti_packet_write (gsti_ctx_t ctx);
+gsti_error_t _gsti_handle_packet_data (gsti_ctx_t ctx, char *data,
+				       size_t data_len, size_t *amount);
+struct packet_buffer_s;
+gsti_error_t _gsti_packet_write (gsti_ctx_t ctx, struct packet_buffer_s *pkt);
+gsti_error_t _gsti_write_packet_from_buffer (gsti_ctx_t ctx,
+					     gsti_buffer_t buf);
 gsti_error_t _gsti_packet_flush (gsti_ctx_t ctx);
 
 #endif	/* GSTI_PACKET_H */
-

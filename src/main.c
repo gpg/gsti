@@ -137,11 +137,15 @@ gsti_error_t
 gsti_init (gsti_ctx_t * r_ctx)
 {
   gsti_ctx_t ctx;
+  gsti_error_t err;
 
   ctx = _gsti_xcalloc (1, sizeof *ctx);
   _gsti_packet_init (ctx);
   _gsti_kex_set_defaults (ctx);
-  gsti_auth_new (&ctx->auth);
+
+  err = gsti_auth_new (&ctx->auth);
+  /* FIXME: Handle error.  */
+
   *r_ctx = ctx;
   return 0;
 }
@@ -185,19 +189,8 @@ gsti_deinit (gsti_ctx_t ctx)
   gsti_key_free (ctx->hostkey);
   _gsti_packet_free (ctx);
   _gsti_free (ctx);
-}
-
-
-gsti_error_t
-gsti_set_readfnc (gsti_ctx_t ctx, gsti_read_fnc_t readfnc, void * opaque)
-{
-  if (!ctx)
-    return gsti_error (GPG_ERR_INV_ARG);
-
-  ctx->readfnc = readfnc;
-  ctx->readctx = opaque;
-
-  return 0;
+  if (ctx->state_data)
+    free (ctx->state_data);
 }
 
 
@@ -240,59 +233,6 @@ gsti_set_service (gsti_ctx_t ctx, const char *svcname)
 }
 
 
-/* Read data from the GSTI stream.  This automagically initializes the
-   the system and decides whether we are client or server.  We are the
-   server side when this function is called before the first
-   gsti_write and vice versa.  Everything to setup the secure
-   transport is handled here.
-
-   LENGTH must point to a variable having the size of the provided
-   buffer and will receive the actuall number of bytes read, which may
-   be less than the buffer. EOF is indicated by returning a zero
-   length.  */
-gsti_error_t
-gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length)
-{
-  gsti_error_t err;
-
-  if (!ctx)
-    return gsti_error (GPG_ERR_INV_ARG);
-
-  ctx->user_read_buffer = buffer;
-  ctx->user_read_bufsize = *length;
-  ctx->user_read_nbytes = 0;
-
-  err = fsm_user_read (ctx);
-  if (err)
-    return err;
-
-  *length = ctx->user_read_nbytes;
-  return 0;
-}
-
-
-/* The counterpart to gsti_read.  */
-gsti_error_t
-gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length)
-{
-  if (!ctx)
-    return gsti_error (GPG_ERR_INV_ARG);
-
-  if (ctx->local_services)
-    {
-      const byte *p = buffer;
-      /* Check that the buffer contains valid packet types.  */
-      if (!length || *p < 192)
-	return gsti_error (GPG_ERR_INV_ARG);
-    }
-
-  ctx->user_write_buffer = buffer;
-  ctx->user_write_bufsize = length;
-
-  return fsm_user_write (ctx);
-}
-
-
 gsti_error_t
 gsti_set_hostkey (gsti_ctx_t ctx, const char *file)
 {
@@ -303,6 +243,7 @@ gsti_set_hostkey (gsti_ctx_t ctx, const char *file)
   if (stat (file, &statbuf))
     return gsti_error_from_errno (errno);
 
+  ctx->we_are_server = 1;
   return gsti_key_load (file, 1, &ctx->hostkey);
 }
 

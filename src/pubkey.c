@@ -45,7 +45,7 @@ static struct
   size_t nsig;
   const char *sec_elements;
   size_t nskey;
-  int algid;
+  gsti_key_type_t algid;
 } pk_table[] =
 {
   {"none",    "dummy", 0, "dummy", 0, "dummy", 0, SSH_PK_NONE},
@@ -73,7 +73,7 @@ get_mpissh (gcry_mpi_t dat)
 
 
 static gsti_error_t
-sexp_get_sshmpi (gcry_sexp_t s_sig, int pktype, gcry_mpi_t sig[2])
+sexp_get_sshmpi (gcry_sexp_t s_sig, gsti_key_type_t pktype, gcry_mpi_t sig[2])
 {
   gcry_sexp_t list;
   gcry_mpi_t tmp;
@@ -345,8 +345,9 @@ _gsti_key_verify (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
       return _gsti_dss_verify (ctx, hash, sig);
     case SSH_PK_RSA:
       return _gsti_rsa_verify (ctx, hash, sig);
+    default:
+      return gsti_error (GPG_ERR_BUG);
     }
-  return gsti_error (GPG_ERR_BUG);
 }
     
 
@@ -362,9 +363,9 @@ _gsti_key_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
       return _gsti_dss_sign (ctx, hash, sig);
     case SSH_PK_RSA:
       return _gsti_rsa_sign (ctx, hash, sig);
+    default:
+      return gsti_error (GPG_ERR_BUG);
     }
-
-  return gsti_error (GPG_ERR_BUG);
 }
 
 
@@ -509,7 +510,8 @@ read_dss_key (FILE * fp, int keytype, gsti_key_t ctx)
 
 /* Create a new key object and fill read in the object. */
 static gsti_error_t
-parse_key_entry (FILE * fp, int pktype, int keytype, gsti_key_t * r_ctx)
+parse_key_entry (FILE * fp, gsti_key_type_t pktype, int keytype,
+		 gsti_key_t * r_ctx)
 {
   gsti_error_t err;
   gsti_key_t ctx;
@@ -537,7 +539,7 @@ parse_key_entry (FILE * fp, int pktype, int keytype, gsti_key_t * r_ctx)
 
 /* Start reading from FP and expect the name of the public key
    algorithm. Return its type. */
-static int
+static gsti_key_type_t
 pktype_from_file (FILE * fp)
 {
   gsti_error_t err;
@@ -562,7 +564,7 @@ gsti_key_load (const char *file, int keytype, gsti_key_t *r_ctx)
 {
   gsti_error_t err;
   FILE *inp;
-  int pktype;
+  gsti_key_type_t pktype;
 
   inp = fopen (file, "rb");
   if (!inp)
@@ -615,7 +617,7 @@ gsti_key_save (const char * file, int secpart, gsti_key_t ctx)
 
 
 gsti_error_t
-_gsti_ssh_cmp_pkname (int pktype, const char *name, size_t len)
+_gsti_ssh_cmp_pkname (gsti_key_type_t pktype, const char *name, size_t len)
 {
   const char *s;
 
@@ -649,7 +651,8 @@ _gsti_ssh_cmp_keys (gsti_key_t a, gsti_key_t b)
 
 
 gsti_error_t
-_gsti_ssh_get_pkname (int pktype, int asbstr, byte ** r_namebuf, size_t * r_n)
+_gsti_ssh_get_pkname (gsti_key_type_t pktype, int asbstr, byte ** r_namebuf,
+		      size_t * r_n)
 {
   const char *s;
   size_t len, n = 0;

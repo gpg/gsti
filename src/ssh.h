@@ -34,6 +34,7 @@
 /* Protocol versions.  */
 #define SSH_IDENT_PREFIX	"SSH-"
 #define SSH_IDENT_PREFIX_LEN	(sizeof (SSH_IDENT_PREFIX) - 1)
+#define SSH_IDENT_MAX_LEN	255
 #define SSH_VERSION_COMPAT	"1.99"
 #define SSH_VERSION_2		"2.0"
 
@@ -166,6 +167,9 @@ typedef enum
     SSH_MSG_USERAUTH_PASSWORD_CHANGEREQ = 60,
 
     /* Connection 9 Summary of Message Numbers.  */
+    SSH_MSG_CHANNEL_BEGIN = 80,
+    SSH_MSG_CHANNEL_END = 127,
+
     SSH_MSG_GLOBAL_REQUEST = 80,
     SSH_MSG_REQUEST_SUCCESS = 81,
     SSH_MSG_REQUEST_FAILURE = 82,
@@ -179,7 +183,15 @@ typedef enum
     SSH_MSG_CHANNEL_CLOSE = 97,
     SSH_MSG_CHANNEL_REQUEST = 98,
     SSH_MSG_CHANNEL_SUCCESS = 99,
-    SSH_MSG_CHANNEL_FAILURE = 100
+    SSH_MSG_CHANNEL_FAILURE = 100,
+
+    /* The beginning and end of the reserved block.  */
+    SSH_MSG_RESERVED_BEGIN = 128,
+    SSH_MSG_RESERVED_END = 191,
+
+    /* The beginning and end of the user defined block.  */
+    SSH_MSG_USER_BEGIN = 192,
+    SSH_MSG_USER_END = 255
   }
 ssh_msg_id_t;
 

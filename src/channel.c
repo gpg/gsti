@@ -312,7 +312,6 @@ ssh_msg_channel_open_confirmation (gsti_ctx_t ctx,
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -336,23 +335,8 @@ ssh_msg_channel_open_confirmation (gsti_ctx_t ctx,
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_OPEN_CONFIRMATION;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -431,7 +415,6 @@ ssh_msg_channel_open_failure (gsti_ctx_t ctx,
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -453,23 +436,8 @@ ssh_msg_channel_open_failure (gsti_ctx_t ctx,
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_OPEN_FAILURE;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -529,7 +497,6 @@ ssh_msg_channel_open (gsti_ctx_t ctx, const char *channel_type,
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -551,23 +518,8 @@ ssh_msg_channel_open (gsti_ctx_t ctx, const char *channel_type,
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_OPEN;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -636,7 +588,7 @@ ssh_msg_channel_open_S (gsti_ctx_t ctx)
   /* FIXME: Good default?  */
   channel->window_size = 32768;
   /* FIXME: Good default?  */
-  channel->max_packet_size = 65536;
+  channel->max_packet_size = 50000;
 
   channel->recipient_channel = chan_open.sender_channel;
   channel->rec_window_size = chan_open.initial_window_size;
@@ -695,7 +647,6 @@ ssh_msg_channel_window_adjust (gsti_ctx_t ctx,
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -713,23 +664,8 @@ ssh_msg_channel_window_adjust (gsti_ctx_t ctx,
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_WINDOW_ADJUST;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -782,7 +718,6 @@ ssh_msg_channel_data (gsti_ctx_t ctx, gsti_uint32_t recipient_channel,
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -800,23 +735,8 @@ ssh_msg_channel_data (gsti_ctx_t ctx, gsti_uint32_t recipient_channel,
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_DATA;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -875,7 +795,6 @@ ssh_msg_channel_eof (gsti_ctx_t ctx, gsti_uint32_t recipient_channel)
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -891,23 +810,8 @@ ssh_msg_channel_eof (gsti_ctx_t ctx, gsti_uint32_t recipient_channel)
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_EOF;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -956,7 +860,6 @@ ssh_msg_channel_close (gsti_ctx_t ctx, gsti_uint32_t recipient_channel)
 {
   gsti_error_t err;
   gsti_buffer_t buf;
-  size_t buflen;
 
   /* Build message.  */
   err = gsti_buf_alloc (&buf);
@@ -972,23 +875,8 @@ ssh_msg_channel_close (gsti_ctx_t ctx, gsti_uint32_t recipient_channel)
       return err;
     }
 
-  /* Protect against buffer overflow.  */
-  buflen = gsti_buf_readable (buf);
-  if (buflen > ctx->pkt.size)
-    {
-      gsti_buf_free (buf);
-      return gsti_error (GPG_ERR_TOO_LARGE);
-    }
-
-  /* Set up the packet.  */
-  ctx->pkt.type = SSH_MSG_CHANNEL_CLOSE;
-  ctx->pkt.payload_len = buflen;
-  err = gsti_buf_getraw (buf, ctx->pkt.payload, buflen);
-  assert (!err);
+  err = _gsti_write_packet_from_buffer (ctx, buf);
   gsti_buf_free (buf);
-
-  /* Send the packet.  */
-  err = _gsti_packet_write (ctx);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -1144,7 +1032,7 @@ gsti_channel_open (gsti_ctx_t ctx, gsti_uint32_t *channel_id,
    CHANNEL_ID in the context CTX.  */
 gsti_error_t
 gsti_channel_write (gsti_ctx_t ctx, gsti_uint32_t channel_id,
-		    char *data, size_t amount)
+		    const char *data, size_t amount)
 {
   gsti_error_t err;
   gsti_channel_t channel = channel_lookup (ctx, channel_id);

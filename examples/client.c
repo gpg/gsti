@@ -86,24 +86,36 @@ make_connection (int *r_conn_fd, const char *host)
 
 
 static gsti_error_t
-myread (void * ctx, void *buffer, size_t to_read, size_t * nbytes)
+reader_loop (struct sock_ctx_s *ctx, gsti_ctx_t gsti_ctx, int *ready)
 {
-  struct sock_ctx_s * c = ctx;
-  int n;
+  gsti_error_t err = 0;
+  char buffer[512];
+  int res;
 
   do
     {
-      n = read (c->conn_fd, buffer, to_read);
+      do
+	{
+	  res = read (ctx->conn_fd, buffer, sizeof(buffer));
+	}
+      while (res == -1 && errno == EINTR);
+      
+      if (res == -1)
+	{
+	  fprintf (stderr, PGMNAME "reader_loop: error: %s\n",
+		   strerror (errno));
+	  err = gsti_error_from_errno (errno);
+	}
+      else
+	{
+	  /* dump_hexbuf (stderr, "reader_loop: ", buffer, res); */
+
+	  err = gsti_push_data (gsti_ctx, buffer, res);
+	}
     }
-  while (n == -1 && errno == EINTR);
-  if (n == -1)
-    {
-      fprintf (stderr, PGMNAME "myread: error: %s\n", strerror (errno));
-      return gsti_error_from_errno (errno);
-    }
-  /*dump_hexbuf( stderr, "myread: ", buffer, n ); */
-  *nbytes = n;
-  return 0;
+  while (!err && res && !*ready);
+
+  return err;
 }
 
 
@@ -135,6 +147,24 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
 }
 
 
+gsti_error_t
+mypkt_handler (gsti_ctx_t ctx, void *arg, gsti_pktdesc_t pkt)
+{
+  /* dump_hexbuf (stderr, "got packet: ", pkt->data, pkt->datalen); */
+
+  return 0;
+}
+
+
+void
+myctrl_handler (gsti_ctx_t ctx, void *arg, unsigned int mask,
+		unsigned int flags)
+{
+  int *ready = (int *) arg;
+
+  *ready = !((mask & flags) & GSTI_CONTROL_FLAG_KEX);
+}
+
 static gsti_error_t
 my_auth_cb (void * hd, int code, const void * buf, size_t len)
 {
@@ -157,6 +187,7 @@ main (int argc, char **argv)
   struct gsti_pktdesc_s pkt;
   unsigned short c_prefs[8] = {0}, h_prefs[3] = {0};
   int i;
+  int ready = 0;
 
   if (argc)
     {
@@ -198,8 +229,9 @@ main (int argc, char **argv)
   log_rc (err, "set_kex_prefs (hmac)");
 
   /* Register our read/write functions. */
-  gsti_set_readfnc (ctx, myread, &fd);
+  gsti_set_packet_handler_cb (ctx, mypkt_handler, 0);
   gsti_set_writefnc (ctx, mywrite, &fd);
+  gsti_set_control_cb (ctx, myctrl_handler, &ready);
 
   /* Register our auth callback */
   gsti_set_auth_callback (ctx, my_auth_cb, NULL);
@@ -220,7 +252,15 @@ main (int argc, char **argv)
      localhost if no args are given. */
   make_connection (&fd.conn_fd, argc ? *argv : "localhost");
 
-  /* Start the processing by sending 2 simple data packets. */
+  /* Fire up the engine.  */
+  err = gsti_start (ctx);
+  log_rc (err, "start");
+
+  /* Process incoming data until we are ready.  */
+  err = reader_loop (&fd, ctx, &ready);
+  log_rc (err, "reader_loop");
+
+  /* Send 2 simple data packets. */
   for (i = 0; i < 2; i++)
     {
       memset (&pkt, 0, sizeof pkt);

@@ -1,3 +1,58 @@
+2004-07-20  Marcus Brinkmann  <marcus@g10code.de>
+
+	* gsti.h (gsti_set_readfnc, gsti_read, gsti_write): Prototypes
+	removed.
+	(gsti_control_cb_t, gsti_pre_ident_cb_t, gsti_packet_handler_t):
+	New type definitions.
+	(GSTI_CONTROL_FLAG_KEX): New macro.
+	(gsti_set_control_cb, gsti_set_pre_ident_cb,
+	gsti_set_packet_handler, gsti_start, gsti_push_data): New
+	prototypes.
+	(gsti_channel_write): Make DATA argument const in prototype.
+	* api.h (struct gsti_context): Removed members readfnc, readctx.
+	Added new members control_cb, control_cb_value, pre_ident_cb,
+	pre_ident_cb_value, user_pkt_handler_cb,
+	user_pkt_handler_cb_value, state_info, state_data, state_data_len,
+	state_data_alloc, data_handler, packet_handler.
+	(fsm_user_read, fsm_user_write): Remove prototypes.
+	* fsm.c: Rewritten.
+	* auth.c: Include <stdlib.h> and <errno.h>.  Do not include
+	"memory.h".  Everwhere pass new extra argument to
+	_gsti_packet_write.  Everywhere use standard memory allocation
+	routines, and not the gsti wrappers.
+	(gsti_auth_free): Fix inverted check for argument.
+	* channel.c: Everywhere use _gsti_write_packet_from_buffer instead
+	gsti_put_packet.
+	(gsti_channel_write): Make DATA argument const.
+	* kex.c: Everwhere pass new extra argument to _gsti_packet_write.
+	(host_version_string): Add space before comment.
+	* main.c (gsti_set_readfnc, gsti_read, gsti_write): Functions
+	removed.
+	(gsti_set_hostkey): Set CTX->we_are_server.
+	(gsti_deinit): Free CTX->state_data.
+	* packet.h: Include "buffer.h".
+	(_gsti_packet_read): Prototype removed.
+	(_gsti_packet_write): Add new argument PKT to prototype.
+	(_gsti_handle_packet_data, _gsti_write_packet_from_buffer): New
+	prototypes.	
+	* packet.c: Include <errno.h>.
+	(generate_mac): Accept new argument PKT.  Use it instead of the
+	packet in CTX.
+	(_gsti_packet_write): Likewise.
+	(_gsti_packet_read): Removed function.
+	(_gsti_handle_packet_data, _gsti_write_packet_from_buffer,
+	gsti_put_packet): New function.
+	* pubkey.h (gsti_key_type_t): New type that supercedes the
+	anonymous enum.  Change the various int's in the prototypes that
+	refer to this enum.
+	* pubkey.c: Everywhere, use the new type gsti_key_type_t instead of
+	an int if appropriate.
+	* ssh.h (SSH_IDENT_MAX_LEN): New macro.
+	(ssh_msg_id_t): Add new symbols SSH_MSG_CHANNEL_BEGIN,
+	SSH_MSG_CHANNEL_END, SSH_MSG_RESERVED_BEGIN, SSH_MSG_RESERVED_END,
+	SSH_MSG_USER_BEGIN and SSH_MSG_USER_END.
+	* utils.h: Include <sys/types.h>, "bstring.h" and "memory.h".
+	
 2004-07-19  Werner Koch  <wk@gnupg.org>
 
 	Some logging cleanups.

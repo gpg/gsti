@@ -120,24 +120,35 @@ wait_connection (int * listen_fd, int * conn_fd)
 
 
 static gsti_error_t
-myread (void * ctx, void *buffer, size_t to_read, size_t * nbytes)
+reader_loop (struct sock_ctx_s *ctx, gsti_ctx_t gsti_ctx)
 {
-  struct sock_ctx_s * c = ctx;
-  int n;
+  gsti_error_t err = 0;
+  char buffer[512];
+  int res;
 
   do
     {
-      n = read (c->conn_fd, buffer, to_read);
+      do
+	{
+	  res = read (ctx->conn_fd, buffer, sizeof(buffer));
+	}
+      while (res == -1 && errno == EINTR);
+      
+      if (res == -1)
+	{
+	  fprintf (stderr, PGMNAME "myread: error: %s\n", strerror (errno));
+	  err = gsti_error_from_errno (errno);
+	}
+      else
+	{
+	  /*dump_hexbuf (stderr, "myread: ", buffer, res); */
+	  
+	  err = gsti_push_data (gsti_ctx, buffer, res);
+	}
     }
-  while (n == -1 && errno == EINTR);
-  if (n == -1)
-    {
-      fprintf (stderr, PGMNAME "myread: error: %s\n", strerror (errno));
-      return gsti_error_from_errno (errno);
-    }
-  /*dump_hexbuf( stderr, "myread: ", buffer, n ); */
-  *nbytes = n;
-  return 0;
+  while (!err && res);
+
+  return err;
 }
 
 
@@ -165,6 +176,15 @@ mywrite (void * ctx, const void *buffer, size_t to_write, size_t *nbytes)
     }
   while (to_write);
   *nbytes = nn;
+  return 0;
+}
+
+
+gsti_error_t
+mypkt_handler (gsti_ctx_t ctx, void *arg, gsti_pktdesc_t pkt)
+{
+  dump_hexbuf (stderr, "got packet: ", pkt->data, pkt->datalen);
+
   return 0;
 }
 
@@ -218,10 +238,8 @@ int
 main (int argc, char **argv)
 {
   gpg_error_t err;
-  int i;
   struct sock_ctx_s fd;
   gsti_ctx_t ctx;
-  struct gsti_pktdesc_s pkt;
 
   if (argc)
     {
@@ -247,7 +265,7 @@ main (int argc, char **argv)
   log_rc (err, "set_hostkey");
 
   /* Register our read/write functions. */
-  gsti_set_readfnc (ctx, myread, &fd);
+  gsti_set_packet_handler_cb (ctx, mypkt_handler, 0);
   gsti_set_writefnc (ctx, mywrite, &fd);
 
   /* Register our auth callback function */
@@ -257,21 +275,20 @@ main (int argc, char **argv)
   gsti_set_auth_banner (ctx, "Eddie lives somewhere in time...", 0);
 
 #if 0
-  rc = gsti_set_service (ctx, "log-lines@gnu.org,dummy@gnu.org");
-  log_rc (rc, "set-service");
+  err = gsti_set_service (ctx, "log-lines@gnu.org,dummy@gnu.org");
+  log_err (err, "set-service");
 #endif
 
   /* Wait for a client to connect. */
   wait_connection (&fd.listen_fd, &fd.conn_fd);
 
-  /* Read 2 packets to get the protocol going.  */
-  for (i = 0; i < 2; i++)
-    {
-      err = gsti_get_packet (ctx, &pkt);
-      log_rc (err, "get-packet");
-      if (!err)
-	dump_hexbuf (stderr, "got packet: ", pkt.data, pkt.datalen);
-    }
+  /* Fire up the engine.  */
+  err = gsti_start (ctx);
+  log_rc (err, "start");
+
+  /* Process incoming data.  */
+  err = reader_loop (&fd, ctx);
+  log_rc (err, "reader_loop");
 
   /* Release the context. */
   gsti_deinit (ctx);

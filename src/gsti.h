@@ -251,13 +251,59 @@ gsti_key_t gsti_get_auth_key (gsti_ctx_t ctx);
 /* api */
 gsti_error_t gsti_init (gsti_ctx_t * r_ctx);
 void gsti_deinit (gsti_ctx_t ctx);
-gsti_error_t gsti_set_readfnc (gsti_ctx_t ctx, gsti_read_fnc_t readfnc,
-                               void * opaque);
+
+/* The control callback handler is invoked when the state of the
+   context changes.  MASK specifies which bits change. Bit 0 in FLAGS
+   is set if a key exchange is in progress, and the user should not
+   send any packets at this time (in fact, this bit is also set just
+   before the first KEX starts).  */
+typedef void (*gsti_control_cb_t) (gsti_ctx_t ctx, void *control_cb_value,
+				   unsigned int mask, unsigned int flags);
+#define GSTI_CONTROL_FLAG_KEX	1
+
+/* The pre-ident callback handler is invoked whenever the server sends
+   textual data before the identification string (usually output from
+   a TCP wrapper and alike).  */
+typedef gsti_error_t (*gsti_pre_ident_cb_t) (gsti_ctx_t ctx, void *data,
+					     size_t data_len);
+
+/* The packet handler is invoked for incoming packets with a user
+   defined type.  */
+typedef gsti_error_t (*gsti_packet_handler_cb_t)
+     (gsti_ctx_t ctx, void *packet_handler_cb_value,
+      gsti_pktdesc_t pkt);
+
+/* Set the packet handler callback handler for the context CTX to
+   PACKET_HANDLER_CB.  PACKET_HANDLER_CB_VALUE is passed to each
+   invocation of this packet handler callback handler.  */
+gsti_error_t gsti_set_packet_handler_cb
+  (gsti_ctx_t ctx, gsti_packet_handler_cb_t packet_handler_cb,
+   void *packet_handler_cb_value);
+
+/* Set the control callback handler for the context CTX to CONTROL_CB.
+   CONTROL_CB_VALUE is passed to each invocation of this control
+   callback handler.  */
+gsti_error_t gsti_set_control_cb (gsti_ctx_t ctx,
+				  gsti_control_cb_t control_cb,
+				  void *control_cb_value);
+
+/* Set the pre-identification-string callback handler for the context
+   CTX to PRE_IDENT_CB.  PRE_IDENT_CB_VALUE is passed to each
+   invocation of this callback handler.  */
+gsti_error_t gsti_set_pre_ident_cb (gsti_ctx_t ctx,
+				    gsti_pre_ident_cb_t pre_ident_cb,
+				    void *pre_ident_cb_value);
+
+/* Initiate a connection to the other side over the context CTX.  */
+gsti_error_t gsti_start (gsti_ctx_t ctx);
+
+/* Push the incoming data, which consists of DATA_LEN bytes starting
+   at the address DATA, into the context CTX and process it.  */
+gsti_error_t gsti_push_data (gsti_ctx_t ctx, void *data, size_t data_len);
+
 gsti_error_t gsti_set_writefnc (gsti_ctx_t ctx, gsti_write_fnc_t writefnc,
                                 void * opaque);
 gsti_error_t gsti_set_service (gsti_ctx_t ctx, const char *svcname);
-gsti_error_t gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length);
-gsti_error_t gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length);
 gsti_error_t gsti_set_hostkey (gsti_ctx_t ctx, const char *file);
 gsti_key_t   gsti_get_hostkey (gsti_ctx_t ctx);
 gsti_error_t gsti_set_client_key (gsti_ctx_t ctx, const char *file);
@@ -410,7 +456,7 @@ size_t gsti_channel_get_rec_window_size (gsti_ctx_t ctx,
 /* Write AMOUNT bytes of data starting from DATA to the channel
    CHANNEL_ID in the context CTX.  */
 gsti_error_t gsti_channel_write (gsti_ctx_t ctx, gsti_uint32_t channel_id,
-				 char *data, size_t amount);
+				 const char *data, size_t amount);
 
 /* Increase the window size of the channel CHANNEL_ID in the context
    CTX by BYTES_TO_ADD bytes.  */

@@ -23,6 +23,11 @@
 
 #include <gsti.h>
 
+#include <sys/types.h>
+
+#include "bstring.h"
+#include "memory.h"
+
 enum
 {
   TYPE_HEXBUF = 1,

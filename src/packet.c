@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <gcrypt.h>
+#include <errno.h>
 
 #include "types.h"
 #include "utils.h"
@@ -270,12 +271,12 @@ _gsti_packet_free (gsti_ctx_t ctx)
  * Generate a HMAC for the current packet with the given sequence nr.
  */
 static size_t
-generate_mac (gsti_ctx_t ctx, u32 seqno)
+generate_mac (gsti_ctx_t ctx, struct packet_buffer_s *pkt, u32 seqno)
 {
   gcry_md_hd_t md;
   byte buf[4];
-  byte *p = ctx->pkt.packet_buffer;
-  size_t n = 5 + ctx->pkt.payload_len + ctx->pkt.padding_len;
+  byte *p = pkt->packet_buffer;
+  size_t n = 5 + pkt->payload_len + pkt->padding_len;
 
   if (!ctx->send_mac)
     return 0;			/* no MAC requested */
@@ -325,161 +326,203 @@ verify_mac (gsti_ctx_t ctx, u32 seqno)
 /* Read a new packet from the input and store it in the packet buffer
    Decompression and decryption is handled too.  */
 gsti_error_t
-_gsti_packet_read (gsti_ctx_t ctx)
+_gsti_handle_packet_data (gsti_ctx_t ctx, char *data, size_t data_len,
+			  size_t *amount)
 {
-  gsti_error_t err;
-  read_stream_t rst = ctx->read_stream;
-  u32 pktlen, seqno;
-  size_t blksize, n, paylen, padlen, maclen;
-  byte *p;
+  gsti_error_t err = 0;
+  size_t blksize;
+  size_t maclen;
 
   blksize = ctx->ciph_blksize ? ctx->ciph_blksize : 8;
   maclen = ctx->recv_mac ? ctx->mac_len : 0;
-again:
-  seqno = ctx->recv_seqno++;
-  /* read the first block so we can decipher the packet length */
-  err = _gsti_stream_readn (rst, ctx->pkt.packet_buffer, blksize);
-  if (err)
-    {
-      _gsti_log_err (ctx, "error reading packet header: %s\n",
-                          gsti_strerror (err));
-      return err;
-    }
 
-  if (ctx->decrypt_hd)
-    {
-      p = ctx->pkt.packet_buffer;
-      err = gcry_cipher_decrypt (ctx->decrypt_hd, p, blksize, NULL, 0);
-      if (err)
-        {
-          _gsti_log_err (ctx, "error decrypting first block: %s\n",
-                         gsti_strerror (err));
-          return err;
-        }
-    }
+  /* CTX->state_info is 0 if we are expecting a new packet header, and
+     1 if we are waiting for the remainder of the packet to
+     arrive.  */
 
-  _gsti_dump_hexbuf (ctx, "begin of packet: ",
-                     ctx->pkt.packet_buffer, blksize);
+  if (ctx->state_info == 0)
+    {
+      size_t n;
+      size_t paylen;
+      size_t padlen;
+      byte *p;
+      u32 pktlen;
 
-  pktlen = buftou32 (ctx->pkt.packet_buffer);
-  /* FIXME: It should be 16 but NEWKEYS has 12 for some reason.  */
-  if (pktlen < 12)  /* minimum packet size as per secsh draft */
-    {
-      _gsti_log_err (ctx, "invalid packet length; received pktlen=%lu\n",
-                     (unsigned long) pktlen);
-      return gsti_error (GPG_ERR_TOO_SHORT);
-    }
-  if (pktlen > MAX_PKTLEN)
-    {
-     _gsti_log_err (ctx, "invalid packet length; received pktlen %lu\n",
-                    (unsigned long) pktlen);
-     return gsti_error (GPG_ERR_TOO_LARGE);
-    }
+      /* A new packet starts.  */
+
+      /* We need at least the first block so we can decipher the
+	 packet length.  */
+      if (data_len < blksize)
+	{
+	  *amount = 0;
+	  return 0;
+	}
+
+      /* Consume the first BLKSIZE bytes.  */
+      *amount = blksize;
+      memcpy (ctx->pkt.packet_buffer, data, blksize);
+
+      if (ctx->decrypt_hd)
+	{
+	  p = ctx->pkt.packet_buffer;
+	  err = gcry_cipher_decrypt (ctx->decrypt_hd, p, blksize, NULL, 0);
+	  if (err)
+	    {
+	      _gsti_log_err (ctx, "error decrypting first block: %s\n",
+			     gsti_strerror (err));
+	      return err;
+	    }
+	}
+
+      _gsti_dump_hexbuf (ctx, "begin of packet: ",
+			 ctx->pkt.packet_buffer, blksize);
+
+      pktlen = buftou32 (ctx->pkt.packet_buffer);
+      /* FIXME: It should be 16 but NEWKEYS has 12 for some reason.  */
+      /* Minimum packet size as per secsh draft.  */
+      if (pktlen < 12)
+	{
+	  _gsti_log_err (ctx, "invalid packet length; received pktlen=%lu\n",
+			 (unsigned long) pktlen);
+	  return gsti_error (GPG_ERR_TOO_SHORT);
+	}
+      if (pktlen > MAX_PKTLEN)
+	{
+	  _gsti_log_err (ctx, "invalid packet length; received pktlen %lu\n",
+			 (unsigned long) pktlen);
+	  return gsti_error (GPG_ERR_TOO_LARGE);
+	}
   
-  padlen = ctx->pkt.packet_buffer[4];
-  if (padlen < 4)
-    {
-      _gsti_log_err (ctx, "invalid packet length; received padding is %lu\n",
-                     (unsigned long) padlen);
-      return gsti_error (GPG_ERR_TOO_SHORT);
+      padlen = ctx->pkt.packet_buffer[4];
+      if (padlen < 4)
+	{
+	  _gsti_log_err (ctx,
+			 "invalid packet length; received padding is %lu\n",
+			 (unsigned long) padlen);
+	  return gsti_error (GPG_ERR_TOO_SHORT);
+	}
+
+      ctx->pkt.packet_len = pktlen;
+      ctx->pkt.padding_len = padlen;
+      ctx->pkt.payload_len = paylen = pktlen - padlen - 1;
+
+      n = 5 + paylen + padlen;
+      if ((n % blksize))
+	_gsti_log_err (ctx, "note: length of packet is not a multiple"
+		       " of the block size\n");
+
+      ctx->state_info = 1;
+      return 0;
     }
-
-  ctx->pkt.packet_len = pktlen;
-  ctx->pkt.padding_len = padlen;
-  ctx->pkt.payload_len = paylen = pktlen - padlen - 1;
-
-  n = 5 + paylen + padlen;
-  if ((n % blksize))
-    _gsti_log_err (ctx, "note: length of packet is not a multiple"
-                   " of the block size\n");
-
-  /* Read the rest of the packet.  */
-  n = 4 + pktlen + maclen;
-  if (n >= blksize)
-    n -= blksize;
-  else
-    n = 0;			/* oops: rest of packet is too short */
-
-  _gsti_log_debug (ctx, "packet_len=%lu padding=%lu payload=%lu "
-		   "maclen=%lu n=%lu\n",
-		   (u32) ctx->pkt.packet_len, (u32) ctx->pkt.padding_len,
-		   (u32) ctx->pkt.payload_len, (u32) maclen, (u32) n);
-
-  err = _gsti_stream_readn (rst, ctx->pkt.packet_buffer + blksize, n);
-  if (err)
+  else if (ctx->state_info == 1)
     {
-      _gsti_log_err (ctx, "error reading rest of packet: %s\n",
-                     gsti_strerror (err));
-      return err;
-    }
-  n -= maclen;			/* don't want the maclen anymore */
-  if (ctx->decrypt_hd)
-    {
-      p = ctx->pkt.packet_buffer + blksize;
-      err = gcry_cipher_decrypt (ctx->decrypt_hd, p, n, NULL, 0);
+      u32 seqno;
+      size_t n;
+
+      /* Read the rest of the packet.  */
+      n = 4 + ctx->pkt.packet_len + maclen;
+      if (n >= blksize)
+	n -= blksize;
+      else
+	/* Oops: The rest of packet is too short.  */
+	n = 0;
+
+      if (n > data_len)
+	{
+	  *amount = 0;
+	  return 0;
+	}
+      
+      _gsti_log_debug (ctx, "packet_len=%lu padding=%lu payload=%lu "
+		       "maclen=%lu n=%lu\n",
+		       (u32) ctx->pkt.packet_len, (u32) ctx->pkt.padding_len,
+		       (u32) ctx->pkt.payload_len, (u32) maclen, (u32) n);
+
+      *amount = n;
+      memcpy (ctx->pkt.packet_buffer + blksize, data, n);
+
+      /* Don't want the maclen anymore.  FIXME: What if we set N to 0
+	 above?  */
+      n -= maclen;
+      if (ctx->decrypt_hd)
+	{
+	  byte *p = ctx->pkt.packet_buffer + blksize;
+	  err = gcry_cipher_decrypt (ctx->decrypt_hd, p, n, NULL, 0);
+	  if (err)
+	    {
+	      _gsti_log_err (ctx, "decryption failed: %s\n",
+			     gsti_strerror (err));
+	      return err;
+	    }
+
+	  /* Note: There is no reason to decrypt the padding, but we do it
+	     anyway because this is easier.  */
+	  _gsti_dump_hexbuf (ctx, "next 16 bytes of packet: ",
+			     ctx->pkt.packet_buffer + blksize,
+			     n > 16? 16: n);
+	}
+      
+      seqno = ctx->recv_seqno++;
+
+      if (ctx->recv_mac && !verify_mac (ctx, seqno))
+	{
+	  err = gsti_error (GPG_ERR_INV_MAC);
+	  _gsti_log_err (ctx, "decryption failed: %s\n", gsti_strerror (err));
+	  return err;
+	}
+
+      if (ctx->zlib.use && !ctx->zlib.init)
+	{
+	  _gsti_decompress_init ();
+	  ctx->zlib.init = 1;
+	}
+
+      /* TODO: Do the uncompressions.  */
+
+      ctx->pkt.type = *ctx->pkt.payload;
+      _gsti_log_debug (ctx, "received packet %lu of type %d (%s)\n",
+		       (u32) seqno, ctx->pkt.type,
+		       msg_id_to_str (ctx->pkt.type));
+      if (!ctx->pktbuf)
+	err = gsti_buf_alloc (&ctx->pktbuf);
+      if (!err)
+	err = gsti_buf_set (ctx->pktbuf, (char *) ctx->pkt.payload,
+			    ctx->pkt.payload_len);
       if (err)
-        {
-          _gsti_log_err (ctx, "decryption failed: %s\n",
-                         gsti_strerror (err));
-          return err;
-        }
-      /* Note: There is no reason to decrypt the padding, but we do it
-         anyway because this is easier.  */
-      _gsti_dump_hexbuf (ctx, "next 16 bytes of packet: ",
-                         ctx->pkt.packet_buffer + blksize,
-			 n > 16? 16: n);
-    }
+	return err;
 
-  if (ctx->recv_mac && !verify_mac (ctx, seqno))
+      switch (ctx->pkt.type)
+	{
+	case SSH_MSG_DEBUG:
+	  print_debug_msg (ctx, ctx->pkt.payload, ctx->pkt.payload_len);
+	  break;
+	  
+	case SSH_MSG_DISCONNECT:
+	  print_disconnect_msg (ctx, ctx->pkt.payload, ctx->pkt.payload_len);
+	  break;
+
+	default:
+	  err = (*ctx->packet_handler) (ctx);
+	  if (err)
+	    return err;
+	} 
+
+      ctx->state_info = 0;
+      return 0;
+    }
+  else
     {
-      err = gsti_error (GPG_ERR_INV_MAC);
-      _gsti_log_err (ctx, "decryption failed: %s\n", gsti_strerror (err));
-      return err;
+      _gsti_log_err (ctx, "unexpected CTX->state_info %u\n", ctx->state_info);
+      return gsti_error (GPG_ERR_BUG);
     }
-
-  if (ctx->zlib.use && !ctx->zlib.init)
-    {
-      _gsti_decompress_init ();
-      ctx->zlib.init = 1;
-    }
-  /* TODO: Do the uncompressions.  */
-
-  ctx->pkt.type = *ctx->pkt.payload;
-  _gsti_log_debug (ctx, "received packet %lu of type %d (%s)\n",
-		  (u32) seqno, ctx->pkt.type, msg_id_to_str (ctx->pkt.type));
-  if (!ctx->pktbuf)
-    err = gsti_buf_alloc (&ctx->pktbuf);
-  if (!err)
-    err = gsti_buf_set (ctx->pktbuf, (char *) ctx->pkt.payload,
-                        ctx->pkt.payload_len);
-  if (err)
-    return err;
-
-  switch (ctx->pkt.type)
-    {
-    case SSH_MSG_IGNORE:
-      goto again;
-      break;
-
-    case SSH_MSG_DEBUG:
-      print_debug_msg (ctx, ctx->pkt.payload, ctx->pkt.payload_len);
-      break;
-
-    case SSH_MSG_DISCONNECT:
-      print_disconnect_msg (ctx, ctx->pkt.payload, ctx->pkt.payload_len);
-      break;
-    }
-
-  return 0;
 }
-
 
 
 /* Write a new packet from the packet buffer.  Compression and
    encryption is handled here.  FIXME: make sure that the padding does
    not cause a buffer overflow!!!  */
 gsti_error_t
-_gsti_packet_write (gsti_ctx_t ctx)
+_gsti_packet_write (gsti_ctx_t ctx, struct packet_buffer_s *pkt)
 {
   gsti_error_t err;
   write_stream_t wst = ctx->write_stream;
@@ -493,17 +536,17 @@ _gsti_packet_write (gsti_ctx_t ctx)
     ctx->req_newkeys = 1;
   
   blksize = ctx->ciph_blksize ? ctx->ciph_blksize : 8;
-  ctx->pkt.padding_len = blksize - ((4 + 1 + ctx->pkt.payload_len) % blksize);
-  if (ctx->pkt.padding_len < 4)
-    ctx->pkt.padding_len += blksize;
+  pkt->padding_len = blksize - ((4 + 1 + pkt->payload_len) % blksize);
+  if (pkt->padding_len < 4)
+    pkt->padding_len += blksize;
 
-  if (ctx->pkt.type == 0)
+  if (pkt->type == 0)
     return gsti_error (GPG_ERR_INV_PACKET);	/* make sure the type is set */
-  ctx->pkt.payload[0] = ctx->pkt.type;
-  ctx->pkt.packet_len = 1 + ctx->pkt.payload_len + ctx->pkt.padding_len;
+  pkt->payload[0] = pkt->type;
+  pkt->packet_len = 1 + pkt->payload_len + pkt->padding_len;
 
   _gsti_log_debug (ctx, "sending packet %lu of type %d (%s)\n",
-		  (u32) seqno, ctx->pkt.type, msg_id_to_str (ctx->pkt.type));
+		  (u32) seqno, pkt->type, msg_id_to_str (pkt->type));
 
   if (ctx->zlib.use && !ctx->zlib.init)
     {
@@ -514,34 +557,120 @@ _gsti_packet_write (gsti_ctx_t ctx)
 
   /* Construct header.  This must be a complete block, so the the
      encrypt function can handle it.  */
-  n = ctx->pkt.packet_len;
-  ctx->pkt.packet_buffer[0] = n >> 24;
-  ctx->pkt.packet_buffer[1] = n >> 16;
-  ctx->pkt.packet_buffer[2] = n >> 8;
-  ctx->pkt.packet_buffer[3] = n;
-  ctx->pkt.packet_buffer[4] = ctx->pkt.padding_len;
-  paylen = ctx->pkt.payload_len;
-  padlen = ctx->pkt.padding_len;
-  gcry_create_nonce (ctx->pkt.payload + paylen, padlen);
+  n = pkt->packet_len;
+  pkt->packet_buffer[0] = n >> 24;
+  pkt->packet_buffer[1] = n >> 16;
+  pkt->packet_buffer[2] = n >> 8;
+  pkt->packet_buffer[3] = n;
+  pkt->packet_buffer[4] = pkt->padding_len;
+  paylen = pkt->payload_len;
+  padlen = pkt->padding_len;
+  gcry_create_nonce (pkt->payload + paylen, padlen);
 
-  maclen = generate_mac (ctx, seqno);
+  maclen = generate_mac (ctx, pkt, seqno);
 
   /* Write the payload */
   n = 5 + paylen + padlen;
   assert (!(n % blksize));
   if (ctx->encrypt_hd)
     {
-      p = ctx->pkt.packet_buffer;
+      p = pkt->packet_buffer;
       err = gcry_cipher_encrypt (ctx->encrypt_hd, p, n, NULL, 0);
       if (err)
 	return err;
     }
   n = 5 + paylen + padlen + maclen;
-  err = _gsti_stream_writen (wst, ctx->pkt.packet_buffer, n);
+  err = _gsti_stream_writen (wst, pkt->packet_buffer, n);
   if (err)
     return err;
 
   return 0;
+}
+
+
+gsti_error_t
+_gsti_write_packet_from_buffer (gsti_ctx_t ctx, gsti_buffer_t buf)
+{
+  gsti_error_t err;
+  size_t buflen;
+  struct packet_buffer_s pkt;
+
+  pkt.size = PKTBUFSIZE;
+  pkt.packet_buffer = malloc (pkt.size + 5);
+  if (!pkt.packet_buffer)
+    return gsti_error_from_errno (errno);
+  pkt.payload = pkt.packet_buffer + 5;
+
+  /* Protect against buffer overflow.  */
+  buflen = gsti_buf_readable (buf);
+  if (buflen > pkt.size)
+    return gsti_error (GPG_ERR_TOO_LARGE);
+
+  /* Set up the packet.  */
+  err = gsti_buf_getraw (buf, pkt.payload, buflen);
+  assert (!err);
+  pkt.payload_len = buflen;
+  pkt.type = pkt.payload[0];
+
+  /* Send the packet.  */
+  err = _gsti_packet_write (ctx, &pkt);
+
+  free (pkt.packet_buffer);
+
+  return err;
+}
+
+
+/* Write a packet and return it's sequence number in pkt->seqno.  If
+   pkt is NULL a flush operation is performed. This is needed if the
+   protocol which is used on top of this transport protocol must
+   assure that a packet has really been sent to the peer.  */
+gsti_error_t
+gsti_put_packet (gsti_ctx_t ctx, gsti_pktdesc_t pktdesc)
+{
+  gsti_error_t err;
+  const byte *data;
+  size_t datalen;
+  struct packet_buffer_s pkt;
+
+  if (!pktdesc)
+    return _gsti_packet_flush (ctx);
+
+  pkt.size = PKTBUFSIZE;
+
+  data = pktdesc->data;
+  datalen = pktdesc->datalen;
+  if (!datalen)
+    return gsti_error (GPG_ERR_TOO_SHORT);	/* need the packet type */
+
+  if (datalen > pkt.size)
+    return gsti_error (GPG_ERR_TOO_LARGE);
+
+  /* The caller is not allowed to supply any of the tranport protocol
+     numbers nor one of the reserved numbers.  0 is not defined.  */
+  if (!*data || *data <= 49 || (*data >= 128 && *data <= 191))
+    return gsti_error (GPG_ERR_INV_ARG);
+
+  pkt.packet_buffer = malloc (pkt.size + 5);
+  if (!pkt.packet_buffer)
+    return gsti_error_from_errno (errno);
+
+  pkt.type = *data;
+  pkt.payload = pkt.packet_buffer + 5;
+  pkt.payload_len = datalen;
+  memcpy (pkt.payload, data, datalen);
+
+  /* Send the packet.  */
+  err = _gsti_packet_write (ctx, &pkt);
+
+  free (pkt.packet_buffer);
+  if (!err)
+    {
+      u32 seqno = ctx->send_seqno - 1;
+      pktdesc->seqno = seqno;
+    }
+
+  return err;
 }
 
 

@@ -24,13 +24,14 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include "types.h"
 #include "utils.h"
 #include "buffer.h"
 #include "api.h"
 #include "packet.h"
-#include "memory.h"
 #include "pubkey.h"
 
 struct valid_auth_method_s
@@ -196,7 +197,7 @@ _gsti_auth_send_banner_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   if (!err)
       err = build_auth_banner (&ban, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -296,7 +297,7 @@ init_auth_request (MSG_auth_request * ath, const char *user, int false,
   err = _gsti_ssh_get_pkname (pk->type, 0, &p, &n);
   if (!err)
     err = gsti_bstr_make (&ath->pkalgo, p, n);
-  _gsti_free (p);
+  free (p);
   if (err)
     {
       free_auth_request (ath);
@@ -352,7 +353,7 @@ _gsti_auth_send_failure_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   memcpy (pkt->payload, tmp, 4);
   pkt->payload[5] = 0;
 
-  err = _gsti_packet_write (ctx);
+  err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
       err = _gsti_packet_flush (ctx);
   return err;
@@ -368,7 +369,7 @@ _gsti_auth_send_success_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 
   pkt->type = SSH_MSG_USERAUTH_SUCCESS;
   pkt->payload_len = 1;
-  err = _gsti_packet_write (ctx);
+  err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   return err;
@@ -402,7 +403,7 @@ read_bstring (gsti_buffer_t buf, gsti_bstr_t * r_dst)
     return err;
 
   err = gsti_bstr_make (r_dst, p, n);
-  _gsti_free (p);
+  free (p);
 
   return err;
 }
@@ -498,9 +499,12 @@ _gsti_auth_proc_request_packet (gsti_ctx_t ctx, gsti_auth_t auth)
     }
   if (auth->trypk == 1)
     {
-      auth->user = _gsti_xstrdup (gsti_bstr_data (ath.user));
-      err = gsti_bstr_make (&auth->blob, gsti_bstr_data (ath.key),
-                            gsti_bstr_length (ath.key));
+      auth->user = strdup (gsti_bstr_data (ath.user));
+      if (!auth->user)
+	err = gsti_error_from_errno (errno);
+      if (!err)
+	err = gsti_bstr_make (&auth->blob, gsti_bstr_data (ath.key),
+			      gsti_bstr_length (ath.key));
       if (!err)
         err = _gsti_key_fromblob (ath.key, &auth->key);
     }
@@ -580,18 +584,18 @@ _gsti_auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
     err = gsti_bstr_make (&ok.pkalgo, p, n);
   if (err)
     {
-      _gsti_free (p);
+      free (p);
       return err;
     }
   err = _gsti_key_getblob (pk, &ok.key);
   if (!err)
     err = build_pkok_packet (&ok, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
-  _gsti_free (p);
+  free (p);
   free_auth_pkok (&ok);
   return err;
 }
@@ -621,7 +625,7 @@ parse_pkok_packet (MSG_auth_pkok * ok, const gsti_buffer_t buf)
     return err;
 
   err = gsti_bstr_make (&ok->pkalgo, p, n);
-  _gsti_free (p);
+  free (p);
   if (err)
     return err;
 
@@ -630,7 +634,7 @@ parse_pkok_packet (MSG_auth_pkok * ok, const gsti_buffer_t buf)
     return err;
 
   err = gsti_bstr_make (&ok->key, p, n);
-  _gsti_free (p);
+  free (p);
 
   return err;
 }
@@ -686,7 +690,7 @@ _gsti_auth_send_request_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   if (!err)
     err = build_auth_request (&ath, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
 
@@ -700,30 +704,36 @@ _gsti_auth_send_request_packet (gsti_ctx_t ctx, gsti_auth_t auth)
 }
 
 
+/* Create a new authentication object and return it in R_AUTH.  */
 gsti_error_t
-gsti_auth_new (gsti_auth_t * r_ath)
+gsti_auth_new (gsti_auth_t *r_auth)
 {
-  gsti_auth_t a;
+  gsti_auth_t auth;
 
-  if (!r_ath)
+  if (!r_auth)
     return gsti_error (GPG_ERR_INV_ARG);
-  a = _gsti_xcalloc (1, sizeof * a);
-  a->trypk = 1;
-  *r_ath = a;
+
+  auth = calloc (1, sizeof *auth);
+  if (!auth)
+    return gsti_error_from_errno (errno);
+
+  auth->trypk = 1;
+  *r_auth = auth;
 
   return 0;
 }
 
 
+/* Destroy the authentication object AUTH.  */
 void
-gsti_auth_free (gsti_auth_t ath)
+gsti_auth_free (gsti_auth_t auth)
 {
-  if (!ath)
-    {
-      _gsti_free (ath->user);
-      gsti_key_free (ath->key);
-      gsti_bstr_free (ath->blob);
-      gsti_bstr_free (ath->msg);
-    }
+  if (!auth)
+    return;
+
+  free (auth->user);
+  gsti_key_free (auth->key);
+  gsti_bstr_free (auth->blob);
+  gsti_bstr_free (auth->msg);
 }
 

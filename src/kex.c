@@ -47,7 +47,7 @@
 
 
 static const char host_version_string[] =
-  SSH_IDENT_PREFIX SSH_VERSION_2 "-GSTI_"VERSION "GNU Transport Library";
+  SSH_IDENT_PREFIX SSH_VERSION_2 "-GSTI_" VERSION " GNU Transport Library";
 
 static const byte diffie_hellman_group1_prime[130] = { 0x04, 0x00,
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
@@ -1042,7 +1042,7 @@ _gsti_kex_send_init_packet (gsti_ctx_t ctx)
   build_compress_list (ctx, &kex->compr_algos_c2s, &kex->compr_algos_s2c);
   err = build_msg_kexinit (kex, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (err)
     {
       free_msg_kexinit (kex);
@@ -1204,7 +1204,7 @@ _gsti_kex_send_kexdh_init (gsti_ctx_t ctx)
   err = build_msg_kexdh_init (&kexdh, ctx->gex.used, &ctx->pkt);
   if (err)
     return err;
-  err = _gsti_packet_write (ctx);
+  err = _gsti_packet_write (ctx, &ctx->pkt);
   if (err)
     return err;
   err = _gsti_packet_flush (ctx);
@@ -1268,7 +1268,7 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
   if (!err)
     dump_msg_kexdh_reply (ctx, &dhr);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   return err;
@@ -1329,7 +1329,7 @@ kex_send_newkeys (gsti_ctx_t ctx)
 
   ctx->pkt.type = SSH_MSG_NEWKEYS;
   ctx->pkt.payload_len = 1;
-  err = _gsti_packet_write (ctx);
+  err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   if (err)
@@ -1594,7 +1594,7 @@ kex_send_service_request (gsti_ctx_t ctx, const char *name)
     err = build_msg_service (ctx->service_name,
                              &ctx->pkt, SSH_MSG_SERVICE_REQUEST);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   if (err)
@@ -1643,7 +1643,7 @@ kex_send_service_accept (gsti_ctx_t ctx)
   err = build_msg_service (ctx->service_name, &ctx->pkt,
 			   SSH_MSG_SERVICE_ACCEPT);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   return err;
@@ -1725,7 +1725,7 @@ _gsti_kex_send_gex_request (gsti_ctx_t ctx)
   gex.max = ctx->gex.max;
   err = build_gex_request (&gex, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   return err;
@@ -1899,7 +1899,7 @@ _gsti_kex_send_gex_group (gsti_ctx_t ctx)
   if (!err)
     err = build_gex_group (&gex, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (ctx);
+    err = _gsti_packet_write (ctx, &ctx->pkt);
   if (!err)
     err = _gsti_packet_flush (ctx);
   

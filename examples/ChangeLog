@@ -1,3 +1,16 @@
+2004-07-20  Marcus Brinkmann  <marcus@g10code.de>
+
+	* client.c (myread): Function removed.
+	(reader_loop, mypkt_handler, myctrl_handler): New functions.
+	(main): New variable READY.  Use it with the myctrl_handler.  Do
+	not register read function, but packet handler and control
+	callbacks.  Run gsti_start (), and reader_loop() until the ready
+	flag is set.
+	* server.c (myread): Function removed.
+	(reader_loop, mypkt_handler): New functions.
+	(main): Do not register read function, but packet handler
+	callback.  Run gsti_start() and reader_loop().
+	
 2004-07-14  Timo Schulz  <ts@g10code.de>
 
 	* server.c (main): Set an example banner which is shown to

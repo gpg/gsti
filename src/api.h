@@ -66,10 +66,8 @@ typedef struct gsti_channel *gsti_channel_t;
 
 struct gsti_context
 {
-  gsti_read_fnc_t readfnc;
-  void * readctx;
   gsti_write_fnc_t writefnc;
-  void * writectx;
+  void *writectx;
   read_stream_t read_stream;
   write_stream_t write_stream;
   gsti_strlist_t local_services;
@@ -78,8 +76,9 @@ struct gsti_context
   gio_stream_t log_stream;
   gsti_log_level_t log_level;
 
-  int state;			/* current state */
 
+  /* True if this is the server side.  This is set by
+     gsti_set_hostkey.  */
   int we_are_server;
   gsti_bstr_t peer_version_string;	/* received from other end */
   gsti_bstr_t host_kexinit_data;	/* the KEX data we sent to the peer */
@@ -142,9 +141,9 @@ struct gsti_context
 
   gsti_key_t hostkey;
 
-  gsti_auth_t    auth;
+  gsti_auth_t auth;
   gsti_auth_cb_t auth_cb;
-  void          *auth_cb_val;
+  void *auth_cb_val;
 
   struct
   {
@@ -159,14 +158,46 @@ struct gsti_context
   gsti_channel_t channels;
   size_t nr_channels;
   size_t max_channels;
-};
 
-/*-- fsm.c --*/
-gsti_error_t fsm_user_read (gsti_ctx_t ctx);
-gsti_error_t fsm_user_write (gsti_ctx_t ctx);
+  /* The control callback hook.  This is used by GSTI to inform the
+     user about changes in the state of the connection.  */
+  gsti_control_cb_t control_cb;
+  void *control_cb_value;
+
+  /* The pre-ident callback hook.  This is used by GSTI to inform the
+     user about strings sent by the server before identification.  */
+  gsti_pre_ident_cb_t pre_ident_cb;
+  void *pre_ident_cb_value;
+
+  /* The user packet handler callback hook.  This is used by GSTI to
+     pass user-defined packets to the user.  */
+  gsti_packet_handler_cb_t user_pkt_handler_cb;
+  void *user_pkt_handler_cb_value;
+
+  /* The current state of the connection.  */
+  int state;
+  /* STATE_INFO is free to be used by the data_handler callback.  It
+     is initially 0.  */
+  unsigned int state_info;
+
+  /* STATE_DATA, STATE_DATA_LEN and STATE_DATA_ALLOC are used by
+     gsti_push_data to buffer incomplete data.  FIXME: Free this
+     somewhere.  */
+  char *state_data;
+  size_t state_data_len;
+  size_t state_data_alloc;
+
+  /* The DATA_HANDLER callback is used by gsti_push_data to inject
+     data into the state machine.  */
+  gsti_error_t (*data_handler) (gsti_ctx_t ctx, char *data, size_t data_len,
+				size_t *amount);
+
+  /* The PACKET_HANDLER callback is used by _gsti_handle_packet_data
+     to inject a packet into the state machine.  */
+  gsti_error_t (*packet_handler) (gsti_ctx_t ctx);
+};
 
 /*-- channel.c --*/
 gsti_error_t _gsti_handle_channel_packet (gsti_ctx_t ctx);
-
 
 #endif	/* GSTI_API_H */
