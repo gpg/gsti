@@ -1,3 +1,12 @@
+2004-03-08  Werner Koch  <wk@gnupg.org>
+
+	* configure.in: Removed.
+	* configure.ac: New.  Based on the old one
+
+	* autogen.sh: Replaced by modern version taken from libksba.
+
+	* Makefile.am (dist-hook): New.
+
 2002-10-03 23:18:16  Timo Schulz  (ts@winpt.org)
 
 	* set version to 0.2.0

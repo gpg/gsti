@@ -1,5 +1,9 @@
 2004-03-08  Werner Koch  <wk@gnupg.org>
 
+	* Makefile.am: Modernized.  Use --version-info.
+
+	* gsti-config.in: Modernized.
+
         Fixed all copyright entries from "Free Software Foundation, Inc"
 	to "Werner Koch".  It was originally intended to assign the code
 	to the FSF but this actually never happened and frankly there has

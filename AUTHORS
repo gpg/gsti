@@ -1,4 +1,11 @@
-Current maintainer: Timo Schulz
+Package: gsti
+Maintainer: Werner Koch <wk@gnupg.org>
+Bug reports: <gcrypt-devel@gnupg.org> (mailing list)
+Security related bug reports: <security@gnupg.org>
+
+
+Authors of GSTI
+===============
 
 Simon Tatham 
 (src/zlib.c)  <===== FIXME: there is no license attached
@@ -8,6 +15,7 @@ Bug fixes and a bulk of new code since 2001.
 
 Werner Koch     <wk@gnupg.org>
 Original Author and initiator of the project.
+
 
 
 

@@ -39,7 +39,7 @@ extern "C" {
  * NOTE: Please do not chnange the formatting of this line;
  *	 configure may set it to the correct version.
  */
-#define GSTI_VERSION "0.2.0-cvs"
+#define GSTI_VERSION "0.3.0-cvs"
 
 enum {
     GSTI_SUCCESS       =  0,	 /* "no error" */

@@ -1,6 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 # Copyright (C) 1999, 2000 Free Software Foundation
 # Copyright (C) 2002 Timo Schulz
+# Copyright (C) 2004 g10 Code GmbH
 #
 # This file is part of GSTI.
 #
@@ -20,18 +21,17 @@
 
 
 EXTRA_DIST = gsti-config.in  gsti.m4
-
 bin_SCRIPTS = gsti-config
-
+include_HEADERS = gsti.h
+lib_LTLIBRARIES = libgsti.la
 m4datadir = $(datadir)/aclocal
 m4data_DATA = gsti.m4
 
-INCLUDES = -I$(top_srcdir)/lib $(LIBGCRYPT_CFLAGS)
-include_HEADERS = gsti.h
+AM_CFLAGS = @GPG_ERROR_CFLAGS@ @LIBGCRYPT_CFLAGS@
 
-lib_LTLIBRARIES = libgsti.la
+libgsti_la_LDFLAGS = -version-info \
+       @LIBGSTI_LT_CURRENT@:@LIBGSTI_LT_REVISION@:@LIBGSTI_LT_AGE@
 
-libgsti_la_LDFLAGS = #-version-info 0:0:0
 libgsti_la_SOURCES = \
 	gsti.h \
 	auth.c \
@@ -49,4 +49,3 @@ libgsti_la_SOURCES = \
 	zlib.c \
 	moduli.h
 
-LDADD = $(LIBGCRYPT_LIBS)
