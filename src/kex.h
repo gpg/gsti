@@ -44,11 +44,11 @@ gsti_error_t kex_proc_service_request (gsti_ctx_t ctx);
 gsti_error_t kex_send_service_accept (gsti_ctx_t ctx);
 gsti_error_t kex_proc_service_accept (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_gex_request (gsti_ctx_t ctx);
-gsti_error_t kex_proc_gex_request (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_send_gex_request (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_proc_gex_request (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_gex_group (gsti_ctx_t ctx);
-gsti_error_t kex_proc_gex_group (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_send_gex_group (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_proc_gex_group (gsti_ctx_t ctx);
 
 
 #endif /* GSTI_KEX_H */

@@ -144,8 +144,8 @@ typedef enum
     SSH_MSG_KEXDH_REPLY = 31,
 
     /* Group Exchange Methods (dh-group-exchange-04.txt) */
-    SSH_MSG_KEX_DH_GEX_GROUP = 31,
-    SSH_MSG_KEX_DH_GEX_INIT = 32,
+    SSH_MSG_KEX_DH_GEX_GROUP = 35, /* XXX the draft says 31 but this is */
+    SSH_MSG_KEX_DH_GEX_INIT = 32,  /* already reserved for KEXDH_REPLY!?*/
     SSH_MSG_KEX_DH_GEX_REPLY = 33,
     SSH_MSG_KEX_DH_GEX_REQUEST = 34,
 

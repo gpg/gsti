@@ -136,5 +136,5 @@ gsti_error_t _gsti_packet_read (gsti_ctx_t ctx);
 gsti_error_t _gsti_packet_write (gsti_ctx_t ctx);
 gsti_error_t _gsti_packet_flush (gsti_ctx_t ctx);
 
-
 #endif	/* GSTI_PACKET_H */
+

@@ -254,8 +254,7 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
   err = gsti_buf_getc (buf, &val);
   if (err)
     goto leave;
-  if (val != SSH_MSG_KEXINIT &&
-      val != SSH_MSG_KEX_DH_GEX_INIT)
+  if (val != SSH_MSG_KEXINIT)
     {
       err = gsti_error (GPG_ERR_BUG);
       goto leave;
@@ -323,7 +322,7 @@ leave:
 
 /* Build a KEX packet.  */
 static gsti_error_t
-build_msg_kexinit (MSG_kexinit * kex, int use_gex, packet_buffer_t pkt)
+build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
 {
   STRLIST algolist[10];
   byte *p = pkt->payload;
@@ -332,7 +331,7 @@ build_msg_kexinit (MSG_kexinit * kex, int use_gex, packet_buffer_t pkt)
 
   assert (length > 100);
 
-  pkt->type = use_gex? SSH_MSG_KEX_DH_GEX_INIT : SSH_MSG_KEXINIT;
+  pkt->type = SSH_MSG_KEXINIT;
   p++;
   length--;
   memcpy (p, kex->cookie, 16);
@@ -392,17 +391,17 @@ dump_msg_kexinit (gsti_ctx_t ctx, MSG_kexinit * kex)
 
 
 static gsti_error_t
-check_dh_mpi_range (gcry_mpi_t chk)
+check_dh_mpi_range (gcry_mpi_t gex_p, gcry_mpi_t chk)
 {
   gsti_error_t err = 0;
   gcry_mpi_t p;
 
-  /* FIXME add DH group support */
-  
   /* A value which is not in the range [1, p-1] is considered as a
      protocol violation.  */
-  if (gcry_mpi_scan (&p, GCRYMPI_FMT_STD, diffie_hellman_group1_prime,
-                     sizeof diffie_hellman_group1_prime, NULL))
+  if (gex_p)
+      p = gcry_mpi_copy (gex_p);
+  else if (gcry_mpi_scan (&p, GCRYMPI_FMT_STD, diffie_hellman_group1_prime,
+                          sizeof diffie_hellman_group1_prime, NULL))
     abort ();
   if (gcry_mpi_cmp (chk, p) > 0 || gcry_mpi_get_nbits (chk) < 2)
     err = gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
@@ -416,7 +415,8 @@ check_dh_mpi_range (gcry_mpi_t chk)
    newly allocated struture.  Returns 0 on success or an
    errorcode.  */
 static gsti_error_t
-parse_msg_kexdh_init (MSG_kexdh_init * kexdh, const gsti_buffer_t buf)
+parse_msg_kexdh_init (MSG_kexdh_init * kexdh, gcry_mpi_t gex_p,
+                      const gsti_buffer_t buf)
 {
   gsti_error_t err = 0;
   int val;
@@ -439,7 +439,7 @@ parse_msg_kexdh_init (MSG_kexdh_init * kexdh, const gsti_buffer_t buf)
   if (err)
     goto leave;
 
-  err = check_dh_mpi_range (kexdh->e);
+  err = check_dh_mpi_range (gex_p, kexdh->e);
   if (err)
     return err;
 
@@ -499,7 +499,8 @@ dump_msg_kexdh_init (gsti_ctx_t ctx, MSG_kexdh_init * kexdh)
    newly allocated struture.  Returns 0 on success or an
    errorcode.  */
 static gsti_error_t
-parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, gsti_buffer_t buf)
+parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, gcry_mpi_t gex_p,
+                       gsti_buffer_t buf)
 {
   gsti_error_t err = 0;
   int val;
@@ -527,7 +528,7 @@ parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, gsti_buffer_t buf)
   if (err)
     goto leave;
 
-  err = check_dh_mpi_range (dhr->f);
+  err = check_dh_mpi_range (gex_p, dhr->f);
   if (err)
       goto leave;
 
@@ -890,14 +891,21 @@ build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 static void
 build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 {
-  *lst = _gsti_strlist_insert (NULL, SSH_GEX_DHG_SHA1);
-  *lst = _gsti_strlist_insert (*lst, SSH_KEX_DHG1_SHA1);
+  const char * kex_1 = SSH_GEX_DHG_SHA1, * kex_2 = SSH_KEX_DHG1_SHA1;
+  
+  if (!ctx->we_are_server && ctx->gex.used)
+    {
+      kex_1 = SSH_KEX_DHG1_SHA1;
+      kex_2 = SSH_GEX_DHG_SHA1;
+    }
+  *lst = _gsti_strlist_insert (NULL, kex_1);
+  *lst = _gsti_strlist_insert (*lst, kex_2);
   ctx->kex.type = SSH_KEX_GROUP_EXCHANGE;
 }
 
 
 static void
-build_pkalgo_list (STRLIST * lst)
+build_pkalgo_list (gsti_ctx_t ctx, STRLIST * lst)
 {
   *lst = _gsti_strlist_insert (NULL, SSH_PKA_SSH_RSA);
   *lst = _gsti_strlist_insert (*lst, SSH_PKA_SSH_DSS);
@@ -919,11 +927,11 @@ kex_send_init_packet (gsti_ctx_t ctx)
   memcpy (ctx->cookie, kex.cookie, 16);
 
   build_kex_list (ctx, &kex.kex_algo);
-  build_pkalgo_list (&kex.server_host_key_algos);
+  build_pkalgo_list (ctx, &kex.server_host_key_algos);
   build_cipher_list (ctx, &kex.encr_algos_c2s, &kex.encr_algos_s2c);
   build_hmac_list (ctx, &kex.mac_algos_c2s, &kex.mac_algos_s2c);
   build_compress_list (ctx, &kex.compr_algos_c2s, &kex.compr_algos_s2c);
-  err = build_msg_kexinit (&kex, ctx->gex.used, &ctx->pkt);
+  err = build_msg_kexinit (&kex, &ctx->pkt);
   if (!err)
     err = _gsti_packet_write (ctx);
   if (err)
@@ -1093,13 +1101,12 @@ kex_proc_kexdh_init (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexdh_init kexdh;
-
-  if (ctx->gex.used && ctx->pkt.type != SSH_MSG_KEX_DH_GEX_INIT)
+  int pkttype = ctx->gex.used? SSH_MSG_KEX_DH_GEX_INIT : SSH_MSG_KEXDH_INIT;
+  
+  if (ctx->pkt.type != pkttype)
     return gsti_error (GPG_ERR_BUG);
-  if (ctx->pkt.type != SSH_MSG_KEXDH_INIT)
-    return gsti_error (GPG_ERR_BUG);
 
-  err = parse_msg_kexdh_init (&kexdh, ctx->pktbuf);
+  err = parse_msg_kexdh_init (&kexdh, ctx->kex.p, ctx->pktbuf);
   if (err)
     return err;
 
@@ -1156,13 +1163,12 @@ kex_proc_kexdh_reply (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexdh_reply dhr;
-
-  if (ctx->gex.used && ctx->pkt.type != SSH_MSG_KEX_DH_GEX_REPLY)
+  int pkttype = ctx->gex.used? SSH_MSG_KEX_DH_GEX_REPLY : SSH_MSG_KEXDH_REPLY;
+  
+  if (pkttype != ctx->pkt.type)
     return gsti_error (GPG_ERR_BUG);
-  if (ctx->pkt.type != SSH_MSG_KEXDH_REPLY)
-    return gsti_error (GPG_ERR_BUG);
 
-  err = parse_msg_kexdh_reply (&dhr, ctx->pktbuf);
+  err = parse_msg_kexdh_reply (&dhr, ctx->kex.p, ctx->pktbuf);
   if (err)
     return err;
 
@@ -1538,6 +1544,14 @@ kex_proc_service_accept (gsti_ctx_t ctx)
 }
 
 
+static void
+dump_gex_request (gsti_ctx_t ctx, MSG_gexdh_request * gex)
+{
+  _gsti_log_debug (ctx, "MSG_gex_request min=%lu n=%lu max=%lu\n",
+                   gex->min, gex->n, gex->max);
+}
+
+
 static gsti_error_t
 build_gex_request (MSG_gexdh_request * gex, packet_buffer_t pkt)
 {
@@ -1561,7 +1575,7 @@ build_gex_request (MSG_gexdh_request * gex, packet_buffer_t pkt)
 
 
 gsti_error_t
-kex_send_gex_request (gsti_ctx_t ctx)
+_gsti_kex_send_gex_request (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_request gex;
@@ -1638,31 +1652,19 @@ select_dh_modulus (size_t n, size_t * r_size)
   *r_size = (n + 7) / 8;
   switch (n)
     {
-    case 1023:
-      p = mpi_array_1023;
-      break;
-    case 1534:
-      p = mpi_array_1534;
-      break;
-    case 2046:
-      p = mpi_array_2046;
-      break;
-    case 3190:
-      p = mpi_array_3190;
-      break;
-    case 4094:
-      p = mpi_array_4094;
-      break;
-    default:
-      p = mpi_array_1534;
-      break;
+    case 1023: p = mpi_array_1023; break;
+    case 1534: p = mpi_array_1534; break;
+    case 2046: p = mpi_array_2046; break;
+    case 3190: p = mpi_array_3190; break;
+    case 4094: p = mpi_array_4094; break;
+    default:   p = mpi_array_1534; break;
     }
   return p;
 }
 
 
 gsti_error_t
-kex_proc_gex_request (gsti_ctx_t ctx)
+_gsti_kex_proc_gex_request (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_request gex;
@@ -1673,6 +1675,7 @@ kex_proc_gex_request (gsti_ctx_t ctx)
   err = parse_gex_request (&gex, ctx->pktbuf);
   if (err)
     return err;
+  dump_gex_request (ctx, &gex);
 
   if (gex.n < gex.min || gex.n > gex.max)
     return gsti_error (GPG_ERR_INV_PACKET);
@@ -1699,6 +1702,15 @@ free_gex_group (MSG_gexdh_group * gex)
       gcry_mpi_release (gex->p);
       gcry_mpi_release (gex->g);
     }
+}
+
+
+static void
+dump_gex_group (gsti_ctx_t ctx, MSG_gexdh_group * gex)
+{
+  _gsti_log_debug (ctx, "MSG_gex_group:\n");
+  _gsti_log_debug (ctx, "prime %d bits, generator %d bits\n",
+                   gcry_mpi_get_nbits (gex->p), gcry_mpi_get_nbits (gex->g));
 }
 
 
@@ -1733,7 +1745,7 @@ build_gex_group (MSG_gexdh_group * gex, packet_buffer_t pkt)
 
 
 gsti_error_t
-kex_send_gex_group (gsti_ctx_t ctx)
+_gsti_kex_send_gex_group (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_group gex;
@@ -1789,7 +1801,7 @@ parse_gex_group (MSG_gexdh_group * gex, const gsti_buffer_t buf)
 
 
 gsti_error_t
-kex_proc_gex_group (gsti_ctx_t ctx)
+_gsti_kex_proc_gex_group (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_group gex;
@@ -1799,6 +1811,8 @@ kex_proc_gex_group (gsti_ctx_t ctx)
   err = parse_gex_group (&gex, ctx->pktbuf);
   if (err)
     return err;
+
+  dump_gex_group (ctx, &gex);
   
   /* store the DH group exchange values for later use */
   ctx->kex.p = gex.p;

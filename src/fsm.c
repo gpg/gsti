@@ -247,17 +247,6 @@ fsm_server_loop (gsti_ctx_t ctx)
 		    ctx->state = FSM_kex_wait;
 		  break;
 
-                case SSH_MSG_KEX_DH_GEX_REQUEST:
-                  err = kex_proc_gex_request (ctx);
-                  if (!err)
-                    err = kex_send_gex_group (ctx);
-                  if (!err)
-                    {
-                      ctx->gex.used = 1;
-                      ctx->state = FSM_kex_wait;
-                    }
-                  break;
-
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_kex_failed;
@@ -275,6 +264,17 @@ fsm_server_loop (gsti_ctx_t ctx)
 		  err = logrc (ctx, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
 			       "server got KEXDH_REPLY\n");
 		  break;
+                  
+                case SSH_MSG_KEX_DH_GEX_REQUEST:
+                  err = _gsti_kex_proc_gex_request (ctx);
+                  if (!err)
+                    err = _gsti_kex_send_gex_group (ctx);
+                  if (!err)
+                    {
+                      _gsti_log_debug (ctx, "KEX: enable DH group exchange\n");
+                      ctx->gex.used = 1;
+                    }
+                  break;
 
 		case SSH_MSG_KEXDH_INIT:
                 case SSH_MSG_KEX_DH_GEX_INIT:
@@ -351,7 +351,6 @@ fsm_server_loop (gsti_ctx_t ctx)
 		{
 		case SSH_MSG_USERAUTH_REQUEST:
 		  err = auth_proc_init_packet (ctx, ctx->auth);
-                  fprintf (stderr, "+++ DBG err=%d (%s)\n", err, gsti_strerror (err));
 		  if (!err)
 		    ctx->state = FSM_auth_send_pkok;
                   else
@@ -461,9 +460,15 @@ fsm_client_loop (gsti_ctx_t ctx)
 	  break;
 
 	case FSM_kex_start:
-          if (ctx->gex.used)
+          if (!err)
+            err = kex_send_init_packet (ctx);
+	  if (!err)
+	    err = request_packet (ctx);
+	  if (!err)
+	    err = kex_proc_init_packet (ctx);
+          if (!err && ctx->gex.used)
             {
-              err = kex_send_gex_request (ctx);
+              err = _gsti_kex_send_gex_request (ctx);
               if (!err)
                 {
                   err = request_packet (ctx);
@@ -472,24 +477,19 @@ fsm_client_loop (gsti_ctx_t ctx)
                       switch (ctx->pkt.type)
                         {
                         case SSH_MSG_KEX_DH_GEX_GROUP:
-                          err = kex_proc_gex_group (ctx);
+                          err = _gsti_kex_proc_gex_group (ctx);
                           break;
-
+                          
                         default:
                           err = logrc (ctx, gsti_error
                                        (GPG_ERR_PROTOCOL_VIOLATION), "client "
-                                       "got wrong packet (!DH_GEX_GROUP)\n");
-                          break;
+                                       "got wrong packet (pkttype=%d)\n",
+                                       ctx->pkt.type);
+                          break; 
                         }
                     }
                 }
             }
-          if (!err)
-            err = kex_send_init_packet (ctx);
-	  if (!err)
-	    err = request_packet (ctx);
-	  if (!err)
-	    err = kex_proc_init_packet (ctx);
 	  if (!err)
 	    err = kex_send_kexdh_init (ctx);
 	  if (!err)

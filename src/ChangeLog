@@ -1,3 +1,12 @@
+2004-07-07  Timo Schulz  <ts@g10code.de>
+
+	* kex.c (check_dh_mpi_range): Add DH group support.
+	Prefixed all gex functions with _gsti_.
+	(parse_msg_kexdh_init): Likewise.
+	(parse_msg_kexdh_reply): Likewise.
+	(build_kex_list): Likewise.
+	* fsm.c (fsm_client_loop): Change order of DH group exchange.
+	
 2004-07-06  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (_gsti_key_fromblob): Return an error for
