@@ -1,0 +1,12 @@
+
+		   GNU Secure Transport Initiative
+
+	This is a library which implements a basic part of the
+	protocol used by SSH to create a secure transport channel.
+
+
+		    THIS IS WORK IN PROGRESS !!!!
+
+	You may need the latest GnuPG 1.1 version form CVS and	hack
+	some things.
+
