@@ -21,31 +21,31 @@
 #ifndef GSTI_KEX_H
 #define GSTI_KEX_H
 
-gsti_error_t kex_send_version (GSTIHD hd);
-gsti_error_t kex_wait_on_version (GSTIHD hd);
+gsti_error_t kex_send_version (gsti_ctx_t ctx);
+gsti_error_t kex_wait_on_version (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_init_packet (GSTIHD hd);
-gsti_error_t kex_proc_init_packet (GSTIHD hd);
+gsti_error_t kex_send_init_packet (gsti_ctx_t ctx);
+gsti_error_t kex_proc_init_packet (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_kexdh_init (GSTIHD hd);
-gsti_error_t kex_proc_kexdh_init (GSTIHD hd);
+gsti_error_t kex_send_kexdh_init (gsti_ctx_t ctx);
+gsti_error_t kex_proc_kexdh_init (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_kexdh_reply (GSTIHD hd);
-gsti_error_t kex_proc_kexdh_reply (GSTIHD hd);
+gsti_error_t kex_send_kexdh_reply (gsti_ctx_t ctx);
+gsti_error_t kex_proc_kexdh_reply (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_newkeys (GSTIHD hd);
-gsti_error_t kex_proc_newkeys (GSTIHD hd);
+gsti_error_t kex_send_newkeys (gsti_ctx_t ctx);
+gsti_error_t kex_proc_newkeys (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_service_request (GSTIHD hd, const char *name);
-gsti_error_t kex_proc_service_request (GSTIHD hd);
-gsti_error_t kex_send_service_accept (GSTIHD hd);
-gsti_error_t kex_proc_service_accept (GSTIHD hd);
+gsti_error_t kex_send_service_request (gsti_ctx_t ctx, const char *name);
+gsti_error_t kex_proc_service_request (gsti_ctx_t ctx);
+gsti_error_t kex_send_service_accept (gsti_ctx_t ctx);
+gsti_error_t kex_proc_service_accept (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_gex_request (GSTIHD hd);
-gsti_error_t kex_proc_gex_request (GSTIHD hd);
+gsti_error_t kex_send_gex_request (gsti_ctx_t ctx);
+gsti_error_t kex_proc_gex_request (gsti_ctx_t ctx);
 
-gsti_error_t kex_send_gex_group (GSTIHD hd);
-gsti_error_t kex_proc_gex_group (GSTIHD hd);
+gsti_error_t kex_send_gex_group (gsti_ctx_t ctx);
+gsti_error_t kex_proc_gex_group (gsti_ctx_t ctx);
 
 
 #endif /* GSTI_KEX_H */

@@ -184,13 +184,14 @@ enum gsti_auth_methods
 };
 
 
-/* Our handle type */
+/* The context type.  */
 struct gsti_context;
-typedef struct gsti_context *GSTIHD;
+typedef struct gsti_context *gsti_ctx_t;
+
 
 /* Some handy types.  */
-typedef int (*GSTI_READ_FNC) (GSTIHD, void *, size_t *);
-typedef int (*GSTI_WRITE_FNC) (GSTIHD, const void *, size_t);
+typedef int (*GSTI_READ_FNC) (gsti_ctx_t ctx, void *, size_t *);
+typedef int (*GSTI_WRITE_FNC) (gsti_ctx_t ctx, const void *, size_t);
 
 typedef struct
 {
@@ -209,19 +210,19 @@ const char *gsti_check_version (const char *req_version);
 void gsti_control (enum gsti_ctl_cmds ctl);
 
 /* api */
-GSTIHD gsti_init (void);
-void gsti_deinit (GSTIHD hd);
-gsti_error_t gsti_set_readfnc (GSTIHD hd, GSTI_READ_FNC readfnc);
-gsti_error_t gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc);
-gsti_error_t gsti_set_service (GSTIHD hd, const char *svcname);
-gsti_error_t gsti_read (GSTIHD hd, void *buffer, size_t * length);
-gsti_error_t gsti_write (GSTIHD hd, const void *buffer, size_t length);
-gsti_error_t gsti_set_hostkey (GSTIHD hd, const char *file);
-gsti_error_t gsti_set_client_key (GSTIHD hd, const char *file);
-gsti_error_t gsti_set_client_user (GSTIHD hd, const char *user);
-gsti_error_t gsti_set_auth_method (GSTIHD hd, int methd);
-gsti_error_t gsti_set_compression (GSTIHD hd, int val);
-gsti_error_t gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n,
+gsti_ctx_t gsti_init (void);
+void gsti_deinit (gsti_ctx_t ctx);
+gsti_error_t gsti_set_readfnc (gsti_ctx_t ctx, GSTI_READ_FNC readfnc);
+gsti_error_t gsti_set_writefnc (gsti_ctx_t ctx, GSTI_WRITE_FNC writefnc);
+gsti_error_t gsti_set_service (gsti_ctx_t ctx, const char *svcname);
+gsti_error_t gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length);
+gsti_error_t gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length);
+gsti_error_t gsti_set_hostkey (gsti_ctx_t ctx, const char *file);
+gsti_error_t gsti_set_client_key (gsti_ctx_t ctx, const char *file);
+gsti_error_t gsti_set_client_user (gsti_ctx_t ctx, const char *user);
+gsti_error_t gsti_set_auth_method (gsti_ctx_t ctx, int methd);
+gsti_error_t gsti_set_compression (gsti_ctx_t ctx, int val);
+gsti_error_t gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
 			     unsigned int max);
 
 
@@ -239,16 +240,16 @@ typedef enum
 gsti_log_level_t;
 
 /* Set the log stream for the context CTX to STREAM.  */
-gsti_error_t gsti_set_log_stream (GSTIHD ctx, gio_stream_t stream);
+gsti_error_t gsti_set_log_stream (gsti_ctx_t ctx, gio_stream_t stream);
 
 /* Set the maximum level up to which messages are passed to the log
    handler for the context CTX.  */
-void gsti_set_log_level (GSTIHD ctx, gsti_log_level_t level);
+void gsti_set_log_level (gsti_ctx_t ctx, gsti_log_level_t level);
 
 
 /*-- fsm.c --*/
-gsti_error_t gsti_get_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
-gsti_error_t gsti_put_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
+gsti_error_t gsti_get_packet (gsti_ctx_t ctx, GSTI_PKTDESC * pkt);
+gsti_error_t gsti_put_packet (gsti_ctx_t ctx, GSTI_PKTDESC * pkt);
 
 
 /*-- pubkey.c --*/

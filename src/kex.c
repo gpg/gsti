@@ -91,10 +91,10 @@ cmp_bstring (BSTRING a, BSTRING b)
 
 
 gsti_error_t
-kex_send_version (GSTIHD hd)
+kex_send_version (gsti_ctx_t ctx)
 {
   gsti_error_t err;
-  WRITE_STREAM wst = hd->write_stream;
+  WRITE_STREAM wst = ctx->write_stream;
   const char *ver = host_version_string;
 
   err = _gsti_stream_writen (wst, ver, strlen (ver));
@@ -113,10 +113,10 @@ kex_send_version (GSTIHD hd)
    reference.  If it does not find such a string it returns an
    error.  */
 gsti_error_t
-kex_wait_on_version (GSTIHD hd)
+kex_wait_on_version (gsti_ctx_t ctx)
 {
   static int initstr[4] = { 0x53, 0x53, 0x48, 0x2d };	/* "SSH-" in ascii */
-  READ_STREAM rst = hd->read_stream;
+  READ_STREAM rst = ctx->read_stream;
   char version[300];
   int any = 0, pos = 0;
   int c;
@@ -159,8 +159,8 @@ kex_wait_on_version (GSTIHD hd)
   if (version[pos - 1] == '\r')
     pos--;
   version[pos] = 0;
-  _gsti_free (hd->peer_version_string);
-  hd->peer_version_string = _gsti_bstring_make (version, strlen (version));
+  _gsti_free (ctx->peer_version_string);
+  ctx->peer_version_string = _gsti_bstring_make (version, strlen (version));
 
   return 0;
 }
@@ -321,7 +321,7 @@ build_msg_kexinit (MSG_kexinit * kex, struct packet_buffer_s *pkt)
 
 
 static void
-dump_msg_kexinit (GSTIHD ctx, MSG_kexinit * kex)
+dump_msg_kexinit (gsti_ctx_t ctx, MSG_kexinit * kex)
 {
   _gsti_log_debug (ctx, "MSG_kexinit:\n");
   _gsti_dump_hexbuf ("cookie: ", kex->cookie, 16);
@@ -404,7 +404,7 @@ leave:
 
 
 static void
-dump_msg_kexdh_init (GSTIHD ctx, MSG_kexdh_init * kexdh)
+dump_msg_kexdh_init (gsti_ctx_t ctx, MSG_kexdh_init * kexdh)
 {
   _gsti_log_debug (ctx, "MSG_kexdh_init:\n");
   _gsti_dump_mpi ("e=", kexdh->e);
@@ -494,7 +494,7 @@ leave:
 
 
 static void
-dump_msg_kexdh_reply (GSTIHD ctx, MSG_kexdh_reply * dhr)
+dump_msg_kexdh_reply (gsti_ctx_t ctx, MSG_kexdh_reply * dhr)
 {
   _gsti_log_debug (ctx, "MSG_kexdh_reply:\n");
   _gsti_dump_bstring ("k_s=", dhr->k_s);
@@ -565,7 +565,7 @@ calc_dh_key (gcry_mpi_t f, gcry_mpi_t x)
 
 /* Calculate the exchange hash value and put it into the handle.  */
 static gsti_error_t
-calc_exchange_hash (GSTIHD hd, BSTRING i_c, BSTRING i_s,
+calc_exchange_hash (gsti_ctx_t ctx, BSTRING i_c, BSTRING i_s,
 		    BSTRING k_s, gcry_mpi_t e, gcry_mpi_t f)
 {
   gsti_error_t err;
@@ -578,9 +578,9 @@ calc_exchange_hash (GSTIHD hd, BSTRING i_c, BSTRING i_s,
   if (err)
     return err;
 
-  if (hd->we_are_server)
+  if (ctx->we_are_server)
     {
-      _gsti_bstring_hash (md, hd->peer_version_string);
+      _gsti_bstring_hash (md, ctx->peer_version_string);
       pp = _gsti_bstring_make (ver, strlen (ver));
       _gsti_bstring_hash (md, pp);
       _gsti_free (pp);
@@ -590,21 +590,21 @@ calc_exchange_hash (GSTIHD hd, BSTRING i_c, BSTRING i_s,
       pp = _gsti_bstring_make (ver, strlen (ver));
       _gsti_bstring_hash (md, pp);
       _gsti_free (pp);
-      _gsti_bstring_hash (md, hd->peer_version_string);
+      _gsti_bstring_hash (md, ctx->peer_version_string);
     }
   _gsti_bstring_hash (md, i_c);
   _gsti_bstring_hash (md, i_s);
   _gsti_bstring_hash (md, k_s);
   hash_mpi (md, e);
   hash_mpi (md, f);
-  hash_mpi (md, hd->kex.k);
+  hash_mpi (md, ctx->kex.k);
 
   dlen = gcry_md_get_algo_dlen (algo);
-  hd->kex.h = _gsti_bstring_make (gcry_md_read (md, algo), dlen);
-  if (!hd->session_id)		/* initialize the session id the first time */
-    hd->session_id = _gsti_bstring_make (gcry_md_read (md, algo), dlen);
+  ctx->kex.h = _gsti_bstring_make (gcry_md_read (md, algo), dlen);
+  if (!ctx->session_id)		/* initialize the session id the first time */
+    ctx->session_id = _gsti_bstring_make (gcry_md_read (md, algo), dlen);
   gcry_md_close (md);
-  _gsti_dump_hexbuf ("SesID=", hd->session_id->d, hd->session_id->len);
+  _gsti_dump_hexbuf ("SesID=", ctx->session_id->d, ctx->session_id->len);
   return 0;
 }
 
@@ -613,7 +613,7 @@ calc_exchange_hash (GSTIHD hd, BSTRING i_c, BSTRING i_s,
    kex data can be used until we have send the NEWKEYs msg
    Well, doesn't matter for now. */
 static BSTRING
-construct_one_key (GSTIHD hd, gcry_md_hd_t md1, int algo,
+construct_one_key (gsti_ctx_t ctx, gcry_md_hd_t md1, int algo,
 		   const byte * letter, size_t size)
 {
   BSTRING hash;
@@ -624,7 +624,7 @@ construct_one_key (GSTIHD hd, gcry_md_hd_t md1, int algo,
     abort ();
   hash = _gsti_bstring_make (NULL, size);
   gcry_md_write (md, letter, 1);
-  gcry_md_write (md, hd->session_id->d, hd->session_id->len);
+  gcry_md_write (md, ctx->session_id->d, ctx->session_id->len);
   n = gcry_md_get_algo_dlen (algo);
   if (n > size)
     n = size;
@@ -648,48 +648,48 @@ construct_one_key (GSTIHD hd, gcry_md_hd_t md1, int algo,
 
 
 static gsti_error_t
-construct_keys (GSTIHD hd)
+construct_keys (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   gcry_md_hd_t md;
   int algo = GCRY_MD_SHA1;
   int keylen, blksize, maclen;
 
-  if (hd->kex.iv_a)
+  if (ctx->kex.iv_a)
     return 0;			/* already constructed */
 
   err = gcry_md_open (&md, algo, 0);
   if (err)
     return err;
 
-  hash_mpi (md, hd->kex.k);
-  gcry_md_write (md, hd->kex.h->d, hd->kex.h->len);
+  hash_mpi (md, ctx->kex.k);
+  gcry_md_write (md, ctx->kex.h->d, ctx->kex.h->len);
 
-  blksize = hd->ciph_blksize;
-  maclen = hd->mac_len;
-  keylen = gcry_cipher_get_algo_keylen (hd->ciph_algo);
+  blksize = ctx->ciph_blksize;
+  maclen = ctx->mac_len;
+  keylen = gcry_cipher_get_algo_keylen (ctx->ciph_algo);
 
-  hd->kex.iv_a = construct_one_key (hd, md, algo, "\x41", blksize);
-  hd->kex.iv_b = construct_one_key (hd, md, algo, "\x42", blksize);
-  hd->kex.key_c = construct_one_key (hd, md, algo, "\x43", keylen);
-  hd->kex.key_d = construct_one_key (hd, md, algo, "\x44", keylen);
-  hd->kex.mac_e = construct_one_key (hd, md, algo, "\x45", maclen);
-  hd->kex.mac_f = construct_one_key (hd, md, algo, "\x46", maclen);
+  ctx->kex.iv_a = construct_one_key (ctx, md, algo, "\x41", blksize);
+  ctx->kex.iv_b = construct_one_key (ctx, md, algo, "\x42", blksize);
+  ctx->kex.key_c = construct_one_key (ctx, md, algo, "\x43", keylen);
+  ctx->kex.key_d = construct_one_key (ctx, md, algo, "\x44", keylen);
+  ctx->kex.mac_e = construct_one_key (ctx, md, algo, "\x45", maclen);
+  ctx->kex.mac_f = construct_one_key (ctx, md, algo, "\x46", maclen);
   gcry_md_close (md);
 
-  _gsti_dump_hexbuf ("key A=", hd->kex.iv_a->d, hd->kex.iv_a->len);
-  _gsti_dump_hexbuf ("key B=", hd->kex.iv_b->d, hd->kex.iv_b->len);
-  _gsti_dump_hexbuf ("key C=", hd->kex.key_c->d, hd->kex.key_c->len);
-  _gsti_dump_hexbuf ("key D=", hd->kex.key_d->d, hd->kex.key_d->len);
-  _gsti_dump_hexbuf ("key E=", hd->kex.mac_e->d, hd->kex.mac_e->len);
-  _gsti_dump_hexbuf ("key F=", hd->kex.mac_f->d, hd->kex.mac_f->len);
+  _gsti_dump_hexbuf ("key A=", ctx->kex.iv_a->d, ctx->kex.iv_a->len);
+  _gsti_dump_hexbuf ("key B=", ctx->kex.iv_b->d, ctx->kex.iv_b->len);
+  _gsti_dump_hexbuf ("key C=", ctx->kex.key_c->d, ctx->kex.key_c->len);
+  _gsti_dump_hexbuf ("key D=", ctx->kex.key_d->d, ctx->kex.key_d->len);
+  _gsti_dump_hexbuf ("key E=", ctx->kex.mac_e->d, ctx->kex.mac_e->len);
+  _gsti_dump_hexbuf ("key F=", ctx->kex.mac_f->d, ctx->kex.mac_f->len);
 
   return 0;
 }
 
 
 static void
-build_cipher_list (GSTIHD hd, STRLIST * c2s, STRLIST * s2c)
+build_cipher_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 {
   const char *s;
   int i;
@@ -706,7 +706,7 @@ build_cipher_list (GSTIHD hd, STRLIST * c2s, STRLIST * s2c)
 
 
 static void
-build_hmac_list (GSTIHD hd, STRLIST * c2s, STRLIST * s2c)
+build_hmac_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 {
   const char *s;
   int i;
@@ -723,12 +723,12 @@ build_hmac_list (GSTIHD hd, STRLIST * c2s, STRLIST * s2c)
 
 
 static void
-build_compress_list (GSTIHD hd, STRLIST * c2s, STRLIST * s2c)
+build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 {
   *c2s = _gsti_strlist_insert (NULL, "none");
   *s2c = _gsti_strlist_insert (NULL, "none");
 #ifdef USE_NEWZLIB
-  if (hd->zlib.use)
+  if (ctx->zlib.use)
     {
       *c2s = _gsti_strlist_insert (*c2s, "zlib");
       *s2c = _gsti_strlist_insert (*s2c, "zlib");
@@ -738,12 +738,12 @@ build_compress_list (GSTIHD hd, STRLIST * c2s, STRLIST * s2c)
 
 
 static void
-build_kex_list (GSTIHD hd, STRLIST * lst)
+build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 {
   *lst = _gsti_strlist_insert (NULL, "diffie-hellman-group-exchange-sha1");
   *lst = _gsti_strlist_insert (*lst, "diffie-hellman-group1-sha1");
 
-  hd->kex_type = SSH_KEX_GROUP_EXCHANGE;
+  ctx->kex_type = SSH_KEX_GROUP_EXCHANGE;
 }
 
 
@@ -755,7 +755,7 @@ build_pkalgo_list (STRLIST * lst)
 
 
 gsti_error_t
-kex_send_init_packet (GSTIHD hd)
+kex_send_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
   MSG_kexinit kex;
@@ -766,32 +766,32 @@ kex_send_init_packet (GSTIHD hd)
 
   /* We need the cookie later, so store it.  */
   gcry_randomize (kex.cookie, 16, GCRY_STRONG_RANDOM);
-  memcpy (hd->cookie, kex.cookie, 16);
+  memcpy (ctx->cookie, kex.cookie, 16);
 
-  build_kex_list (hd, &kex.kex_algo);
+  build_kex_list (ctx, &kex.kex_algo);
   build_pkalgo_list (&kex.server_host_key_algos);
-  build_cipher_list (hd, &kex.encr_algos_c2s, &kex.encr_algos_s2c);
-  build_hmac_list (hd, &kex.mac_algos_c2s, &kex.mac_algos_s2c);
-  build_compress_list (hd, &kex.compr_algos_c2s, &kex.compr_algos_s2c);
-  err = build_msg_kexinit (&kex, &hd->pkt);
+  build_cipher_list (ctx, &kex.encr_algos_c2s, &kex.encr_algos_s2c);
+  build_hmac_list (ctx, &kex.mac_algos_c2s, &kex.mac_algos_s2c);
+  build_compress_list (ctx, &kex.compr_algos_c2s, &kex.compr_algos_s2c);
+  err = build_msg_kexinit (&kex, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (hd);
+    err = _gsti_packet_write (ctx);
   if (err)
     {
       free_msg_kexinit (&kex);
       return err;
     }
   /* Must do it here because write_packet fills in the packet type.  */
-  p = hd->pkt.payload;
-  hd->host_kexinit_data = _gsti_bstring_make (p, hd->pkt.payload_len);
-  err = _gsti_packet_flush (hd);
+  p = ctx->pkt.payload;
+  ctx->host_kexinit_data = _gsti_bstring_make (p, ctx->pkt.payload_len);
+  err = _gsti_packet_flush (ctx);
   return err;
 }
 
 
 /* Choose a MAC algorithm that is supported by both sides.  */
 static gsti_error_t
-choose_mac_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
+choose_mac_algo (gsti_ctx_t ctx, STRLIST cli, STRLIST srv)
 {
   gsti_error_t err = 0;
   STRLIST l;
@@ -807,10 +807,10 @@ choose_mac_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
 	{
 	  if (!strcmp (s, l->d))
 	    {
-	      _gsti_log_debug (hd, "chosen mac: %s (maclen %d)\n",
+	      _gsti_log_debug (ctx, "chosen mac: %s (maclen %d)\n",
 			       hmac_list[i].name, hmac_list[i].len);
-	      hd->mac_algo = hmac_list[i].algid;
-	      hd->mac_len = hmac_list[i].len;
+	      ctx->mac_algo = hmac_list[i].algid;
+	      ctx->mac_len = hmac_list[i].len;
 	      return 0;
 	    }
 	}
@@ -821,7 +821,7 @@ choose_mac_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
 
 /* Choose a cipher algorithm which is available on both sides.  */
 static int
-choose_cipher_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
+choose_cipher_algo (gsti_ctx_t ctx, STRLIST cli, STRLIST srv)
 {
   gsti_error_t err = 0;
   STRLIST l;
@@ -837,12 +837,13 @@ choose_cipher_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
 	{
 	  if (!strcmp (s, l->d))
 	    {
-	      _gsti_log_debug (hd, "chosen cipher: %s (blklen %d, keylen %d)\n",
+	      _gsti_log_debug (ctx,
+			       "chosen cipher: %s (blklen %d, keylen %d)\n",
 			       cipher_list[i].name,
 			       cipher_list[i].blksize, cipher_list[i].len);
-	      hd->ciph_blksize = cipher_list[i].blksize;
-	      hd->ciph_algo = cipher_list[i].algid;
-	      hd->ciph_mode = cipher_list[i].mode;
+	      ctx->ciph_blksize = cipher_list[i].blksize;
+	      ctx->ciph_algo = cipher_list[i].algid;
+	      ctx->ciph_mode = cipher_list[i].mode;
 	      return 0;
 	    }
 	}
@@ -852,19 +853,19 @@ choose_cipher_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
 
 
 static gsti_error_t
-choose_kex_algo (GSTIHD hd, STRLIST peer)
+choose_kex_algo (gsti_ctx_t ctx, STRLIST peer)
 {
   char *p;
   int res;
 
   /* FIXME: Check for extensions the server does not understand.  */
-  if (hd->we_are_server)
+  if (ctx->we_are_server)
     {
       p = strstr (peer->d, "exchange");
       res = p ? SSH_KEX_GROUP_EXCHANGE : SSH_KEX_GROUP1;
-      if (hd->kex_type != res)
-	hd->kex_type = res;
-      _gsti_log_debug (hd, "chosen kex-algo: %s\n", peer->d);
+      if (ctx->kex_type != res)
+	ctx->kex_type = res;
+      _gsti_log_debug (ctx, "chosen kex-algo: %s\n", peer->d);
     }
   return 0;
 }
@@ -872,213 +873,217 @@ choose_kex_algo (GSTIHD hd, STRLIST peer)
 
 /* Process a received key init packet.  */
 gsti_error_t
-kex_proc_init_packet (GSTIHD hd)
+kex_proc_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexinit kex;
 
-  if (hd->pkt.type != SSH_MSG_KEXINIT)
+  if (ctx->pkt.type != SSH_MSG_KEXINIT)
     return gsti_error (GPG_ERR_BUG);
-  err = parse_msg_kexinit (&kex, hd->we_are_server, hd->cookie, hd->pktbuf);
+  err = parse_msg_kexinit (&kex, ctx->we_are_server, ctx->cookie, ctx->pktbuf);
   if (err)
     return err;
-  err = choose_mac_algo (hd, kex.mac_algos_c2s, kex.mac_algos_s2c);
+  err = choose_mac_algo (ctx, kex.mac_algos_c2s, kex.mac_algos_s2c);
   if (err)
     return err;
-  err = choose_cipher_algo (hd, kex.encr_algos_c2s, kex.encr_algos_s2c);
+  err = choose_cipher_algo (ctx, kex.encr_algos_c2s, kex.encr_algos_s2c);
   if (err)
     return err;
-  err = choose_kex_algo (hd, kex.kex_algo);
+  err = choose_kex_algo (ctx, kex.kex_algo);
   if (err)
     return err;
 
-  if (!hd->we_are_server)
+  if (!ctx->we_are_server)
     {
       /* We replace the cookie inside with the right cookie to
          calculate a valid message digest.  */
-      memcpy (hd->pkt.packet_buffer + 6, hd->cookie, 16);
-      hd->pkt.payload = hd->pkt.packet_buffer + 5;
+      memcpy (ctx->pkt.packet_buffer + 6, ctx->cookie, 16);
+      ctx->pkt.payload = ctx->pkt.packet_buffer + 5;
     }
   else
     {
       /* The server still has its own cookie in the host data, we need
          to replace this with the received (client) cookie.  */
-      memcpy (hd->host_kexinit_data->d + 1, kex.cookie, 16);
+      memcpy (ctx->host_kexinit_data->d + 1, kex.cookie, 16);
     }
   /* Make a copy of the received payload which we will need later.  */
-  hd->peer_kexinit_data = _gsti_bstring_make (hd->pkt.payload,
-					      hd->pkt.payload_len);
+  ctx->peer_kexinit_data = _gsti_bstring_make (ctx->pkt.payload,
+					       ctx->pkt.payload_len);
 
-  dump_msg_kexinit (hd, &kex);
+  dump_msg_kexinit (ctx, &kex);
   return 0;
 }
 
 
 /* Send a KEX init packet (we are in the client role).  */
 gsti_error_t
-kex_send_kexdh_init (GSTIHD hd)
+kex_send_kexdh_init (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
   MSG_kexdh_init kexdh;
 
   memset (&kexdh, 0, sizeof kexdh);
-  kexdh.e = hd->kexdh_e = calc_dh_secret (&hd->secret_x);
-  err = build_msg_kexdh_init (&kexdh, &hd->pkt);
+  kexdh.e = ctx->kexdh_e = calc_dh_secret (&ctx->secret_x);
+  err = build_msg_kexdh_init (&kexdh, &ctx->pkt);
   if (err)
     return err;
-  err = _gsti_packet_write (hd);
+  err = _gsti_packet_write (ctx);
   if (err)
     return err;
-  err = _gsti_packet_flush (hd);
+  err = _gsti_packet_flush (ctx);
   return err;
 }
 
 
 /* Process the received DH init (we are in the server role).  */
 gsti_error_t
-kex_proc_kexdh_init (GSTIHD hd)
+kex_proc_kexdh_init (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexdh_init kexdh;
 
-  if (hd->pkt.type != SSH_MSG_KEXDH_INIT)
+  if (ctx->pkt.type != SSH_MSG_KEXDH_INIT)
     return gsti_error (GPG_ERR_BUG);
 
-  err = parse_msg_kexdh_init (&kexdh, hd->pktbuf);
+  err = parse_msg_kexdh_init (&kexdh, ctx->pktbuf);
   if (err)
     return err;
 
   /* We need the received e later.  */
-  hd->kexdh_e = kexdh.e;
+  ctx->kexdh_e = kexdh.e;
 
-  dump_msg_kexdh_init (hd, &kexdh);
+  dump_msg_kexdh_init (ctx, &kexdh);
   return 0;
 }
 
 
 /* Send a DH init packet (we are in the server role).  */
 gsti_error_t
-kex_send_kexdh_reply (GSTIHD hd)
+kex_send_kexdh_reply (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexdh_reply dhr;
   gcry_mpi_t y;
 
   memset (&dhr, 0, sizeof dhr);
-  dhr.k_s = _gsti_key_getblob (hd->hostkey);
+  dhr.k_s = _gsti_key_getblob (ctx->hostkey);
 
   /* Generate our secret and the public value for it.  */
   dhr.f = calc_dh_secret (&y);
   /* Now we can calculate the shared secret.  */
-  hd->kex.k = calc_dh_key (hd->kexdh_e, y);
+  ctx->kex.k = calc_dh_key (ctx->kexdh_e, y);
   gcry_mpi_release (y);
   /* And the hash.  */
-  err = calc_exchange_hash (hd, hd->host_kexinit_data, hd->peer_kexinit_data,
-			    dhr.k_s, hd->kexdh_e, dhr.f);
-  gcry_mpi_release (hd->kexdh_e);
+  err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
+			    ctx->peer_kexinit_data,
+			    dhr.k_s, ctx->kexdh_e, dhr.f);
+  gcry_mpi_release (ctx->kexdh_e);
   if (err)
     return err;
-  dhr.sig_h = _gsti_sig_encode (hd->hostkey, hd->kex.h->d);
+  dhr.sig_h = _gsti_sig_encode (ctx->hostkey, ctx->kex.h->d);
 
-  err = build_msg_kexdh_reply (&dhr, &hd->pkt);
+  err = build_msg_kexdh_reply (&dhr, &ctx->pkt);
   if (!err)
-    dump_msg_kexdh_reply (hd, &dhr);
+    dump_msg_kexdh_reply (ctx, &dhr);
   if (!err)
-    err = _gsti_packet_write (hd);
+    err = _gsti_packet_write (ctx);
   if (!err)
-    err = _gsti_packet_flush (hd);
+    err = _gsti_packet_flush (ctx);
   return err;
 }
 
 /* Process the received DH value and take the encryption kes into use.
    (we are in the client role).  */
 gsti_error_t
-kex_proc_kexdh_reply (GSTIHD hd)
+kex_proc_kexdh_reply (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexdh_reply dhr;
 
-  if (hd->pkt.type != SSH_MSG_KEXDH_REPLY)
+  if (ctx->pkt.type != SSH_MSG_KEXDH_REPLY)
     return gsti_error (GPG_ERR_BUG);
 
-  err = parse_msg_kexdh_reply (&dhr, hd->pktbuf);
+  err = parse_msg_kexdh_reply (&dhr, ctx->pktbuf);
   if (err)
     return err;
 
-  dump_msg_kexdh_reply (hd, &dhr);
+  dump_msg_kexdh_reply (ctx, &dhr);
 
-  hd->kex.k = calc_dh_key (dhr.f, hd->secret_x);
-  gcry_mpi_release (hd->secret_x);
+  ctx->kex.k = calc_dh_key (dhr.f, ctx->secret_x);
+  gcry_mpi_release (ctx->secret_x);
 
-  err = calc_exchange_hash (hd, hd->host_kexinit_data, hd->peer_kexinit_data,
-			    dhr.k_s, hd->kexdh_e, dhr.f);
-  gcry_mpi_release (hd->kexdh_e);
+  err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
+			    ctx->peer_kexinit_data,
+			    dhr.k_s, ctx->kexdh_e, dhr.f);
+  gcry_mpi_release (ctx->kexdh_e);
   if (err)
     return err;
 
-  err = _gsti_sig_decode (dhr.k_s, dhr.sig_h, hd->kex.h->d, &hd->hostkey);
+  err = _gsti_sig_decode (dhr.k_s, dhr.sig_h, ctx->kex.h->d, &ctx->hostkey);
 
   return err;
 }
 
 
 gsti_error_t
-kex_send_newkeys (GSTIHD hd)
+kex_send_newkeys (gsti_ctx_t ctx)
 {
   gsti_error_t err;
 
-  err = construct_keys (hd);
+  err = construct_keys (ctx);
   if (err)
     return err;
 
-  hd->pkt.type = SSH_MSG_NEWKEYS;
-  hd->pkt.payload_len = 1;
-  err = _gsti_packet_write (hd);
+  ctx->pkt.type = SSH_MSG_NEWKEYS;
+  ctx->pkt.payload_len = 1;
+  err = _gsti_packet_write (ctx);
   if (!err)
-    err = _gsti_packet_flush (hd);
+    err = _gsti_packet_flush (ctx);
   if (err)
     return err;
 
   /* Now we have to take the encryption keys into use.  */
-  err = gcry_cipher_open (&hd->encrypt_hd, hd->ciph_algo, hd->ciph_mode, 0);
-  if (!hd->ciph_blksize)
-    hd->ciph_blksize = gcry_cipher_get_algo_blklen (hd->ciph_algo);
+  err = gcry_cipher_open (&ctx->encrypt_hd, ctx->ciph_algo, ctx->ciph_mode, 0);
+  if (!ctx->ciph_blksize)
+    ctx->ciph_blksize = gcry_cipher_get_algo_blklen (ctx->ciph_algo);
   if (err)
     ;
-  else if (hd->we_are_server)
+  else if (ctx->we_are_server)
     {
       if (!err)
-	err = gcry_cipher_setkey (hd->encrypt_hd, hd->kex.key_d->d,
-				  hd->kex.key_d->len);
+	err = gcry_cipher_setkey (ctx->encrypt_hd, ctx->kex.key_d->d,
+				  ctx->kex.key_d->len);
       if (!err)
-	err = gcry_cipher_setiv (hd->encrypt_hd, hd->kex.iv_b->d,
-				 hd->kex.iv_b->len);
+	err = gcry_cipher_setiv (ctx->encrypt_hd, ctx->kex.iv_b->d,
+				 ctx->kex.iv_b->len);
       if (!err)
 	{
-	  err = gcry_md_open (&hd->send_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC);
+	  err = gcry_md_open (&ctx->send_mac, ctx->mac_algo,
+			      GCRY_MD_FLAG_HMAC);
 	  if (!err)
-	    err = gcry_md_setkey (hd->send_mac, hd->kex.mac_f->d,
-				  hd->kex.mac_f->len);
+	    err = gcry_md_setkey (ctx->send_mac, ctx->kex.mac_f->d,
+				  ctx->kex.mac_f->len);
 	}
     }
   else
     {
       if (!err)
-	err = gcry_cipher_setkey (hd->encrypt_hd, hd->kex.key_c->d,
-				  hd->kex.key_c->len);
+	err = gcry_cipher_setkey (ctx->encrypt_hd, ctx->kex.key_c->d,
+				  ctx->kex.key_c->len);
       if (!err)
-	err = gcry_cipher_setiv (hd->encrypt_hd, hd->kex.iv_a->d,
-				 hd->kex.iv_a->len);
+	err = gcry_cipher_setiv (ctx->encrypt_hd, ctx->kex.iv_a->d,
+				 ctx->kex.iv_a->len);
       if (!err)
 	{
-	  err = gcry_md_open (&hd->send_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC);
+	  err = gcry_md_open (&ctx->send_mac, ctx->mac_algo,
+			      GCRY_MD_FLAG_HMAC);
 	  if (!err)
-	    err = gcry_md_setkey (hd->send_mac, hd->kex.mac_e->d,
-				  hd->kex.mac_e->len);
+	    err = gcry_md_setkey (ctx->send_mac, ctx->kex.mac_e->d,
+				  ctx->kex.mac_e->len);
 	}
     }
   if (err)
-    return _gsti_log_err (hd, err, "setup encryption keys failed\n");
+    return _gsti_log_err (ctx, err, "setup encryption keys failed\n");
   return err;
 }
 
@@ -1086,66 +1091,68 @@ kex_send_newkeys (GSTIHD hd)
 /* Process a received newkeys message and take the decryption keys in
    use.  */
 gsti_error_t
-kex_proc_newkeys (GSTIHD hd)
+kex_proc_newkeys (gsti_ctx_t ctx)
 {
   gsti_error_t err;
 
-  if (hd->pkt.type != SSH_MSG_NEWKEYS)
+  if (ctx->pkt.type != SSH_MSG_NEWKEYS)
     return gsti_error (GPG_ERR_BUG);
 
-  err = construct_keys (hd);
+  err = construct_keys (ctx);
   if (err)
     return err;
 
-  err = gcry_cipher_open (&hd->decrypt_hd, hd->ciph_algo, hd->ciph_mode, 0);
-  if (!hd->ciph_blksize)
-    hd->ciph_blksize = gcry_cipher_get_algo_blklen (hd->ciph_algo);
+  err = gcry_cipher_open (&ctx->decrypt_hd, ctx->ciph_algo, ctx->ciph_mode, 0);
+  if (!ctx->ciph_blksize)
+    ctx->ciph_blksize = gcry_cipher_get_algo_blklen (ctx->ciph_algo);
   if (err)
     ;
-  else if (hd->we_are_server)
+  else if (ctx->we_are_server)
     {
       if (!err)
-	err = gcry_cipher_setkey (hd->decrypt_hd, hd->kex.key_c->d,
-				  hd->kex.key_c->len);
+	err = gcry_cipher_setkey (ctx->decrypt_hd, ctx->kex.key_c->d,
+				  ctx->kex.key_c->len);
       if (!err)
-	err = gcry_cipher_setiv (hd->decrypt_hd, hd->kex.iv_a->d,
-				 hd->kex.iv_a->len);
+	err = gcry_cipher_setiv (ctx->decrypt_hd, ctx->kex.iv_a->d,
+				 ctx->kex.iv_a->len);
       if (!err)
 	{
-	  err = gcry_md_open (&hd->recv_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC);
+	  err = gcry_md_open (&ctx->recv_mac, ctx->mac_algo,
+			      GCRY_MD_FLAG_HMAC);
 	  if (!err)
-	    err = gcry_md_setkey (hd->recv_mac, hd->kex.mac_e->d,
-				  hd->kex.mac_e->len);
+	    err = gcry_md_setkey (ctx->recv_mac, ctx->kex.mac_e->d,
+				  ctx->kex.mac_e->len);
 	}
     }
   else
     {
       if (!err)
-	err = gcry_cipher_setkey (hd->decrypt_hd, hd->kex.key_d->d,
-				  hd->kex.key_d->len);
+	err = gcry_cipher_setkey (ctx->decrypt_hd, ctx->kex.key_d->d,
+				  ctx->kex.key_d->len);
       if (!err)
-	err = gcry_cipher_setiv (hd->decrypt_hd, hd->kex.iv_b->d,
-				 hd->kex.iv_b->len);
+	err = gcry_cipher_setiv (ctx->decrypt_hd, ctx->kex.iv_b->d,
+				 ctx->kex.iv_b->len);
       if (!err)
 	{
-	  err = gcry_md_open (&hd->recv_mac, hd->mac_algo, GCRY_MD_FLAG_HMAC);
+	  err = gcry_md_open (&ctx->recv_mac, ctx->mac_algo,
+			      GCRY_MD_FLAG_HMAC);
 	  if (!err)
-	    err = gcry_md_setkey (hd->recv_mac, hd->kex.mac_f->d,
-				  hd->kex.mac_f->len);
+	    err = gcry_md_setkey (ctx->recv_mac, ctx->kex.mac_f->d,
+				  ctx->kex.mac_f->len);
 	}
     }
 
   if (err)
-    return _gsti_log_err (hd, err, "setup decryption keys failed\n");
+    return _gsti_log_err (ctx, err, "setup decryption keys failed\n");
   return err;
 }
 
 
 gsti_error_t
-kex_send_disconnect (GSTIHD hd, u32 reason)
+kex_send_disconnect (gsti_ctx_t ctx, u32 reason)
 {
   gsti_error_t err = 0;
-  struct packet_buffer_s *pkt = &hd->pkt;
+  struct packet_buffer_s *pkt = &ctx->pkt;
   BUFFER buf = NULL;
   size_t len;
 
@@ -1238,87 +1245,88 @@ leave:
 
 
 gsti_error_t
-kex_send_service_request (GSTIHD hd, const char *name)
+kex_send_service_request (gsti_ctx_t ctx, const char *name)
 {
   gsti_error_t err;
 
-  hd->service_name = _gsti_bstring_make (name, strlen (name));
-  err = build_msg_service (hd->service_name,
-			   &hd->pkt, SSH_MSG_SERVICE_REQUEST);
+  ctx->service_name = _gsti_bstring_make (name, strlen (name));
+  err = build_msg_service (ctx->service_name,
+			   &ctx->pkt, SSH_MSG_SERVICE_REQUEST);
   if (!err)
-    err = _gsti_packet_write (hd);
+    err = _gsti_packet_write (ctx);
   if (!err)
-    err = _gsti_packet_flush (hd);
+    err = _gsti_packet_flush (ctx);
   if (err)
     {
-      _gsti_free (hd->service_name);
-      hd->service_name = NULL;
+      _gsti_free (ctx->service_name);
+      ctx->service_name = NULL;
     }
   return err;
 }
 
 
 gsti_error_t
-kex_proc_service_request (GSTIHD hd)
+kex_proc_service_request (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   BSTRING svcname;
 
-  if (hd->pkt.type != SSH_MSG_SERVICE_REQUEST)
+  if (ctx->pkt.type != SSH_MSG_SERVICE_REQUEST)
     return gsti_error (GPG_ERR_BUG);
 
-  err = parse_msg_service (&svcname, hd->pktbuf, SSH_MSG_SERVICE_REQUEST);
+  err = parse_msg_service (&svcname, ctx->pktbuf, SSH_MSG_SERVICE_REQUEST);
   if (err)
     return err;
 
   if (svcname->len < 12 || memcmp (svcname->d, "ssh-userauth", 12))
-    return kex_send_disconnect (hd, SSH_DISCONNECT_SERVICE_NOT_AVAILABLE);
+    return kex_send_disconnect (ctx, SSH_DISCONNECT_SERVICE_NOT_AVAILABLE);
 
   /* Store the servicename, so that it can later be answered.  */
-  if (hd->service_name)
-    return _gsti_log_err (hd, gsti_error (GPG_ERR_BUG),
+  if (ctx->service_name)
+    return _gsti_log_err (ctx, gsti_error (GPG_ERR_BUG),
 			  "a service is already in use\n");
 
-  hd->service_name = svcname;
+  ctx->service_name = svcname;
   return err;
 }
 
 
 gsti_error_t
-kex_send_service_accept (GSTIHD hd)
+kex_send_service_accept (gsti_ctx_t ctx)
 {
   gsti_error_t err;
 
-  err = build_msg_service (hd->service_name, &hd->pkt, SSH_MSG_SERVICE_ACCEPT);
+  err = build_msg_service (ctx->service_name, &ctx->pkt,
+			   SSH_MSG_SERVICE_ACCEPT);
   if (!err)
-    err = _gsti_packet_write (hd);
+    err = _gsti_packet_write (ctx);
   if (!err)
-    err = _gsti_packet_flush (hd);
+    err = _gsti_packet_flush (ctx);
   return err;
 }
 
 
 gsti_error_t
-kex_proc_service_accept (GSTIHD hd)
+kex_proc_service_accept (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   BSTRING svcname;
   int res;
 
-  if (hd->pkt.type != SSH_MSG_SERVICE_ACCEPT)
+  if (ctx->pkt.type != SSH_MSG_SERVICE_ACCEPT)
     return gsti_error (GPG_ERR_BUG);
 
-  err = parse_msg_service (&svcname, hd->pktbuf, SSH_MSG_SERVICE_ACCEPT);
+  err = parse_msg_service (&svcname, ctx->pktbuf, SSH_MSG_SERVICE_ACCEPT);
   if (err)
     return err;
 
-  if (!hd->service_name)
-    return _gsti_log_err (hd, gsti_error (GPG_ERR_BUG),
+  if (!ctx->service_name)
+    return _gsti_log_err (ctx, gsti_error (GPG_ERR_BUG),
 			  "no service request sent\n");
-  res = cmp_bstring (hd->service_name, svcname);
+  res = cmp_bstring (ctx->service_name, svcname);
   _gsti_free (svcname);
   if (res)
-    return _gsti_log_err (hd, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
+    return _gsti_log_err (ctx, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
 			 "service name does not match requested one\n");
   return 0;
 }
@@ -1362,20 +1370,20 @@ build_gex_request (MSG_gexdh_request * gex, struct packet_buffer_s *pkt)
 
 
 gsti_error_t
-kex_send_gex_request (GSTIHD hd)
+kex_send_gex_request (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_request gex;
 
   memset (&gex, 0, sizeof gex);
-  gex.n = hd->gex.n;
-  gex.min = hd->gex.min;
-  gex.max = hd->gex.max;
-  err = build_gex_request (&gex, &hd->pkt);
+  gex.n = ctx->gex.n;
+  gex.min = ctx->gex.min;
+  gex.max = ctx->gex.max;
+  err = build_gex_request (&gex, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (hd);
+    err = _gsti_packet_write (ctx);
   if (!err)
-    err = _gsti_packet_flush (hd);
+    err = _gsti_packet_flush (ctx);
   return err;
 }
 
@@ -1445,15 +1453,15 @@ select_dh_modulus (size_t n, size_t * r_size)
 
 
 gsti_error_t
-kex_proc_gex_request (GSTIHD hd)
+kex_proc_gex_request (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_request gex;
 
-  if (hd->pkt.type != SSH_MSG_KEX_DH_GEX_REQUEST)
+  if (ctx->pkt.type != SSH_MSG_KEX_DH_GEX_REQUEST)
     return gsti_error (GPG_ERR_BUG);
 
-  err = parse_gex_request (&gex, hd->pktbuf);
+  err = parse_gex_request (&gex, ctx->pktbuf);
   if (err)
     return err;
 
@@ -1466,9 +1474,9 @@ kex_proc_gex_request (GSTIHD hd)
   else
     gex.n = choose_dh_size (gex.n);
 
-  hd->gex.n = gex.n;
-  hd->gex.min = gex.min;
-  hd->gex.max = gex.max;
+  ctx->gex.n = gex.n;
+  ctx->gex.min = gex.min;
+  ctx->gex.max = gex.max;
 
   return 0;
 }
@@ -1513,7 +1521,7 @@ leave:
 
 
 gsti_error_t
-kex_send_gex_group (GSTIHD hd)
+kex_send_gex_group (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_group gex;
@@ -1523,14 +1531,14 @@ kex_send_gex_group (GSTIHD hd)
   memset (&gex, 0, sizeof gex);
 
   gex.g = gcry_mpi_set_ui (NULL, 2);
-  mod = select_dh_modulus (hd->gex.n, &n);
+  mod = select_dh_modulus (ctx->gex.n, &n);
   err = gcry_mpi_scan (&gex.p, GCRYMPI_FMT_USG, mod, n, NULL);
   if (!err)
-    err = build_gex_group (&gex, &hd->pkt);
+    err = build_gex_group (&gex, &ctx->pkt);
   if (!err)
-    err = _gsti_packet_write (hd);
+    err = _gsti_packet_write (ctx);
   if (!err)
-    err = _gsti_packet_flush (hd);
+    err = _gsti_packet_flush (ctx);
   free_gex_group (&gex);
   return err;
 }
@@ -1563,14 +1571,14 @@ leave:
 
 
 gsti_error_t
-kex_proc_gex_group (GSTIHD hd)
+kex_proc_gex_group (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_gexdh_group gex;
 
-  if (hd->pkt.type != SSH_MSG_KEX_DH_GEX_GROUP)
+  if (ctx->pkt.type != SSH_MSG_KEX_DH_GEX_GROUP)
     return gsti_error (GPG_ERR_BUG);
-  err = parse_gex_group (&gex, hd->pktbuf);
+  err = parse_gex_group (&gex, ctx->pktbuf);
   if (err)
     return err;
 

@@ -39,7 +39,7 @@
 /* Log the message FMT with the arguments ARG_PTR for the context CTX,
    under the level LEVEL.  */
 static void
-_gsti_logv (GSTIHD ctx, gsti_log_level_t level,
+_gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
 	    const char *fmt, va_list arg_ptr)
 {
   gio_stream_t log_stream;
@@ -76,7 +76,7 @@ _gsti_logv (GSTIHD ctx, gsti_log_level_t level,
 
 /* Log the error ERR, which occured in context CTX, and return it.  */
 int
-_gsti_log_err (GSTIHD ctx, int err, const char *fmt, ...)
+_gsti_log_err (gsti_ctx_t ctx, int err, const char *fmt, ...)
 {
   va_list arg;
 
@@ -90,7 +90,7 @@ _gsti_log_err (GSTIHD ctx, int err, const char *fmt, ...)
 
 /* Log the information FMT for context CTX.  */
 void
-_gsti_log_info (GSTIHD ctx, const char *fmt, ...)
+_gsti_log_info (gsti_ctx_t ctx, const char *fmt, ...)
 {
   va_list arg;
 
@@ -102,7 +102,7 @@ _gsti_log_info (GSTIHD ctx, const char *fmt, ...)
 
 /* Log the debug message FMT for context CTX.  */
 void
-_gsti_log_debug (GSTIHD ctx, const char *fmt, ...)
+_gsti_log_debug (gsti_ctx_t ctx, const char *fmt, ...)
 {
   va_list arg;
 
@@ -115,7 +115,7 @@ _gsti_log_debug (GSTIHD ctx, const char *fmt, ...)
 /* Set the stream for logging output for context CTX to STREAM.  This
    acquires a new reference to the stream.  */
 gsti_error_t
-gsti_set_log_stream (GSTIHD ctx, gio_stream_t stream)
+gsti_set_log_stream (gsti_ctx_t ctx, gio_stream_t stream)
 {
   gio_stream_t new_stream;
 
@@ -139,7 +139,7 @@ gsti_set_log_stream (GSTIHD ctx, gio_stream_t stream)
 /* Set the maximum level up to which messages are passed to the log
    handler for the context CTX.  */
 void
-gsti_set_log_level (GSTIHD ctx, gsti_log_level_t level)
+gsti_set_log_level (gsti_ctx_t ctx, gsti_log_level_t level)
 {
   ctx->log_level = level;
 }

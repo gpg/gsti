@@ -113,7 +113,7 @@ wait_connection (void)
 
 
 static int
-myread (GSTIHD hd, void *buffer, size_t * nbytes)
+myread (gsti_ctx_t ctx, void *buffer, size_t * nbytes)
 {
   int n;
 
@@ -134,7 +134,7 @@ myread (GSTIHD hd, void *buffer, size_t * nbytes)
 
 
 static int
-mywrite (GSTIHD hd, const void *buffer, size_t nbytes)
+mywrite (gsti_ctx_t ctx, const void *buffer, size_t nbytes)
 {
   int n;
   const char *p = buffer;
@@ -163,7 +163,7 @@ int
 main (int argc, char **argv)
 {
   int rc, i;
-  GSTIHD hd;
+  gsti_ctx_t ctx;
   GSTI_PKTDESC pkt;
 
   if (argc)
@@ -173,27 +173,29 @@ main (int argc, char **argv)
     }
 
   gsti_control (GSTI_SECMEM_INIT);
-  hd = gsti_init ();
-  gsti_set_log_level (hd, GSTI_LOG_DEBUG);
-  gsti_set_hostkey (hd, SECKEY);
-  gsti_set_readfnc (hd, myread);
-  gsti_set_writefnc (hd, mywrite);
+  ctx = gsti_init ();
+  gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
+  gsti_set_hostkey (ctx, SECKEY);
+  gsti_set_readfnc (ctx, myread);
+  gsti_set_writefnc (ctx, mywrite);
 
-  /*rc = gsti_set_service( hd, "log-lines@gnu.org,dummy@gnu.org" ); */
-  /*log_rc( rc, "set-service" ); */
+#if 0
+  rc = gsti_set_service (ctx, "log-lines@gnu.org,dummy@gnu.org");
+  log_rc (rc, "set-service");
+#endif
 
   wait_connection ();
 
   for (i = 0; i < 2; i++)
     {
-      rc = gsti_get_packet (hd, &pkt);
+      rc = gsti_get_packet (ctx, &pkt);
       log_rc (rc, "get-packet");
       if (!rc)
 	dump_hexbuf (stderr, "got packet: ", pkt.data, pkt.datalen);
     }
 
   gsti_control (GSTI_SECMEM_RELEASE);
-  gsti_deinit (hd);
+  gsti_deinit (ctx);
 
   return 0;
 }

@@ -1,3 +1,7 @@
+2004-05-26  Marcus Brinkmann  <marcus@g10code.de>
+
+	Everywhere: Change GSTIHD hd to gsti_ctx_t ctx.
+
 2004-05-25  Marcus Brinkmann  <marcus@g10code.de>
 
 	* server.c (main): Do not look at result of gsti_deinit.

@@ -173,11 +173,11 @@ typedef struct
 } MSG_auth_pkok;
 
 
-void _gsti_packet_init (GSTIHD hd);
-void _gsti_packet_free (GSTIHD hd);
-gsti_error_t _gsti_packet_read (GSTIHD hd);
-gsti_error_t _gsti_packet_write (GSTIHD hd);
-gsti_error_t _gsti_packet_flush (GSTIHD hd);
+void _gsti_packet_init (gsti_ctx_t ctx);
+void _gsti_packet_free (gsti_ctx_t ctx);
+gsti_error_t _gsti_packet_read (gsti_ctx_t ctx);
+gsti_error_t _gsti_packet_write (gsti_ctx_t ctx);
+gsti_error_t _gsti_packet_flush (gsti_ctx_t ctx);
 
 
 #endif	/* GSTI_PACKET_H */

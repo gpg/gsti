@@ -132,20 +132,20 @@ struct gsti_context
 
 
 /*-- fsm.c --*/
-gsti_error_t fsm_user_read (GSTIHD hd);
-gsti_error_t fsm_user_write (GSTIHD hd);
+gsti_error_t fsm_user_read (gsti_ctx_t ctx);
+gsti_error_t fsm_user_write (gsti_ctx_t ctx);
 
 /*-- auth.c --*/
-gsti_error_t auth_send_accept_packet (GSTIHD hd);
-gsti_error_t auth_proc_accept_packet (GSTIHD hd);
+gsti_error_t auth_send_accept_packet (gsti_ctx_t ctx);
+gsti_error_t auth_proc_accept_packet (gsti_ctx_t ctx);
 
-gsti_error_t auth_send_pkok_packet (GSTIHD hd);
-gsti_error_t auth_proc_pkok_packet (GSTIHD hd);
+gsti_error_t auth_send_pkok_packet (gsti_ctx_t ctx);
+gsti_error_t auth_proc_pkok_packet (gsti_ctx_t ctx);
 
-gsti_error_t auth_send_init_packet (GSTIHD hd);
-gsti_error_t auth_proc_init_packet (GSTIHD hd);
+gsti_error_t auth_send_init_packet (gsti_ctx_t ctx);
+gsti_error_t auth_proc_init_packet (gsti_ctx_t ctx);
 
-gsti_error_t auth_send_second_packet (GSTIHD hd);
-gsti_error_t auth_proc_second_packet (GSTIHD hd);
+gsti_error_t auth_send_second_packet (gsti_ctx_t ctx);
+gsti_error_t auth_proc_second_packet (gsti_ctx_t ctx);
 
-#endif /* GSTI_API_H */
+#endif	/* GSTI_API_H */

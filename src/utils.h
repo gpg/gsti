@@ -58,9 +58,9 @@ _gsti_dump_object( (prefix), TYPE_BUFFER, (buf), 0 )
 void _gsti_print_string (const char *string, size_t n);
 
 /*-- logging.c --*/
-int _gsti_log_err (GSTIHD ctx, int rc, const char *fmt, ...);
-void _gsti_log_info (GSTIHD ctx, const char *fmt, ...);
-void _gsti_log_debug (GSTIHD ctx, const char *fmt, ...);
+int _gsti_log_err (gsti_ctx_t ctx, int rc, const char *fmt, ...);
+void _gsti_log_info (gsti_ctx_t ctx, const char *fmt, ...);
+void _gsti_log_debug (gsti_ctx_t ctx, const char *fmt, ...);
 
 /*-- zlib.c --*/
 void _gsti_compress_init (void);

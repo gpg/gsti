@@ -134,86 +134,86 @@ gsti_control (enum gsti_ctl_cmds ctl)
 
 
 static void
-init_gex_default (GSTIHD hd)
+init_gex_default (gsti_ctx_t ctx)
 {
-  hd->gex.min = MIN_GROUPSIZE;
-  hd->gex.n = 2048;
-  hd->gex.max = MAX_GROUPSIZE;
+  ctx->gex.min = MIN_GROUPSIZE;
+  ctx->gex.n = 2048;
+  ctx->gex.max = MAX_GROUPSIZE;
 }
 
 
-GSTIHD
+gsti_ctx_t
 gsti_init (void)
 {
-  GSTIHD hd;
+  gsti_ctx_t ctx;
 
-  hd = _gsti_xcalloc (1, sizeof *hd);
-  _gsti_packet_init (hd);
-  init_gex_default (hd);
-  return hd;
+  ctx = _gsti_xcalloc (1, sizeof *ctx);
+  _gsti_packet_init (ctx);
+  init_gex_default (ctx);
+  return ctx;
 }
 
 
 static void
-_gsti_free_auth (GSTIHD hd)
+_gsti_free_auth (gsti_ctx_t ctx)
 {
-  if (hd)
+  if (ctx)
     {
-      _gsti_free (hd->auth.user);
-      gsti_key_free (hd->auth.key);
+      _gsti_free (ctx->auth.user);
+      gsti_key_free (ctx->auth.key);
     }
 }
 
 
 void
-gsti_deinit (GSTIHD hd)
+gsti_deinit (gsti_ctx_t ctx)
 {
-  if (!hd)
+  if (!ctx)
     return;
 
-  _gsti_free_auth (hd);
-  _gsti_read_stream_free (hd->read_stream);
-  _gsti_write_stream_free (hd->write_stream);
-  _gsti_strlist_free (hd->local_services);
-  _gsti_bstring_free (hd->peer_version_string);
-  _gsti_bstring_free (hd->host_kexinit_data);
-  _gsti_bstring_free (hd->peer_kexinit_data);
-  _gsti_free (hd->service_name);
-  _gsti_bstring_free (hd->session_id);
-  _gsti_bstring_free (hd->kex.h);
-  _gsti_bstring_free (hd->kex.iv_a);
-  _gsti_bstring_free (hd->kex.iv_b);
-  _gsti_bstring_free (hd->kex.key_c);
-  _gsti_bstring_free (hd->kex.key_d);
-  _gsti_bstring_free (hd->kex.mac_e);
-  _gsti_bstring_free (hd->kex.mac_f);
-  gcry_cipher_close (hd->encrypt_hd);
-  gcry_cipher_close (hd->decrypt_hd);
-  gsti_key_free (hd->hostkey);
-  _gsti_packet_free (hd);
-  _gsti_free (hd);
+  _gsti_free_auth (ctx);
+  _gsti_read_stream_free (ctx->read_stream);
+  _gsti_write_stream_free (ctx->write_stream);
+  _gsti_strlist_free (ctx->local_services);
+  _gsti_bstring_free (ctx->peer_version_string);
+  _gsti_bstring_free (ctx->host_kexinit_data);
+  _gsti_bstring_free (ctx->peer_kexinit_data);
+  _gsti_free (ctx->service_name);
+  _gsti_bstring_free (ctx->session_id);
+  _gsti_bstring_free (ctx->kex.h);
+  _gsti_bstring_free (ctx->kex.iv_a);
+  _gsti_bstring_free (ctx->kex.iv_b);
+  _gsti_bstring_free (ctx->kex.key_c);
+  _gsti_bstring_free (ctx->kex.key_d);
+  _gsti_bstring_free (ctx->kex.mac_e);
+  _gsti_bstring_free (ctx->kex.mac_f);
+  gcry_cipher_close (ctx->encrypt_hd);
+  gcry_cipher_close (ctx->decrypt_hd);
+  gsti_key_free (ctx->hostkey);
+  _gsti_packet_free (ctx);
+  _gsti_free (ctx);
 }
 
 
 gsti_error_t
-gsti_set_readfnc (GSTIHD hd, GSTI_READ_FNC readfnc)
+gsti_set_readfnc (gsti_ctx_t ctx, GSTI_READ_FNC readfnc)
 {
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  hd->readfnc = readfnc;
+  ctx->readfnc = readfnc;
 
   return 0;
 }
 
 
 gsti_error_t
-gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc)
+gsti_set_writefnc (gsti_ctx_t ctx, GSTI_WRITE_FNC writefnc)
 {
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  hd->writefnc = writefnc;
+  ctx->writefnc = writefnc;
 
   return 0;
 }
@@ -226,20 +226,20 @@ gsti_set_writefnc (GSTIHD hd, GSTI_WRITE_FNC writefnc)
    A server must use this function to set acceptable services.  A
    client uses the first service from the list.  */
 gsti_error_t
-gsti_set_service (GSTIHD hd, const char *svcname)
+gsti_set_service (gsti_ctx_t ctx, const char *svcname)
 {
   STRLIST s;
 
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);  
   if (!svcname || !*svcname)
     return 0;
-  hd->local_services = _gsti_algolist_parse (svcname, strlen (svcname));
-  for (s = hd->local_services; s; s = s->next)
+  ctx->local_services = _gsti_algolist_parse (svcname, strlen (svcname));
+  for (s = ctx->local_services; s; s = s->next)
     {
       if (!strchr (s->d, '@'))
 	;
-      _gsti_log_info (hd, "service `%s'\n", s->d);
+      _gsti_log_info (ctx, "service `%s'\n", s->d);
     }
   return 0;
 }
@@ -256,34 +256,34 @@ gsti_set_service (GSTIHD hd, const char *svcname)
    be less than the buffer. EOF is indicated by returning a zero
    length.  */
 gsti_error_t
-gsti_read (GSTIHD hd, void *buffer, size_t * length)
+gsti_read (gsti_ctx_t ctx, void *buffer, size_t * length)
 {
   gsti_error_t err;
 
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  hd->user_read_buffer = buffer;
-  hd->user_read_bufsize = *length;
-  hd->user_read_nbytes = 0;
+  ctx->user_read_buffer = buffer;
+  ctx->user_read_bufsize = *length;
+  ctx->user_read_nbytes = 0;
 
-  err = fsm_user_read (hd);
+  err = fsm_user_read (ctx);
   if (err)
     return err;
 
-  *length = hd->user_read_nbytes;
+  *length = ctx->user_read_nbytes;
   return 0;
 }
 
 
 /* The counterpart to gsti_read.  */
 gsti_error_t
-gsti_write (GSTIHD hd, const void *buffer, size_t length)
+gsti_write (gsti_ctx_t ctx, const void *buffer, size_t length)
 {
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  if (hd->local_services)
+  if (ctx->local_services)
     {
       const byte *p = buffer;
       /* Check that the buffer contains valid packet types.  */
@@ -291,64 +291,64 @@ gsti_write (GSTIHD hd, const void *buffer, size_t length)
 	return gsti_error (GPG_ERR_INV_ARG);
     }
 
-  hd->user_write_buffer = buffer;
-  hd->user_write_bufsize = length;
+  ctx->user_write_buffer = buffer;
+  ctx->user_write_bufsize = length;
 
-  return fsm_user_write (hd);
+  return fsm_user_write (ctx);
 }
 
 
 gsti_error_t
-gsti_set_hostkey (GSTIHD hd, const char *file)
+gsti_set_hostkey (gsti_ctx_t ctx, const char *file)
 {
   struct stat statbuf;
 
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
   if (stat (file, &statbuf))
     return gsti_error_from_errno (errno);
 
-  return gsti_key_load (file, 1, &hd->hostkey);
+  return gsti_key_load (file, 1, &ctx->hostkey);
 }
 
 
 gsti_error_t
-gsti_set_client_key (GSTIHD hd, const char *file)
+gsti_set_client_key (gsti_ctx_t ctx, const char *file)
 {
   struct stat statbuf;
 
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
   if (stat (file, &statbuf))
     return gsti_error_from_errno (errno);
 
-  return gsti_key_load (file, 1, &hd->auth.key);
+  return gsti_key_load (file, 1, &ctx->auth.key);
 }
 
 
 gsti_error_t
-gsti_set_client_user (GSTIHD hd, const char *user)
+gsti_set_client_user (gsti_ctx_t ctx, const char *user)
 {
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  _gsti_free (hd->auth.user);
-  hd->auth.user = _gsti_xstrdup (user);
+  _gsti_free (ctx->auth.user);
+  ctx->auth.user = _gsti_xstrdup (user);
 
   return 0;
 }
 
 
 gsti_error_t
-gsti_set_auth_method (GSTIHD hd, int methd)
+gsti_set_auth_method (gsti_ctx_t ctx, int methd)
 {
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
   switch (methd)
     {
     case GSTI_AUTH_PUBLICKEY:
-      hd->auth.method = methd;
+      ctx->auth.method = methd;
       break;
     default:
       return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
@@ -359,32 +359,33 @@ gsti_set_auth_method (GSTIHD hd, int methd)
 
 
 gsti_error_t
-gsti_set_compression (GSTIHD hd, int val)
+gsti_set_compression (gsti_ctx_t ctx, int val)
 {
 #ifndef USE_ZLIB
-  hd->zlib.use = 0;
+  ctx->zlib.use = 0;
   return gsti_error (GPG_ERR_NOT_IMPLEMENTED);
 #else
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
-  hd->zlib.use = val;
+  ctx->zlib.use = val;
   return 0;
 #endif
 }
 
 
 gsti_error_t
-gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n, unsigned int max)
+gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
+		unsigned int max)
 {
-  if (!hd)
+  if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
 
   if (n < min || n > max)
     return gsti_error (GPG_ERR_INV_ARG);
 
-  hd->gex.min = min;
-  hd->gex.n = n;
-  hd->gex.max = max;
+  ctx->gex.min = min;
+  ctx->gex.n = n;
+  ctx->gex.max = max;
 
   return 0;
 }

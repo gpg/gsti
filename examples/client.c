@@ -79,7 +79,7 @@ make_connection (const char *host)
 
 
 static int
-myread (GSTIHD hd, void *buffer, size_t * nbytes)
+myread (gsti_ctx_t ctx, void *buffer, size_t * nbytes)
 {
   int n;
 
@@ -100,7 +100,7 @@ myread (GSTIHD hd, void *buffer, size_t * nbytes)
 
 
 static int
-mywrite (GSTIHD hd, const void *buffer, size_t nbytes)
+mywrite (gsti_ctx_t ctx, const void *buffer, size_t nbytes)
 {
   int n;
   const char *p = buffer;
@@ -129,7 +129,7 @@ int
 main (int argc, char **argv)
 {
   int rc, i;
-  GSTIHD hd;
+  gsti_ctx_t ctx;
   GSTI_PKTDESC pkt;
 
   if (argc)
@@ -140,15 +140,17 @@ main (int argc, char **argv)
 
   gsti_control (GSTI_SECMEM_INIT);
   gsti_control (GSTI_DISABLE_LOCKING);
-  hd = gsti_init ();
-  gsti_set_log_level (hd, GSTI_LOG_DEBUG);
-  gsti_set_readfnc (hd, myread);
-  gsti_set_writefnc (hd, mywrite);
-  gsti_set_client_key (hd, SECKEY);
-  gsti_set_client_user (hd, "twoaday");
+  ctx = gsti_init ();
+  gsti_set_log_level (ctx, GSTI_LOG_DEBUG);
+  gsti_set_readfnc (ctx, myread);
+  gsti_set_writefnc (ctx, mywrite);
+  gsti_set_client_key (ctx, SECKEY);
+  gsti_set_client_user (ctx, "twoaday");
 
-  /*rc = gsti_set_service( hd, "log-lines@gnu.org" ); */
-  /*log_rc( rc, "set-service" ); */
+#if 0
+  rc = gsti_set_service (ctx, "log-lines@gnu.org");
+  log_rc (rc, "set-service");
+#endif
 
   make_connection (argc ? *argv : "localhost");
 
@@ -157,16 +159,16 @@ main (int argc, char **argv)
       memset (&pkt, 0, sizeof pkt);
       pkt.data = "\xf0\x01\x00\x00\x00\x04" "hallo" "\x00\x00\x00\x00";
       pkt.datalen = 15;
-      rc = gsti_put_packet (hd, &pkt);
+      rc = gsti_put_packet (ctx, &pkt);
       log_rc (rc, "put_packet");
 
-      rc = gsti_put_packet (hd, NULL);
+      rc = gsti_put_packet (ctx, NULL);
       log_rc (rc, "flush_packet");
 
       printf ("seqno %lu\n", pkt.seqno);
     }
 
-  gsti_deinit (hd);
+  gsti_deinit (ctx);
   gsti_control (GSTI_SECMEM_RELEASE);
   return 0;
 }
