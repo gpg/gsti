@@ -44,9 +44,9 @@ static struct
   size_t nsig;
 } pk_table[] =
 {
-  { "none", "dummy", 0, "dummy", 0 },
-  { "ssh-dss", "pqgy", 4, "rs", 2 },
-  { 0 }
+  {"none", "dummy", 0, "dummy", 0},
+  {"ssh-dss", "pqgy", 4, "rs", 2},
+  {0}
 };
 
 
@@ -133,7 +133,7 @@ free_mpi_array (gcry_mpi_t * a, size_t na)
 
 
 gsti_error_t
-_gsti_dss_sign (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
+_gsti_dss_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
 {
   gsti_error_t err;
   gcry_sexp_t s_hash = NULL, s_key = NULL, s_sig = NULL;
@@ -146,7 +146,9 @@ _gsti_dss_sign (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
 
   err = sexp_from_buffer (&s_hash, hash, dlen);
   if (!err)
-    err = gcry_sexp_build (&s_key, NULL, "(private-key(dsa(p%m)(q%m)(g%m)(y%m)(x%m)))", ctx->key[0],	/* p */
+    err = gcry_sexp_build (&s_key, NULL,
+                           "(private-key(dsa(p%m)(q%m)(g%m)(y%m)(x%m)))",
+                           ctx->key[0],	/* p */
 			  ctx->key[1],	/* q */
 			  ctx->key[2],	/* g */
 			  ctx->key[3],	/* y */
@@ -166,7 +168,7 @@ _gsti_dss_sign (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
 
 
 gsti_error_t
-_gsti_dss_verify (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
+_gsti_dss_verify (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
 {
   gsti_error_t err;
   gcry_sexp_t s_key, s_md, s_sig;
@@ -177,13 +179,17 @@ _gsti_dss_verify (GSTI_KEY ctx, const byte * hash, gcry_mpi_t sig[2])
 
   err = sexp_from_buffer (&s_md, hash, dlen);
   if (!err)
-    err = gcry_sexp_build (&s_key, NULL, "(public-key(dsa(p%m)(q%m)(g%m)(y%m)))", ctx->key[0],	/* p */
-			  ctx->key[1],	/* q */
-			  ctx->key[2],	/* g */
-			  ctx->key[3] /* y */ );
+    err = gcry_sexp_build (&s_key, NULL,
+                           "(public-key(dsa(p%m)(q%m)(g%m)(y%m)))",
+                           ctx->key[0],	/* p */
+                           ctx->key[1],	/* q */
+                           ctx->key[2],	/* g */
+                           ctx->key[3] /* y */ );
   if (!err)
-    err = gcry_sexp_build (&s_sig, NULL, "(sig-val(dsa(r%m)(s%m)))", sig[0],	/* r */
-			  sig[1] /* s */ );
+    err = gcry_sexp_build (&s_sig, NULL,
+                           "(sig-val(dsa(r%m)(s%m)))",
+                           sig[0] /* r */,
+                           sig[1] /* s */ );
   if (!err)
     err = gcry_pk_verify (s_sig, s_md, s_key);
 
@@ -247,7 +253,7 @@ bstring_to_sshmpi (BSTRING bstr)
 
 
 static gsti_error_t
-read_dss_key (FILE * fp, int keytype, GSTI_KEY ctx)
+read_dss_key (FILE * fp, int keytype, gsti_key_t ctx)
 {
   gsti_error_t err;
   BSTRING a;
@@ -286,10 +292,10 @@ read_dss_key (FILE * fp, int keytype, GSTI_KEY ctx)
 
 
 static gsti_error_t
-parse_key_entry (FILE * fp, int pktype, int keytype, GSTI_KEY * r_ctx)
+parse_key_entry (FILE * fp, int pktype, int keytype, gsti_key_t * r_ctx)
 {
   gsti_error_t err;
-  GSTI_KEY ctx;
+  gsti_key_t ctx;
 
   ctx = _gsti_xcalloc (1, sizeof *ctx);
   ctx->type = SSH_PK_NONE;
@@ -332,7 +338,7 @@ pktype_from_file (FILE * fp)
    file contains one key and as a result, only the first record will
    be read!  */
 gsti_error_t
-gsti_key_load (const char *file, int keytype, GSTI_KEY *r_ctx)
+gsti_key_load (const char *file, int keytype, gsti_key_t *r_ctx)
 {
   gsti_error_t err;
   FILE *inp;
@@ -366,7 +372,7 @@ _gsti_ssh_cmp_pkname (int pktype, const char *name, size_t len)
 
 
 gsti_error_t
-_gsti_ssh_cmp_keys (GSTI_KEY a, GSTI_KEY b)
+_gsti_ssh_cmp_keys (gsti_key_t a, gsti_key_t b)
 {
   size_t n;
 
@@ -430,12 +436,12 @@ pkalgo_get_nkey (int algid, const char *name)
 }
 
 
-GSTI_KEY
+gsti_key_t
 _gsti_key_fromblob (BSTRING blob)
 {
   gsti_error_t err = 0;
   BUFFER buf;
-  GSTI_KEY pk = NULL;
+  gsti_key_t pk = NULL;
   byte *p;
   size_t n, i;
 
@@ -470,7 +476,7 @@ leave:
 }
 
 BSTRING
-_gsti_key_getblob (GSTI_KEY pk)
+_gsti_key_getblob (gsti_key_t pk)
 {
   BUFFER buf;
   BSTRING a;
@@ -495,7 +501,7 @@ _gsti_key_getblob (GSTI_KEY pk)
 
 
 byte *
-gsti_key_fingerprint (GSTI_KEY ctx, int mdalgo)
+gsti_key_fingerprint (gsti_key_t ctx, int mdalgo)
 {
   gpg_error_t err;
   gcry_md_hd_t hd;
@@ -529,7 +535,7 @@ gsti_key_fingerprint (GSTI_KEY ctx, int mdalgo)
 
 
 void
-gsti_key_free (GSTI_KEY ctx)
+gsti_key_free (gsti_key_t ctx)
 {
   if (!ctx)
     return;
@@ -541,11 +547,11 @@ gsti_key_free (GSTI_KEY ctx)
 
 gsti_error_t
 _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
-		  GSTI_KEY * r_pk)
+		  gsti_key_t * r_pk)
 {
   gsti_error_t err;
   BUFFER buf;
-  GSTI_KEY pk;
+  gsti_key_t pk;
   gcry_mpi_t _sig[2];
   byte *p = NULL, tmpbuf[20];
   size_t n;
@@ -580,8 +586,6 @@ _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
     }
   if (!err)
     err = _gsti_dss_verify (pk, hash, _sig);
-  _gsti_log_info (0, "dss_verify=%d (%d %d)\n", err,
-                  gcry_mpi_get_nbits (_sig[0]), gcry_mpi_get_nbits (_sig[1]));
   free_mpi_array (_sig, 2);
 
 leave:
@@ -594,7 +598,7 @@ leave:
 
 
 BSTRING
-_gsti_sig_encode (GSTI_KEY sk, const byte * hash)
+_gsti_sig_encode (gsti_key_t sk, const byte * hash)
 {
   gsti_error_t err;
   gcry_mpi_t sig[2];

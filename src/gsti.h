@@ -201,6 +201,7 @@ typedef struct
 } GSTI_PKTDESC;
 
 struct gsti_key_s;
+typedef struct gsti_key_s *gsti_key_t;
 typedef struct gsti_key_s *GSTI_KEY;
 
 
@@ -253,9 +254,9 @@ gsti_error_t gsti_put_packet (gsti_ctx_t ctx, GSTI_PKTDESC * pkt);
 
 
 /*-- pubkey.c --*/
-gsti_error_t gsti_key_load (const char *file, int keytype, GSTI_KEY * r_ctx);
-unsigned char *gsti_key_fingerprint (GSTI_KEY ctx, int mdalgo);
-void gsti_key_free (GSTI_KEY ctx);
+gsti_error_t gsti_key_load (const char *file, int keytype, gsti_key_t * r_ctx);
+unsigned char *gsti_key_fingerprint (gsti_key_t ctx, int mdalgo);
+void gsti_key_free (gsti_key_t ctx);
 
 
 #ifdef __cplusplus
