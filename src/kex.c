@@ -1,5 +1,5 @@
 /* kex.c - connect, key exchange and service request
- *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *	Copyright (C) 1999 Werner Koch
  *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.

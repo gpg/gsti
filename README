@@ -19,7 +19,7 @@ Even if they use the same protocol, the library is not a ssh client.
 The library only includes all required algorithms to be in compliance
 with the SSH drafts.
 
-You may need the Libgcrypt 1.1.8 version from ftp.gnupg.org
+You need the Libgcryptfrom ftp.gnupg.org
 
 
 Some parts of the lib design are still in flux and the code need more

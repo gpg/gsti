@@ -1,5 +1,5 @@
 /* memory.c -  memory allocation wrappers
- *	Copyright (C) 1999, 2002 Free Software Foundation, Inc.
+ *	Copyright (C) 1999, 2002 Werner Koch
  *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.

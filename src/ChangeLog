@@ -1,3 +1,15 @@
+2004-03-08  Werner Koch  <wk@gnupg.org>
+
+        Fixed all copyright entries from "Free Software Foundation, Inc"
+	to "Werner Koch".  It was originally intended to assign the code
+	to the FSF but this actually never happened and frankly there has
+	been no real release as the code lived his life for most time
+	merely as a test bed for libgcrypt.
+	
+	* ChangeLog: Merged my entries from 2000.  Obviously I forgot to
+	commit the Changelog to the CVS when moving the files from the
+	local PRCS repository to CVS.
+
 2002-10-05  Timo Schulz  (ts@winpt.org)
 
 	* kex.c (kex_send_init_packet): Fixed memory leak.
@@ -98,5 +110,12 @@
 	* main.c (init_gex_default): New.
 	(gsti_init): Use it here.
 	
+2000-10-10  Werner Koch  <wk@gnupg.org>
+
+	* api.h (gsti_context): Replaced *mac_{inner,outer}_hd by *mac_hd.
+	* kex.c (prepare_mac): Changed to use the libgcrypt function,
+	changed args and adjusted all callers.
+	(prepare_hmac_pad): Removed.
+	* packet.c (generate_mac, verify_mac): Use libgcrypt function.
 	
 	

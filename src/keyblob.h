@@ -1,6 +1,5 @@
-/* memory.h
+/* keyblob.h
  *	Copyright (C) 1999 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
  *
  * This file is part of GSTI.
  *
@@ -19,21 +18,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#ifndef GSTI_MEMORY_H
-#define GSTI_MEMORY_H
+#ifndef GSTI_KEYBLOB_H
+#define GSTI_KEYBLOB_H
 
-#include "types.h"
 
-void * _gsti_xmalloc( size_t n );
-void * _gsti_xcalloc( size_t n, size_t m );
-void * _gsti_xrealloc( void *p, size_t n );
-char * _gsti_xstrdup( const char* string );
-void   _gsti_free( void * );
-
-STRLIST _gsti_strlist_insert( STRLIST head, const char *s );
-void    _gsti_strlist_free( STRLIST a );
-
-BSTRING _gsti_bstring_make( const byte *buffer, size_t length );
-void    _gsti_bstring_free( BSTRING a );
-
-#endif /* GSTI_MEMORY_H */
+#endif /* GSTI_KEYBLOB_H */

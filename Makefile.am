@@ -1,5 +1,5 @@
 ## Process this file with automake to produce Makefile.in
-# Copyright (C) 1999, 2000 Free Software Foundatio
+# Copyright (C) 1999, 2000 Werner Koch
 # Copyright (C) 2002 Timo Schulz
 #
 # This file is part of GSTI.

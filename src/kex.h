@@ -1,5 +1,5 @@
 /* kex.h - kex exchange (KEX)
- *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *	Copyright (C) 1999 Werner Koch
  *
  * This file is part of GSTI.
  *

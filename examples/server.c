@@ -1,5 +1,5 @@
 /* server.c  -	An example how to use gsti
- *	Copyright (C) 1999 Free Software Foundation, Inc.
+ *	Copyright (C) 1999 Werner Koch
  *
  * This file is part of GSTI.
  *
