@@ -36,7 +36,7 @@ struct key_context_s {
 int _gsti_dss_sign( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] );
 int _gsti_dss_verify( GSTI_KEY ctx, const byte *hash, GCRY_MPI sig[2] );
 
-BSTRING _gsti_key_getblob( const char *file, int pktype );
+BSTRING _gsti_key_getblob( GSTI_KEY pk );
 GSTI_KEY _gsti_key_fromblob( BSTRING blob );
 
 BSTRING _gsti_sig_encode( const char *file, const byte *hash  );

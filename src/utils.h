@@ -23,9 +23,9 @@
 
 #include <gcrypt.h>
 
-STRLIST parse_algorithm_list( const byte *string, size_t length );
-size_t build_algorithm_list( byte *buffer, size_t length, STRLIST list );
-int find_algorithm_list( STRLIST list, const char *algo );
+STRLIST _gsti_algolist_parse( const byte *string, size_t length );
+size_t _gsti_algolist_build( byte *buffer, size_t length, STRLIST list );
+int _gsti_algolist_find( STRLIST list, const char *algo );
 
 int  cmp_bstring( BSTRING a, BSTRING b );
 

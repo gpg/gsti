@@ -37,7 +37,7 @@
  * return a STRLIST with these algorithms.
  */
 STRLIST
-parse_algorithm_list( const byte *string, size_t length )
+_gsti_algolist_parse( const byte *string, size_t length )
 {
     const byte *comma, *s;
     size_t n;
@@ -73,7 +73,7 @@ parse_algorithm_list( const byte *string, size_t length )
 }
 
 size_t
-build_algorithm_list( byte *buffer, size_t length, STRLIST list )
+_gsti_algolist_build( byte *buffer, size_t length, STRLIST list )
 {
     size_t n;
     int any=0;
@@ -109,7 +109,7 @@ build_algorithm_list( byte *buffer, size_t length, STRLIST list )
 }
 
 int
-find_algorithm_list( STRLIST list, const char *algo )
+_gsti_algolist_find( STRLIST list, const char *algo )
 {
     STRLIST l;
     
@@ -159,7 +159,7 @@ gsti_print_string( FILE *fp, const char *string, size_t n )
 	    else if( !*p )
 		putc('0', fp);
 	    else
-		fprintf(fp, "x%02x", *p );
+		fprintf( fp, "x%02x", *p );
 	}
 	else
 	    putc(*p, fp);
@@ -172,8 +172,8 @@ dump_hexbuf( FILE *fp, const char *prefix, const byte *buf, size_t len )
 {
     fputs( prefix, fp );
     for( ; len ; len--, buf++ )
-	fprintf(fp, "%02X ", *buf );
-    putc('\n', fp );
+	fprintf( fp, "%02X ", *buf );
+    putc( '\n', fp );
 }
 
 void

@@ -29,6 +29,16 @@
 #include "memory.h"
 #include "buffer.h"
 
+static struct {
+    const char *algname;
+    const char *elements;
+    size_t nelements;
+} pk_table[] = {
+    { "none", "dummy", 0 },
+    { "ssh-dss", "rs", 2 },
+    {0},
+};
+
 GCRY_MPI
 get_mpissh( GCRY_MPI dat )
 {
@@ -50,20 +60,24 @@ sexp_get_sshmpi( GCRY_SEXP s_sig, int pktype, GCRY_MPI sig[2] )
 {
     GCRY_SEXP list;
     GCRY_MPI tmp;
+    size_t n = 0;
+    const char *s;
+    char name[2];
 
-    list = gcry_sexp_find_token( s_sig, "r", 0 );
-    if( !list )
-        return GSTI_INV_OBJ;
-    tmp = gcry_sexp_nth_mpi( list, 1, 0 );
-    sig[0] = get_mpissh( tmp );
-    gcry_sexp_release( list );
-
-    list = gcry_sexp_find_token( s_sig, "s", 0 );
-    if( !list )
-        return GSTI_INV_OBJ;
-    tmp = gcry_sexp_nth_mpi( list, 1, 0 );
-    sig[1] = get_mpissh( tmp );
-    gcry_sexp_release( list );
+    if( pktype > 1 )
+        return GSTI_BUG;
+    s = pk_table[pktype].elements;
+    while( s && n < 2 ) {
+        name[0] = *s;
+        name[1] = 0;
+        list = gcry_sexp_find_token( s_sig, name, 0 );
+        if( !list )
+            return GSTI_INV_OBJ;
+        tmp = gcry_sexp_nth_mpi( list, 1, 0 );
+        sig[n++] = get_mpissh( tmp );
+        gcry_sexp_release( list );
+        s++;
+    }
 
     return 0;
 }
@@ -192,7 +206,7 @@ read_bstring( FILE *fp, int ismpi, BSTRING *r_a )
     }
     else
         n = 0;
-    log_info( "got string with a length of %d\n", len );
+    /*log_info( "got string with a length of %d\n", len );*/
     while( len-- )
         a->d[n++] = fgetc( fp );
     *r_a = a;
@@ -214,7 +228,7 @@ bstring_to_sshmpi( BSTRING bstr )
 
 
 static int
-read_dsa_key( FILE *fp, int keytype, GSTI_KEY ctx )
+read_dss_key( FILE *fp, int keytype, GSTI_KEY ctx )
 {
     BSTRING a;
     size_t n = keytype? 5: 4;
@@ -224,7 +238,7 @@ read_dsa_key( FILE *fp, int keytype, GSTI_KEY ctx )
     if( rc )
         return rc;
     if( a->len != 7 || strncmp( a->d, "ssh-dss", 7 ) ) {
-        log_info( "read_dsa_key: %s: not a dss key blob\n", a->d );
+        log_info( "read_dss_key: %s: not a dss key blob\n", a->d );
         _gsti_bstring_free( a );
         return GSTI_INV_OBJ;
     }
@@ -256,7 +270,7 @@ parse_key_entry( FILE *fp, int pktype, int keytype, GSTI_KEY *r_ctx )
     ctx = _gsti_calloc( 1, sizeof *ctx );
     ctx->type = SSH_PK_NONE;
     switch( pktype ) {
-    case SSH_PK_DSS: rc = read_dsa_key( fp, keytype, ctx ); break;
+    case SSH_PK_DSS: rc = read_dss_key( fp, keytype, ctx ); break;
     default:         rc = GSTI_GENERAL; break;
     }
     *r_ctx = ctx;
@@ -284,16 +298,15 @@ gsti_key_load( const char *file, int pktype, int keytype, GSTI_KEY *r_ctx )
 }
 
 static byte *
-get_sshkeyname( int type, int asbstr, size_t *r_n )
+get_sshkeyname( int pktype, int asbstr, size_t *r_n )
 {
     const char *s;
     size_t len, n = 0;
     byte *p;
-    
-    switch( type ) {
-    case SSH_PK_DSS: s = "ssh-dss"; break;
-    default:         s = "none"; break;
-    }
+
+    if( pktype > 1 )
+        return NULL;
+    s = pk_table[pktype].algname;
     len = strlen( s );
     if( asbstr )
         n = 4;
@@ -321,9 +334,9 @@ _gsti_key_fromblob( BSTRING blob )
 
     if( blob->len == 4 )
         return NULL;
-    buffer_init( &buf );
-    buffer_put_raw( buf, blob->d, blob->len );
-    p = buffer_get_string( buf, &n );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, blob->d, blob->len );
+    p = _gsti_buf_getstr( buf, &n );
     if( n != 7 || strcmp( p, "ssh-dss" ) ) {
         _gsti_free( p );
         goto leave; /* not supported */
@@ -332,12 +345,12 @@ _gsti_key_fromblob( BSTRING blob )
     pk = _gsti_calloc( 1, sizeof *pk );
     pk->secret = 0;
     for( i = 0; i < 4; i++ ) {
-        rc = buffer_get_mpi( buf, &pk->key[i], &n );
+        rc = _gsti_buf_getmpi( buf, &pk->key[i], &n );
         if( rc )
             break;
     }
  leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     if( !rc )
         pk->type = SSH_PK_DSS;
     if( !rc )
@@ -346,31 +359,27 @@ _gsti_key_fromblob( BSTRING blob )
 }
 
 BSTRING
-_gsti_key_getblob( const char *file, int pktype )
+_gsti_key_getblob( GSTI_KEY pk )
 {
-    GSTI_KEY pk;
     BUFFER buf;
     BSTRING a;
     byte *p;
     size_t n;
 
-    if( !file )
+    if( !pk )
         return _gsti_bstring_make( NULL, 4 );
-    if( gsti_key_load( file, pktype, 0, &pk ) )
-        return NULL;
-    buffer_init( &buf );
-    p = get_sshkeyname( pktype, 0, &n );
-    buffer_put_string( buf, p, n );
-    buffer_put_mpi( buf, pk->key[0] );
-    buffer_put_mpi( buf, pk->key[1] );
-    buffer_put_mpi( buf, pk->key[2] );
-    buffer_put_mpi( buf, pk->key[3] );
+    _gsti_buf_init( &buf );
+    p = get_sshkeyname( pk->type, 0, &n );
+    _gsti_buf_putstr( buf, p, n );
+    _gsti_buf_putmpi( buf, pk->key[0] );
+    _gsti_buf_putmpi( buf, pk->key[1] );
+    _gsti_buf_putmpi( buf, pk->key[2] );
+    _gsti_buf_putmpi( buf, pk->key[3] );
 
-    a = _gsti_bstring_make( buffer_get_ptr( buf ), buffer_get_len( buf ) );
+    a = _gsti_bstring_make( _gsti_buf_getptr( buf ), _gsti_buf_getlen( buf ) );
 
     _gsti_free( p );
-    gsti_key_free( pk );
-    buffer_free( buf );
+    _gsti_buf_free( buf );
 
     return a;
 }   
@@ -429,15 +438,15 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
     pk = _gsti_key_fromblob( key );
     if( !pk )
         return GSTI_INV_OBJ;
-    buffer_init( &buf );
-    buffer_put_raw( buf, sig->d, sig->len );
-    p = buffer_get_string( buf, &n );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, sig->d, sig->len );
+    p = _gsti_buf_getstr( buf, &n );
     if( n != 7 || strcmp( p, "ssh-dss" ) ) {
         rc = GSTI_INV_OBJ;
         goto leave;
     }
     _gsti_free( p );
-    p = buffer_get_string( buf, &n );
+    p = _gsti_buf_getstr( buf, &n );
     if( n != 40 ) {
         rc = GSTI_BUG;
         goto leave;
@@ -447,14 +456,14 @@ _gsti_sig_decode( BSTRING key, BSTRING sig, const byte *hash, GSTI_KEY *r_pk )
     n = 20;
     rc = gcry_mpi_scan( &_sig[0], GCRYMPI_FMT_USG, p, &n );
     if( !rc )
-        rc = gcry_mpi_scan( &_sig[1], GCRYMPI_FMT_USG, p + 20, &n );
+        rc = gcry_mpi_scan( &_sig[1], GCRYMPI_FMT_USG, p + n, &n );
     if( !rc )
         rc = _gsti_dss_verify( pk, hash, _sig );
     free_mpi_array( _sig, 2 );
 
  leave:
     _gsti_free( p );
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     if( !rc )
         *r_pk = pk;
     return rc;
@@ -486,21 +495,21 @@ _gsti_sig_encode( const char *file, const byte *hash  )
         return NULL;
     }
     p = get_sshkeyname( GSTI_PK_DSS, 0, &n );
-    buffer_init( &buf );
-    buffer_put_string( buf, p, n );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putstr( buf, p, n );
     n = sizeof buffer -1;
     n2 = sizeof buffer -1;
     rc = gcry_mpi_print( GCRYMPI_FMT_USG, buffer, &n, sig[0] );
     if( !rc )
         rc = gcry_mpi_print( GCRYMPI_FMT_USG, buffer + n, &n2, sig[1] );
     if( !rc )
-        buffer_put_string( buf, buffer, n + n2 );
+        _gsti_buf_putstr( buf, buffer, n + n2 );
     free_mpi_array( sig, 2 );
     
-    a = _gsti_bstring_make( buffer_get_ptr( buf ), buffer_get_len( buf ) );
+    a = _gsti_bstring_make( _gsti_buf_getptr( buf ), _gsti_buf_getlen( buf ) );
     
     _gsti_free( p );
-    buffer_free( buf );
+    _gsti_buf_free( buf );
 
     return a;
 }

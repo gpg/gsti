@@ -28,26 +28,23 @@ struct buffer_s {
 };
 typedef struct buffer_s *BUFFER;
 
-int buffer_init( BUFFER *r_ctx );
-void buffer_free( BUFFER ctx );
-size_t buffer_get_len( BUFFER ctx );
-void* buffer_get_ptr( BUFFER ctx );
-int buffer_put_ulong( BUFFER ctx, u32 val );
-u32 buffer_get_ulong( BUFFER ctx );
-int buffer_put_string( BUFFER ctx, const byte *buf, size_t len );
-byte* buffer_get_string( BUFFER ctx, size_t *r_n );
-int buffer_put_byte( BUFFER ctx, int val );
-int buffer_get_byte( BUFFER ctx );
-int buffer_put_raw( BUFFER ctx, const byte *buf, size_t len );
-int buffer_get_raw( BUFFER ctx, byte *buf, size_t reqlen );
-int buffer_skip( BUFFER ctx, int nbytes );
-int buffer_put_mpi( BUFFER ctx, GCRY_MPI a );
-int buffer_get_mpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n );
-int buffer_get_bstring( BUFFER ctx, BSTRING *r_bstr );
-void buffer_dump( BUFFER ctx );
+int _gsti_buf_init( BUFFER *r_ctx );
+void _gsti_buf_free( BUFFER ctx );
+size_t _gsti_buf_getlen( BUFFER ctx );
+void* _gsti_buf_getptr( BUFFER ctx );
+int _gsti_buf_putint( BUFFER ctx, u32 val );
+unsigned _gsti_buf_getint( BUFFER ctx );
+int _gsti_buf_putstr( BUFFER ctx, const byte *buf, size_t len );
+byte* _gsti_buf_getstr( BUFFER ctx, size_t *r_n );
+int _gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a );
+int _gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n );
+int _gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr );
+int _gsti_buf_putc( BUFFER ctx, int val );
+int _gsti_buf_getc( BUFFER ctx );
+int _gsti_buf_putraw( BUFFER ctx, const byte *buf, size_t len );
+int _gsti_buf_getraw( BUFFER ctx, byte *buf, size_t reqlen );
+void _gsti_buf_dump( BUFFER ctx );
 
-#define buffer_getc( ctx ) buffer_get_byte( (ctx) )
-#define buffer_putc( ctx, val ) buffer_put_byte( (ctx), (val) )
 
 #endif /*BUFFER_H*/
 

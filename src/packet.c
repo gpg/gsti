@@ -52,26 +52,26 @@ print_disconnect_msg( const byte *msg, size_t msglen )
 	log_info( "SSH_MSG_DISCONNECT is not valid\n" );
 	return;
     }
-    buffer_init( &buf );
-    buffer_put_raw( buf, msg, msglen );
-    if( buffer_getc( buf ) != SSH_MSG_DISCONNECT )
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, msg, msglen );
+    if( _gsti_buf_getc( buf ) != SSH_MSG_DISCONNECT )
         goto leave;
-    reason = buffer_get_ulong( buf );
+    reason = _gsti_buf_getint( buf );
     log_info( "SSH_MSG_DISCONNECT: reason=%lu `", reason );
 
-    if( buffer_get_bstring( buf, &desc ) )
+    if( _gsti_buf_getbstr( buf, &desc ) )
         goto leave;
     dump_bstring( stderr, "description:", desc );
     _gsti_bstring_free( desc );
     
-    if( buffer_get_bstring( buf, &lang ) )
+    if( _gsti_buf_getbstr( buf, &lang ) )
         goto leave;
     dump_bstring( stderr, "language-tag:", lang );
     _gsti_bstring_free( lang );
 
 leave:
-    msglen = buffer_get_len( buf );
-    buffer_free( buf );
+    msglen = _gsti_buf_getlen( buf );
+    _gsti_buf_free( buf );
     if( msglen )
 	log_info( "print_msg_disconnect: %lu bytes remaining\n", (u32)msglen );
 }
@@ -87,27 +87,27 @@ print_debug_msg( const byte *msg, size_t msglen )
 	log_info( "SSH_MSG_DEBUG is not valid\n" );
 	return;
     }
-    buffer_init( &buf );
-    buffer_put_raw( buf, msg, msglen );
-    if( buffer_getc( buf ) != SSH_MSG_DEBUG )
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, msg, msglen );
+    if( _gsti_buf_getc( buf ) != SSH_MSG_DEBUG )
         goto leave;    
 
-    display = buffer_getc( buf );
+    display = _gsti_buf_getc( buf );
     log_info( "SSH_MSG_DEBUG:%s `", display? " (always display)":"" );
 
-    if( buffer_get_bstring( buf, &mesag ) )
+    if( _gsti_buf_getbstr( buf, &mesag ) )
         goto leave;
     dump_bstring( stderr, "message:", mesag );
     _gsti_bstring_free( mesag );
 
-    if( buffer_get_bstring( buf, &lang ) )
+    if( _gsti_buf_getbstr( buf, &lang ) )
         goto leave;
     dump_bstring( stderr, "language:", lang );
     _gsti_bstring_free( lang );
     
 
 leave:
-    msglen = buffer_get_len( buf );
+    msglen = _gsti_buf_getlen( buf );
     if( msglen )
 	log_info( "print_msg_debug: %lu bytes remaining\n", (u32)msglen );
 }

@@ -217,7 +217,7 @@ gsti_set_service( GSTIHD hd, const char *svcname )
         return GSTI_INV_ARG;
     if( !svcname || !*svcname )
         return 0;
-    hd->local_services = parse_algorithm_list( svcname, strlen( svcname ) );
+    hd->local_services = _gsti_algolist_parse( svcname, strlen( svcname ) );
     for( s = hd->local_services; s; s = s->next ) {
         if( !strchr( s->d, '@' ) )
             ;
@@ -281,6 +281,7 @@ int
 gsti_set_hostkey_file( GSTIHD hd, const char *file )
 {
     struct stat statbuf;
+    int rc;
 
     if( !hd )
         return GSTI_INV_ARG;
@@ -288,7 +289,9 @@ gsti_set_hostkey_file( GSTIHD hd, const char *file )
         return GSTI_FILE;
     _gsti_free( hd->hostkey_file );
     hd->hostkey_file = _gsti_strdup( file );
-    return 0;
+    rc = gsti_key_load( file, GSTI_PK_DSS, 1, &hd->hostkey );
+    
+    return rc;
 }
 
 

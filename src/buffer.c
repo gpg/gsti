@@ -42,7 +42,7 @@ buffer_realloc( BUFFER ctx, size_t len )
 }
 
 int
-buffer_init( BUFFER *r_ctx )
+_gsti_buf_init( BUFFER *r_ctx )
 {
     BUFFER ctx;
 
@@ -54,8 +54,9 @@ buffer_init( BUFFER *r_ctx )
     return 0;
 }
 
+
 void
-buffer_free( BUFFER ctx )
+_gsti_buf_free( BUFFER ctx )
 {
     if( !ctx )
         return;
@@ -66,20 +67,23 @@ buffer_free( BUFFER ctx )
     _gsti_free( ctx );
 }
 
+
 size_t
-buffer_get_len( BUFFER ctx )
+_gsti_buf_getlen( BUFFER ctx )
 {
     return ctx->end - ctx->off;
 }
 
+
 void*
-buffer_get_ptr( BUFFER ctx )
+_gsti_buf_getptr( BUFFER ctx )
 {
     return ctx->d + ctx->off;
 }
 
+
 int
-buffer_put_ulong( BUFFER ctx, u32 val )
+_gsti_buf_putint( BUFFER ctx, unsigned val )
 {
     int i = ctx->end;
 
@@ -94,8 +98,9 @@ buffer_put_ulong( BUFFER ctx, u32 val )
     return 0;
 }
 
-u32
-buffer_get_ulong( BUFFER ctx )
+
+unsigned
+_gsti_buf_getint( BUFFER ctx )
 {
     int i = ctx->off;
     u32 val;
@@ -111,10 +116,11 @@ buffer_get_ulong( BUFFER ctx )
     return val;
 }
 
+
 int
-buffer_put_string( BUFFER ctx, const byte *buf, size_t len )
+_gsti_buf_putstr( BUFFER ctx, const byte *buf, size_t len )
 {
-    buffer_put_ulong( ctx, len );
+    _gsti_buf_putint( ctx, len );
     if( ctx->end + len > ctx->size )
         buffer_realloc( ctx, len );
     if( buf ) {
@@ -125,19 +131,20 @@ buffer_put_string( BUFFER ctx, const byte *buf, size_t len )
     return 0;
 }
 
+
 byte*
-buffer_get_string( BUFFER ctx, size_t *r_n )
+_gsti_buf_getstr( BUFFER ctx, size_t *r_n )
 {
     byte *p;
     size_t len;
 
-    len = buffer_get_ulong( ctx );
+    len = _gsti_buf_getint( ctx );
     if( !len ) {
         *r_n = 4;
         return NULL;
     }
     p = _gsti_calloc( 1, len + 1 );
-    buffer_get_raw( ctx, p, len );
+    _gsti_buf_getraw( ctx, p, len );
     p[len] = 0;
     *r_n = len;
     
@@ -145,7 +152,7 @@ buffer_get_string( BUFFER ctx, size_t *r_n )
 }
 
 int
-buffer_put_mpi( BUFFER ctx, GCRY_MPI a )
+_gsti_buf_putmpi( BUFFER ctx, GCRY_MPI a )
 {
     byte buf[512];
     size_t buflen = sizeof buf -1;
@@ -154,19 +161,19 @@ buffer_put_mpi( BUFFER ctx, GCRY_MPI a )
     rc = gcry_mpi_print( GCRYMPI_FMT_SSH, buf, &buflen, a );
     if( rc )
         return map_gcry_rc( rc );
-    buffer_put_raw( ctx, buf, buflen );
+    _gsti_buf_putraw( ctx, buf, buflen );
     
     return 0;
 }
 
 int
-buffer_get_mpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
+_gsti_buf_getmpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
 {
     byte buf[512+4];
     size_t buflen;
     int rc;
 
-    buflen = buffer_get_ulong( ctx );
+    buflen = _gsti_buf_getint( ctx );
     if( !buflen || buflen > 512 )
         return GSTI_INV_ARG;
     buf[0] = buflen >> 24;
@@ -175,7 +182,7 @@ buffer_get_mpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
     buf[3] = buflen;
     buflen += 4;
     *r_n = buflen;
-    buffer_get_raw( ctx, buf + 4, buflen - 4 );
+    _gsti_buf_getraw( ctx, buf + 4, buflen - 4 );
     rc = gcry_mpi_scan( ret_a, GCRYMPI_FMT_SSH, buf, &buflen );
     if( rc )
         return map_gcry_rc( rc );
@@ -184,13 +191,13 @@ buffer_get_mpi( BUFFER ctx, GCRY_MPI *ret_a, size_t *r_n )
 }
 
 int
-buffer_get_bstring( BUFFER ctx, BSTRING *r_bstr )
+_gsti_buf_getbstr( BUFFER ctx, BSTRING *r_bstr )
 {
     BSTRING a;
     byte *p;
     size_t len;
 
-    p = buffer_get_string( ctx, &len );
+    p = _gsti_buf_getstr( ctx, &len );
     a = _gsti_bstring_make( p, len );
     *r_bstr = a;
     _gsti_free( p );
@@ -198,11 +205,11 @@ buffer_get_bstring( BUFFER ctx, BSTRING *r_bstr )
 }
 
 int
-buffer_put_byte( BUFFER ctx, int val )
+_gsti_buf_putc( BUFFER ctx, int val )
 {
     int i = ctx->end;
     
-    if( ctx->end + 1 >= buffer_get_len( ctx ) )
+    if( ctx->end + 1 >= _gsti_buf_getlen( ctx ) )
         buffer_realloc( ctx, 1024 );
     ctx->d[i++] = val & 0xff;
     ctx->end = i;
@@ -210,8 +217,9 @@ buffer_put_byte( BUFFER ctx, int val )
     return 0;
 }
 
+
 int
-buffer_get_byte( BUFFER ctx )
+_gsti_buf_getc( BUFFER ctx )
 {
     int i = ctx->off, val = 0;
 
@@ -223,8 +231,9 @@ buffer_get_byte( BUFFER ctx )
     return val;
 }
 
+
 int
-buffer_put_raw( BUFFER ctx, const byte *buf, size_t len )
+_gsti_buf_putraw( BUFFER ctx, const byte *buf, size_t len )
 {
     if( ctx->end + len >= ctx->size )
         buffer_realloc( ctx, len + 1024 );
@@ -234,10 +243,11 @@ buffer_put_raw( BUFFER ctx, const byte *buf, size_t len )
     return 0;
 }
 
+
 int
-buffer_get_raw( BUFFER ctx, byte *buf, size_t reqlen )
+_gsti_buf_getraw( BUFFER ctx, byte *buf, size_t reqlen )
 {
-    size_t len = buffer_get_len( ctx );
+    size_t len = _gsti_buf_getlen( ctx );
     
     if( reqlen > len )
         reqlen = len;
@@ -247,23 +257,13 @@ buffer_get_raw( BUFFER ctx, byte *buf, size_t reqlen )
     return 0;
 }
 
-int
-buffer_skip( BUFFER ctx, int nbytes )
-{
-    if( ctx->off + nbytes < buffer_get_len( ctx ) ) {
-        ctx->off += nbytes;
-        return 0;
-    }
-
-    return -1;
-}
 
 void
-buffer_dump( BUFFER ctx )
+_gsti_buf_dump( BUFFER ctx )
 {
     int i = 0;
 
-    for( i = ctx->off; i < buffer_get_len( ctx ); i++ )
+    for( i = ctx->off; i < _gsti_buf_getlen( ctx ); i++ )
         printf( "%4x", ctx->d[i] );
     printf( "\n" );
 }

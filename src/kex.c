@@ -171,26 +171,26 @@ parse_msg_kexinit( MSG_kexinit *kex, const byte *msg, size_t msglen )
     memset( kex, 0, sizeof *kex );
     if( msglen < (1+16+10*4+1+4) )
         return GSTI_TOO_SHORT;
-    buffer_init( &buf );
-    buffer_put_raw( buf, msg, msglen );
-    if( buffer_getc( buf ) != SSH_MSG_KEXINIT ) {
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, msg, msglen );
+    if( _gsti_buf_getc( buf ) != SSH_MSG_KEXINIT ) {
         rc = GSTI_BUG;
         goto leave;
     }
-    buffer_get_raw( buf, kex->cookie, 16 );
+    _gsti_buf_getraw( buf, kex->cookie, 16 );
 
     /* get 10 strings */
     for( i = 0; i < 10; i++ ) {
-        if( buffer_get_len( buf ) < 4 ) {
+        if( _gsti_buf_getlen( buf ) < 4 ) {
             rc = GSTI_TOO_SHORT;
             goto leave;
         }
-        p = buffer_get_string( buf, &len );
+        p = _gsti_buf_getstr( buf, &len );
         if( !len ) {
             rc = GSTI_TOO_SHORT;
             goto leave;
         }
-        algolist[i] = p? parse_algorithm_list( p, len ) : NULL;
+        algolist[i] = p? _gsti_algolist_parse( p, len ) : NULL;
         _gsti_free( p );
     }
     kex->kex_algorithm = algolist[0];
@@ -203,20 +203,20 @@ parse_msg_kexinit( MSG_kexinit *kex, const byte *msg, size_t msglen )
     kex->compr_algos_s2c = algolist[7];
     /* (we don't need the two language lists) */
 
-    kex->first_kex_packet_follows = buffer_getc( buf );
+    kex->first_kex_packet_follows = _gsti_buf_getc( buf );
  
     /* make sure that the reserved value is zero */
-    if( buffer_get_ulong( buf ) ) {
+    if( _gsti_buf_getint( buf ) ) {
         rc = GSTI_INV_PKT;
         goto leave;
     }
 
     /* make sure the msg length matches */
-    if( buffer_get_len( buf ) )
+    if( _gsti_buf_getlen( buf ) )
         rc = GSTI_INV_PKT;
 
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     if( rc ) {
         free_msg_kexinit( kex );
         memset( kex, 0, sizeof *kex );
@@ -254,7 +254,7 @@ build_msg_kexinit( MSG_kexinit *kex, struct packet_buffer_s *pkt )
     algolist[8] = NULL;
     algolist[9] = NULL;
     for( i = 0; i < 10; i++ ) {
-        n = build_algorithm_list( p, length, algolist[i] );
+        n = _gsti_algolist_build( p, length, algolist[i] );
         if( !n )
             return GSTI_TOO_SHORT;
         assert( n <= length );
@@ -315,13 +315,13 @@ parse_msg_kexdh_init( MSG_kexdh_init *kexdh, const byte *msg, size_t msglen )
     memset( kexdh, 0, sizeof *kexdh );
     if( msglen < (1+4) )
         return GSTI_TOO_SHORT;
-    buffer_init( &buf );
-    buffer_put_raw( buf, msg, msglen );
-    if( buffer_getc( buf ) != SSH_MSG_KEXDH_INIT ) {
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, msg, msglen );
+    if( _gsti_buf_getc( buf ) != SSH_MSG_KEXDH_INIT ) {
         rc = GSTI_BUG;
         goto leave;
     }        
-    rc = buffer_get_mpi( buf, &kexdh->e, &n );
+    rc = _gsti_buf_getmpi( buf, &kexdh->e, &n );
     if( rc )
         goto leave;
     /* a value which is not in the range [1, p-1] is considered as a
@@ -330,10 +330,10 @@ parse_msg_kexdh_init( MSG_kexdh_init *kexdh, const byte *msg, size_t msglen )
         return GSTI_PROT_VIOL;
 
     /* make sure the msg length matches */
-    if( buffer_get_len( buf ) )
+    if( _gsti_buf_getlen( buf ) )
         rc = GSTI_INV_PKT;
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
@@ -350,19 +350,19 @@ build_msg_kexdh_init( MSG_kexdh_init *kexdh, struct packet_buffer_s *pkt )
 
     assert( pkt->size > 100 );
 
-    buffer_init( &buf );
-    rc = buffer_put_mpi( buf, kexdh->e );
+    _gsti_buf_init( &buf );
+    rc = _gsti_buf_putmpi( buf, kexdh->e );
     if( rc )
         goto leave;
-    len = buffer_get_len( buf );
+    len = _gsti_buf_getlen( buf );
     if( len > pkt->size - 1 )
         return GSTI_TOO_LARGE;
     pkt->type = SSH_MSG_KEXDH_INIT;
     pkt->payload_len = len + 1;
-    memcpy( pkt->payload + 1, buffer_get_ptr( buf ), len );
+    memcpy( pkt->payload + 1, _gsti_buf_getptr( buf ), len );
 
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
@@ -396,17 +396,17 @@ parse_msg_kexdh_reply( MSG_kexdh_reply *dhr, const byte *msg, size_t msglen )
     memset( dhr, 0, sizeof *dhr );
     if( msglen < (1+4+4+4) )
         return GSTI_TOO_SHORT;
-    buffer_init( &buf );
-    buffer_put_raw( buf, msg, msglen );
-    if( buffer_getc( buf ) != SSH_MSG_KEXDH_REPLY ) {
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, msg, msglen );
+    if( _gsti_buf_getc( buf ) != SSH_MSG_KEXDH_REPLY ) {
         rc = GSTI_BUG;
         goto leave;
     }
 
-    rc = buffer_get_bstring( buf, &dhr->k_s );
+    rc = _gsti_buf_getbstr( buf, &dhr->k_s );
     if( rc )
         goto leave;
-    rc = buffer_get_mpi( buf, &dhr->f, &n );
+    rc = _gsti_buf_getmpi( buf, &dhr->f, &n );
     if( rc )
         goto leave;
     /* a value which is not in the range [1, p-1] is considered as a
@@ -414,18 +414,18 @@ parse_msg_kexdh_reply( MSG_kexdh_reply *dhr, const byte *msg, size_t msglen )
     if( (n-4) > sizeof diffie_hellman_group1_prime )
         return GSTI_PROT_VIOL;
 
-    rc = buffer_get_bstring( buf, &dhr->sig_h );
+    rc = _gsti_buf_getbstr( buf, &dhr->sig_h );
     if( rc )
         goto leave;
 
-    msglen = buffer_get_len( buf );
+    msglen = _gsti_buf_getlen( buf );
     /* make sure the msg length matches */
     if( msglen ) {
         log_info( "parse_msg_kexdh_reply: %lu bytes remaining\n",(u32)msglen );
         rc = GSTI_INV_PKT;
     }
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
@@ -443,31 +443,31 @@ build_msg_kexdh_reply( MSG_kexdh_reply *dhr, struct packet_buffer_s *pkt )
     assert( pkt->size > 100 );
 
     pkt->type = SSH_MSG_KEXDH_REPLY;
-    buffer_init( &buf );
-    buffer_putc( buf, 0 );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putc( buf, 0 );
     
-    rc = buffer_put_string( buf, dhr->k_s->d, dhr->k_s->len );
+    rc = _gsti_buf_putstr( buf, dhr->k_s->d, dhr->k_s->len );
     if( rc )
         goto leave;
     
-    rc = buffer_put_mpi( buf, dhr->f );
+    rc = _gsti_buf_putmpi( buf, dhr->f );
     if( rc )
         goto leave;
 
-    rc = buffer_put_string( buf, dhr->sig_h->d, dhr->sig_h->len );
+    rc = _gsti_buf_putstr( buf, dhr->sig_h->d, dhr->sig_h->len );
     if( rc )
         goto leave;
 
-    len = buffer_get_len( buf );
+    len = _gsti_buf_getlen( buf );
     if( len > pkt->size ) {
         rc = GSTI_TOO_LARGE;
         goto leave;
     }
-    memcpy( pkt->payload, buffer_get_ptr( buf ), len );
+    memcpy( pkt->payload, _gsti_buf_getptr( buf ), len );
     pkt->payload_len = len;
 
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
@@ -759,7 +759,7 @@ choose_mac_algo( GSTIHD hd, STRLIST cli, STRLIST srv )
     int res = 0, i;
 
     for( l = cli; l && !res; l = l->next ) {
-        res = find_algorithm_list( srv, l->d );
+        res = _gsti_algolist_find( srv, l->d );
         if( !res )
             continue;
         for( i = 0; (s = hmac_list[i].name); i++ ) {
@@ -788,7 +788,7 @@ choose_cipher_algo( GSTIHD hd, STRLIST cli, STRLIST srv )
     int res, i;
 
     for( l = cli; l; l = l->next ) {
-        res = find_algorithm_list( srv, l->d );
+        res = _gsti_algolist_find( srv, l->d );
         if( !res )
             continue;
         for( i = 0; (s = cipher_list[i].name); i++ ) {
@@ -896,7 +896,7 @@ kex_send_kexdh_reply( GSTIHD hd )
     GCRY_MPI y;
 
     memset( &dhr, 0, sizeof dhr );
-    dhr.k_s = _gsti_key_getblob( hd->hostkey_file, GSTI_PK_DSS );
+    dhr.k_s = _gsti_key_getblob( hd->hostkey );
 
     /* generate our secret and the public value for it */
     dhr.f = calc_dh_secret( &y );
@@ -1087,25 +1087,25 @@ kex_send_disconnect( GSTIHD hd, u32 reason )
     int rc;
 
     pkt->type = SSH_MSG_DISCONNECT;
-    buffer_init( &buf );
-    buffer_putc( buf, 0 );
-    buffer_put_ulong( buf, reason );
-    rc = buffer_put_string( buf, NULL, 4 );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putc( buf, 0 );
+    _gsti_buf_putint( buf, reason );
+    rc = _gsti_buf_putstr( buf, NULL, 4 );
     if( rc )
         goto leave;
-    rc = buffer_put_string( buf, NULL, 4 );
+    rc = _gsti_buf_putstr( buf, NULL, 4 );
     if( rc )
         goto leave;
 
-    len = buffer_get_len( buf );
+    len = _gsti_buf_getlen( buf );
     if( len > pkt->size ) {
         rc = GSTI_TOO_LARGE;
         goto leave;
     }
-    memcpy( pkt->payload, buffer_get_ptr( buf ), len );
+    memcpy( pkt->payload, _gsti_buf_getptr( buf ), len );
 
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
@@ -1124,25 +1124,25 @@ parse_msg_service( BSTRING *svcname, const byte *msg, size_t msglen, int type )
     *svcname = NULL;
     if( msglen < (1+4) )
         return GSTI_TOO_SHORT;
-    buffer_init( &buf );
-    buffer_put_raw( buf, msg, msglen );
-    if( buffer_getc( buf ) != type ) {
+    _gsti_buf_init( &buf );
+    _gsti_buf_putraw( buf, msg, msglen );
+    if( _gsti_buf_getc( buf ) != type ) {
         rc = GSTI_BUG;
         goto leave;
     }
 
-    rc = buffer_get_bstring( buf, svcname );
+    rc = _gsti_buf_getbstr( buf, svcname );
     if( rc )
         goto leave;
     
     /* make sure the msg length matches */
-    msglen = buffer_get_len( buf );
+    msglen = _gsti_buf_getlen( buf );
     if( msglen ) {
         log_info( "parse_msg_service: %lu bytes remaining\n", (u32)msglen );
         rc = GSTI_INV_PKT;
     }
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
@@ -1164,22 +1164,22 @@ build_msg_service( BSTRING svcname, struct packet_buffer_s *pkt, int type )
     }
 
     pkt->type = type;
-    buffer_init( &buf );
-    buffer_putc( buf, 0 );
-    rc = buffer_put_string( buf, svcname->d, svcname->len );
+    _gsti_buf_init( &buf );
+    _gsti_buf_putc( buf, 0 );
+    rc = _gsti_buf_putstr( buf, svcname->d, svcname->len );
     if( rc )
         goto leave;
 
-    len = buffer_get_len( buf );
+    len = _gsti_buf_getlen( buf );
     if( len > pkt->size ) {
         rc = GSTI_TOO_LARGE;
         goto leave;
     }
-    memcpy( pkt->payload, buffer_get_ptr( buf ), len );
+    memcpy( pkt->payload, _gsti_buf_getptr( buf ), len );
     pkt->payload_len = len;
 
 leave:
-    buffer_free( buf );
+    _gsti_buf_free( buf );
     
     return rc;
 }
