@@ -411,8 +411,8 @@ gsti_set_compression (gsti_ctx_t ctx, int val)
 
 
 gsti_error_t
-gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
-		unsigned int max)
+gsti_set_kex_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
+                    unsigned int max)
 {
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
@@ -453,6 +453,25 @@ gsti_set_auth_callback (gsti_ctx_t ctx, gsti_auth_cb_t fnc,
   ctx->auth_cb_val = fnc_value;
   
   return 0;
+}
+
+
+gsti_error_t
+gsti_set_auth_banner (gsti_ctx_t ctx, const char * data, int isfile)
+{
+  gsti_error_t err = 0;
+  
+  if (!ctx)
+    gsti_error (GPG_ERR_INV_ARG);
+  
+  if (!isfile)
+    {
+      gsti_bstr_free (ctx->auth->msg);
+      err = gsti_bstr_make (&ctx->auth->msg, data, strlen (data));
+    }
+  else
+    ; /* FIXME: todo */
+  return err;
 }
 
 

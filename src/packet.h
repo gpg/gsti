@@ -117,12 +117,17 @@ typedef struct
   gsti_bstr_t user;
   gsti_bstr_t svcname;
   gsti_bstr_t method;
-  unsigned false:1;
+  unsigned chk_key:1;
   gsti_bstr_t pkalgo;
   gsti_bstr_t key;
   gsti_bstr_t sig;
 } MSG_auth_request;
 
+typedef struct
+{
+  gsti_bstr_t msg;
+  gsti_bstr_t lang;
+} MSG_auth_banner;
 
 typedef struct
 {

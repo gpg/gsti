@@ -71,6 +71,8 @@ gsti_bstr_free (gsti_bstr_t bstr)
 size_t
 gsti_bstr_length (gsti_bstr_t bstr)
 {
+  if (!bstr)
+    return 0;
   return bstr->length;
 }
 
@@ -78,5 +80,10 @@ gsti_bstr_length (gsti_bstr_t bstr)
 /* Return the data of the binary string BSTR.  */
 gsti_byte_t *gsti_bstr_data (gsti_bstr_t bstr)
 {
+  if (!bstr)
+    return NULL;
   return bstr->data;
 }
+
+
+

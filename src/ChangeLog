@@ -1,3 +1,21 @@
+2003-07-13  Timo Schulz  <twoaday@g10code.de>
+
+	* packet.h (MSG_auth_request): s/false/chk_key.
+	Changed all callers.
+	* auth.c: All authentication functions now have a uniform
+	function form.
+	(build_auth_banner): New.
+	(free_auth_banner): New.
+	(parse_auth_banner): New.
+	(init_auth_banner): New.
+	(_gsti_auth_send_banner_packet): New.
+	(_gsti_auth_proc_banner_packet): New.
+	* fsm.c (handle_auth_cb): Support for banner messages.
+	(fsm_client_loop): Likewise.
+	* bstring.c (gsti_bstr_length, gsti_bstr_data): Allow for NULL
+	pointers.
+	* main.c (gsti_set_auth_banner): New.
+	
 2004-07-10  Timo Schulz  <twoaday@g10code.de>
 
 	* gsti.h (gsti_auth_cb_t): New.
@@ -510,7 +528,7 @@
 	commit the Changelog to the CVS when moving the files from the
 	local PRCS repository to CVS.
 
-2002-10-05  Timo Schulz  (ts@winpt.org)
+2002-10-05  Timo Schulz  <ts@winpt.org>
 
 	* kex.c (kex_send_init_packet): Fixed memory leak.
 	* main.c (gsti_deinit): Free auth struct.
@@ -528,7 +546,7 @@
 	* utils.c (_gsti_bstring_hash): Moved from kex.c and
 	renamed from hash_bstring. Now it's global.
 	
-2002-10-06  Timo Schulz  (ts@winpt.org)
+2002-10-06  Timo Schulz  <ts@winpt.org>
 
 	* fsm.c (fsm_server_loop): New.
 	(fsm_client_loop): New.
@@ -538,7 +556,7 @@
 	(auth_send_init_packet): Ditto.
 	(auth_send_second_packet): Ditto.
 
-2002-10-06  Timo Schulz  (ts@winpt.org)
+2002-10-06  Timo Schulz  <ts@winpt.org>
 	* auth.c (auth_send_pkok_packet): New.
 	(auth_proc_pkok_packet): New.
 	* fsm.c (fsm_server_loop): Send the SSH_MSG_USERAUTH_PK_OK and
@@ -546,7 +564,7 @@
 	(fsm_client_loop): Proc the new packets.
 	(pubkey.h): Prefix key context with gsti_.
 	
-2002-10-07  Timo Schulz  (ts@winpt.org)
+2002-10-07  Timo Schulz  <ts@winpt.org>
 
 	* pubkey.c (read_dss_key): Store 'x' in secure memory.
 	* auth.c (parse_pkok_packet): New.
@@ -562,7 +580,7 @@
 	* kex.c (build_compress_list): New.
 	(kex_send_init_packet): Use it here.
 	
-2002-10-08  Timo Schulz  (ts@winpt.org)
+2002-10-08  Timo Schulz  <ts@winpt.org>
 
 	* utils.c (_gsti_dump_object): Use the logging stuff and
 	not fprintf. Support to dump BUFFER's.
@@ -578,7 +596,7 @@
 	(_gsti_xcalloc): Ditto.
 	(_gsti_xstrdup): Ditto.
 	
-2002-10-19  Timo Schulz  (ts@winpt.org)
+2002-10-19  Timo Schulz  <ts@winpt.org>
 
 	* pubkey.c (pktype_from_file): New.
 	(gsti_key_load): Use it here and remove the pktype param.
@@ -587,7 +605,7 @@
 	DH group exchange method.
 	
 	
-2002-10-19  Timo Schulz  (ts@winpt.org)
+2002-10-19  Timo Schulz  <ts@winpt.org>
 
 	* packet.h: Added DH group numbers.
 	* kex.c (build_gex_request): New.
@@ -598,7 +616,7 @@
 	(choose_dh_size): New.
 	(kex_send_gex_group): New.
 	
-2002-10-20  Timo Schulz  (ts@winpt.org)
+2002-10-20  Timo Schulz  <ts@winpt.org>
 
 	* api.h: Use a BUFFER to read from the payload.
 	* kex.c (parse_xxx): Use a BUFFER as the input.

@@ -202,7 +202,8 @@ enum gsti_prefs
 enum gsti_auth_ids
 {
   GSTI_AUTHID_USER   = 1,
-  GSTI_AUTHID_PUBKEY = 2
+  GSTI_AUTHID_PUBKEY = 2,
+  GSTI_AUTHID_BANNER = 3,
 };
 
 /* The context type.  */
@@ -268,9 +269,11 @@ gsti_error_t gsti_set_client_user (gsti_ctx_t ctx, const char *user);
 gsti_error_t gsti_set_auth_method (gsti_ctx_t ctx, int methd);
 gsti_error_t gsti_set_auth_callback (gsti_ctx_t ctx, gsti_auth_cb_t fnc,
                                      void * fnc_value);
+gsti_error_t gsti_set_auth_banner (gsti_ctx_t ctx, const char * data,
+                                   int isfile);
 gsti_error_t gsti_set_compression (gsti_ctx_t ctx, int val);
-gsti_error_t gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
-			     unsigned int max);
+gsti_error_t gsti_set_kex_dhgex (gsti_ctx_t ctx, unsigned int min,
+                                 unsigned int n, unsigned int max);
 gsti_error_t gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
                                  const unsigned short * prefs, size_t n);
 

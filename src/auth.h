@@ -23,23 +23,27 @@
 struct gsti_auth_s
 {
   int method;
+  int trypk;
   gsti_key_t key;
   gsti_bstr_t blob;
+  gsti_bstr_t msg;
   char *user;
 };
 
+
 /*-- auth.c --*/
-gsti_error_t _gsti_auth_send_accept_packet (gsti_ctx_t ctx);
-gsti_error_t _gsti_auth_proc_accept_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_auth_send_success_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t _gsti_auth_proc_success_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
 gsti_error_t _gsti_auth_send_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 gsti_error_t _gsti_auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
-gsti_error_t _gsti_auth_send_init_packet (gsti_ctx_t ctx, gsti_auth_t auth,
-                                          int trypk);
-gsti_error_t _gsti_auth_proc_init_packet (gsti_ctx_t ctx, gsti_auth_t auth,
-                                          int trypk);
+gsti_error_t _gsti_auth_send_request_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t _gsti_auth_proc_request_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
-gsti_error_t _gsti_auth_send_failure_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_auth_send_failure_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+
+gsti_error_t _gsti_auth_send_banner_packet (gsti_ctx_t ctx, gsti_auth_t auth);
+gsti_error_t _gsti_auth_proc_banner_packet (gsti_ctx_t ctx, gsti_auth_t auth);
 
 #endif /*GSTI_AUTH_H*/

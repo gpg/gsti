@@ -182,6 +182,8 @@ gsti_buf_putstr (gsti_buffer_t buf, const char *data, size_t amount)
   err = gsti_buf_putuint32 (buf, amount);
   if (err)
     return err;
+  if (!amount)
+    return 0;
 
   return gsti_buf_putraw (buf, data, amount);
 }
@@ -333,6 +335,14 @@ gsti_buf_getstr (gsti_buffer_t buf, char **r_str, size_t *r_length)
   if (err)
     return err;
 
+  if (!len)
+    { /* allow empty strings */
+      *r_str = malloc (1);
+      r_str[0] = '\0';
+      *r_length = 1;
+      return 0;
+    }
+  
   if (len > gsti_buf_readable (buf))
     return gsti_error (GPG_ERR_INV_PACKET);
 
