@@ -390,6 +390,24 @@ dump_msg_kexinit (gsti_ctx_t ctx, MSG_kexinit * kex)
 }
 
 
+static gsti_error_t
+check_dh_mpi_range (gcry_mpi_t chk)
+{
+  gsti_error_t err = 0;
+  gcry_mpi_t p;
+  
+  /* A value which is not in the range [1, p-1] is considered as a
+     protocol violation.  */
+  if (gcry_mpi_scan (&p, GCRYMPI_FMT_STD, diffie_hellman_group1_prime,
+                     sizeof diffie_hellman_group1_prime, NULL))
+    abort ();
+  if (gcry_mpi_cmp (chk, p) > 0 || gcry_mpi_get_nbits (chk) < 2)
+    err = gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
+  gcry_mpi_release (p);
+  
+  return err;
+}
+
 
 /* Parse a SSH_MSG_KEXDH_INIT and return the parsed information in a
    newly allocated struture.  Returns 0 on success or an
@@ -417,16 +435,9 @@ parse_msg_kexdh_init (MSG_kexdh_init * kexdh, const gsti_buffer_t buf)
   if (err)
     goto leave;
 
-#if 0
-  /* FIXME: This check is disabled, because it is bogus and needs to
-     be rewritten to really compare against the mpi, and not the byte
-     length.  */
-
-  /* A value which is not in the range [1, p-1] is considered as a
-     protocol violation.  */
-  if ((n - 4) > sizeof diffie_hellman_group1_prime)
-    return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
-#endif
+  err = check_dh_mpi_range (kexdh->e);
+  if (err)
+    return err;
 
   /* Make sure the message length matches.  */
   if (gsti_buf_readable (buf))
@@ -511,16 +522,9 @@ parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, gsti_buffer_t buf)
   if (err)
     goto leave;
 
-#if 0
-  /* FIXME: This check is disabled, because it is bogus and needs to
-     be rewritten to really compare against the mpi, and not the byte
-     length.  */
-
-  /* A value which is not in the range [1, p-1] is considered as a
-     protocol violation.  */
-  if ((n - 4) > sizeof diffie_hellman_group1_prime)
-    return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
-#endif
+  err = check_dh_mpi_range (dhr->f);
+  if (err)
+      goto leave;
 
   err = gsti_buf_getbstr (buf, &dhr->sig_h);
   if (err)
@@ -1596,16 +1600,22 @@ select_dh_modulus (size_t n, size_t * r_size)
     {
     case 1023:
       p = mpi_array_1023;
+      break;
     case 1534:
       p = mpi_array_1534;
+      break;
     case 2046:
       p = mpi_array_2046;
+      break;
     case 3190:
       p = mpi_array_3190;
+      break;
     case 4094:
       p = mpi_array_4094;
+      break;
     default:
       p = mpi_array_1534;
+      break;
     }
   return p;
 }

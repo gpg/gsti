@@ -1,3 +1,10 @@
+2004-06-29  Timo Schulz  <twoaday@freakmail.de>
+
+	* kex.c (select_dh_modulus): Add missing break keywords.
+	(check_dh_mpi_range): New.
+	(parse_msg_kexdh_init): Check range of returned MPI.
+	(parse_msg_kexdh_reply): Likewise.
+	
 2004-06-29  Werner Koch  <wk@gnupg.org>
 
 	* fsm.c (state_to_string): New.
