@@ -51,35 +51,52 @@ buftou32 (const byte * buf)
 static void
 print_disconnect_msg (const byte * msg, size_t msglen)
 {
-  BUFFER buf = NULL;
-  BSTRING desc, lang;
+  gsti_error_t err;
+
+  gsti_buffer_t buf = NULL;
+  gsti_bstr_t desc, lang;
   u32 reason;
+  int val;
 
   if (msglen < 13)
     {
       _gsti_log_info (0, "SSH_MSG_DISCONNECT is not valid\n");
       return;
     }
-  _gsti_buf_init (&buf);
-  _gsti_buf_putraw (buf, msg, msglen);
-  if (_gsti_buf_getc (buf) != SSH_MSG_DISCONNECT)
+
+  err = gsti_buf_alloc (&buf);
+  if (err)
+    return;
+
+  err = gsti_buf_putraw (buf, msg, msglen);
+  if (err)
+    return;
+
+  err = gsti_buf_getc (buf, &val);
+  if (err)
     goto leave;
-  reason = _gsti_buf_getint (buf);
+
+  if (val != SSH_MSG_DISCONNECT)
+    goto leave;
+
+  err = gsti_buf_getuint32 (buf, &reason);
+  if (err)
+    goto leave;
   _gsti_log_info (0, "SSH_MSG_DISCONNECT: reason=%lu `", reason);
 
-  if (_gsti_buf_getbstr (buf, &desc))
+  if (gsti_buf_getbstr (buf, &desc))
     goto leave;
   _gsti_dump_bstring ("description:", desc);
-  _gsti_bstring_free (desc);
+  gsti_bstr_free (desc);
 
-  if (_gsti_buf_getbstr (buf, &lang))
+  if (gsti_buf_getbstr (buf, &lang))
     goto leave;
   _gsti_dump_bstring ("language-tag:", lang);
-  _gsti_bstring_free (lang);
+  gsti_bstr_free (lang);
 
 leave:
-  msglen = _gsti_buf_getlen (buf);
-  _gsti_buf_free (buf);
+  msglen = gsti_buf_readable (buf);
+  gsti_buf_free (buf);
   if (msglen)
     _gsti_log_info (0, "print_msg_disconnect: %lu bytes remaining\n",
 		    (u32) msglen);
@@ -89,37 +106,49 @@ leave:
 static void
 print_debug_msg (const byte * msg, size_t msglen)
 {
-  BUFFER buf = NULL;
-  BSTRING mesag, lang;
-  int display;
+  gsti_error_t err;
+  gsti_buffer_t buf = NULL;
+  gsti_bstr_t mesag, lang;
+  int val;
 
   if (msglen < (1 + 1 + 4 + 4))
     {
       _gsti_log_info (0, "SSH_MSG_DEBUG is not valid\n");
       return;
     }
-  _gsti_buf_init (&buf);
-  _gsti_buf_putraw (buf, msg, msglen);
-  if (_gsti_buf_getc (buf) != SSH_MSG_DEBUG)
+
+  err = gsti_buf_alloc (&buf);
+  if (err)
+    return;
+
+  err = gsti_buf_putraw (buf, msg, msglen);
+  if (err)
+    return;
+
+  err = gsti_buf_getc (buf, &val);
+  if (err)
+    goto leave;
+  if (val != SSH_MSG_DEBUG)
     goto leave;
 
-  display = _gsti_buf_getc (buf);
-  _gsti_log_info (0, "SSH_MSG_DEBUG:%s `", display ? " (always display)" : "");
+  err = gsti_buf_getbool (buf, &val);
+  if (err)
+    goto leave;
+  _gsti_log_info (0, "SSH_MSG_DEBUG:%s `", val ? " (always display)" : "");
 
-  if (_gsti_buf_getbstr (buf, &mesag))
+  if (gsti_buf_getbstr (buf, &mesag))
     goto leave;
   _gsti_dump_bstring ("message:", mesag);
-  _gsti_bstring_free (mesag);
+  gsti_bstr_free (mesag);
 
-  if (_gsti_buf_getbstr (buf, &lang))
+  if (gsti_buf_getbstr (buf, &lang))
     goto leave;
   _gsti_dump_bstring ("language:", lang);
-  _gsti_bstring_free (lang);
-
+  gsti_bstr_free (lang);
 
 leave:
-  msglen = _gsti_buf_getlen (buf);
-  _gsti_buf_free (buf);
+  msglen = gsti_buf_readable (buf);
+  gsti_buf_free (buf);
   if (msglen)
     _gsti_log_info (0, "print_msg_debug: %lu bytes remaining\n", (u32) msglen);
 }
@@ -297,8 +326,10 @@ again:
   ctx->pkt.type = *ctx->pkt.payload;
   _gsti_log_info (ctx, "received packet %lu of type %d\n",
 		  (u32) seqno, ctx->pkt.type);
-  _gsti_buf_free (ctx->pktbuf);
-  _gsti_buf_set (&ctx->pktbuf, ctx->pkt.payload, ctx->pkt.payload_len);
+  if (!ctx->pktbuf)
+    /* FIXME: Handle error.  */
+    gsti_buf_alloc (&ctx->pktbuf);
+  gsti_buf_set (ctx->pktbuf, (char *) ctx->pkt.payload, ctx->pkt.payload_len);
 
   switch (ctx->pkt.type)
     {

@@ -103,28 +103,28 @@ typedef struct
 
 typedef struct
 {
-  BSTRING k_s;			/* servers public host key */
+  gsti_bstr_t k_s;		/* servers public host key */
   gcry_mpi_t f;
-  BSTRING sig_h;		/* signature of the hash */
+  gsti_bstr_t sig_h;		/* signature of the hash */
 } MSG_kexdh_reply;
 
 
 typedef struct
 {
-  BSTRING user;
-  BSTRING svcname;
-  BSTRING method;
+  gsti_bstr_t user;
+  gsti_bstr_t svcname;
+  gsti_bstr_t method;
   unsigned false:1;
-  BSTRING pkalgo;
-  BSTRING key;
-  BSTRING sig;
+  gsti_bstr_t pkalgo;
+  gsti_bstr_t key;
+  gsti_bstr_t sig;
 } MSG_auth_request;
 
 
 typedef struct
 {
-  BSTRING pkalgo;
-  BSTRING key;
+  gsti_bstr_t pkalgo;
+  gsti_bstr_t key;
 } MSG_auth_pkok;
 
 

@@ -32,7 +32,7 @@ enum
   TYPE_BUFFER = 5,
 };
 
-void _gsti_bstring_hash (gcry_md_hd_t md, BSTRING a);
+void _gsti_bstring_hash (gcry_md_hd_t md, gsti_bstr_t a);
 
 STRLIST _gsti_algolist_parse (const byte * string, size_t length);
 size_t _gsti_algolist_build (byte * buffer, size_t length, STRLIST list);

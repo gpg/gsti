@@ -1,4 +1,4 @@
-/* buffer.h - Buffer handling
+/* buffer.h - Buffer handling.
    Copyright (C) 2002 Timo Schulz
    Copyright (C) 2004 g10 Code GmbH
 
@@ -18,36 +18,161 @@
    along with GSTI; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA  */
 
-#ifndef BUFFER_H
-#define BUFFER_H
+#ifndef GSTI_BUFFER_H
+#define GSTI_BUFFER_H	1
 
-typedef struct buffer_s
+#include <gcrypt.h>
+
+#include "types.h"
+
+
+/* Formatted buffers.  */
+
+/* Buffers are losely formatted objects that support the SSH data
+   types.  */
+struct gsti_buffer
 {
-  unsigned char *d;
-  unsigned size;
-  unsigned end;
-  unsigned off;
-} *BUFFER;
+  /* The buffer data.  */
+  gsti_byte_t *data;
+
+  /* The allocated size of the buffer.  */
+  size_t size;
+
+  /* The amount of data in the buffer.  */
+  size_t end;
+
+  /* The current offset into the buffer.  This is used and
+     automatically adjusted by the various get functions.  */
+  size_t offset;
+};
+
+typedef struct gsti_buffer *gsti_buffer_t;
+
+
+void _gsti_buf_init (gsti_buffer_t *r_buf);
+void _gsti_buf_set (gsti_buffer_t *r_buf, const byte * buf, size_t blen);
+void _gsti_buf_free (gsti_buffer_t buf);
+size_t _gsti_buf_getlen (gsti_buffer_t buf);
+void *_gsti_buf_getptr (gsti_buffer_t buf);
+void _gsti_buf_putint (gsti_buffer_t buf, u32 val);
+unsigned _gsti_buf_getint (gsti_buffer_t buf);
+void _gsti_buf_putstr (gsti_buffer_t buf, const byte *data, size_t data_len);
+byte *_gsti_buf_getstr (gsti_buffer_t buf, size_t * r_n);
+gsti_error_t _gsti_buf_putmpi (gsti_buffer_t buf, gcry_mpi_t a);
+gsti_error_t _gsti_buf_getmpi (gsti_buffer_t buf, gcry_mpi_t * ret_a,
+			       size_t * r_n);
+gsti_error_t _gsti_buf_getbstr (gsti_buffer_t buf, gsti_bstr_t * r_bstr);
+void _gsti_buf_putbstr (gsti_buffer_t buf, gsti_bstr_t bstr);
+void _gsti_buf_putc (gsti_buffer_t buf, int val);
+int _gsti_buf_getc (gsti_buffer_t buf);
+void _gsti_buf_putraw (gsti_buffer_t buf, const byte *data, size_t data_len);
+int _gsti_buf_getraw (gsti_buffer_t buf, byte *data, size_t reqlen);
+void _gsti_buf_dump (gsti_buffer_t buf);
+
+
+/* Allocate a new buffer and return it in R_BUF.  */
+gpg_error_t gsti_buf_alloc (gsti_buffer_t *r_buf);
+
+/* Destroy the buffer BUF and release all associated resources.  */
+void gsti_buf_free (gsti_buffer_t buf);
+
+/* Set the content of the buffer to AMOUNT bytes starting from DATA,
+   and reset the buffer offset.  */
+gpg_error_t gsti_buf_set (gsti_buffer_t buf, const char *data, size_t amount);
 
 
-void _gsti_buf_init (BUFFER * r_ctx);
-void _gsti_buf_set (BUFFER * r_ctx, const byte * buf, size_t blen);
-void _gsti_buf_free (BUFFER ctx);
-size_t _gsti_buf_getlen (BUFFER ctx);
-void *_gsti_buf_getptr (BUFFER ctx);
-void _gsti_buf_putint (BUFFER ctx, u32 val);
-unsigned _gsti_buf_getint (BUFFER ctx);
-void _gsti_buf_putstr (BUFFER ctx, const byte * buf, size_t len);
-byte *_gsti_buf_getstr (BUFFER ctx, size_t * r_n);
-gsti_error_t _gsti_buf_putmpi (BUFFER ctx, gcry_mpi_t a);
-gsti_error_t _gsti_buf_getmpi (BUFFER ctx, gcry_mpi_t * ret_a, size_t * r_n);
-gsti_error_t _gsti_buf_getbstr (BUFFER ctx, BSTRING * r_bstr);
-void _gsti_buf_putbstr (BUFFER ctx, BSTRING bstr);
-void _gsti_buf_putc (BUFFER ctx, int val);
-int _gsti_buf_getc (BUFFER ctx);
-void _gsti_buf_putraw (BUFFER ctx, const byte * buf, size_t len);
-int _gsti_buf_getraw (BUFFER ctx, byte * buf, size_t reqlen);
-void _gsti_buf_dump (BUFFER ctx);
+/* Functions for appending to the buffer.  These functions do not
+   change the offset into the buffer.  They grow the buffer by
+   allocating more space if necessary.  */
+
+/* Append the character CHR to the buffer BUF.  */
+gpg_error_t gsti_buf_putc (gsti_buffer_t buf, int chr);
+
+/* Append the byte VAL to the buffer BUF.  */
+gpg_error_t gsti_buf_putbyte (gsti_buffer_t buf, gsti_byte_t val);
+
+/* Append the boolean VAL to the buffer BUF.  */
+gpg_error_t gsti_buf_putbool (gsti_buffer_t buf, int val);
+
+/* Append the 32-bit unsigned integer to the buffer BUF.  */
+gpg_error_t gsti_buf_putuint32 (gsti_buffer_t buf, gsti_uint32_t val);
+
+/* Append the string data, AMOUNT bytes starting from DATA, to the
+   buffer BUF.  */
+gpg_error_t gsti_buf_putstr (gsti_buffer_t buf, const char *data,
+			      size_t amount);
+
+/* Append the binary string BSTR to the buffer BUF.  */
+gpg_error_t gsti_buf_putbstr (gsti_buffer_t buf, gsti_bstr_t bstr);
+
+/* Append the MPI VAL to the buffer BUF.  */
+gpg_error_t gsti_buf_putmpi (gsti_buffer_t buf, gcry_mpi_t mpi);
+
+/* Append AMOUNT bytes starting from DATA to the buffer BUF.  */
+gpg_error_t gsti_buf_putraw (gsti_buffer_t buf, const char *data,
+			      size_t amount);
 
 
-#endif /*BUFFER_H */
+/* Functions for reading from the buffer.  These functions usually
+   increase the buffer offset.  */
+
+/* Return the amount of data left for reading in the buffer BUF
+   without changing the buffer offset.  */
+size_t gsti_buf_readable (gsti_buffer_t buf);
+
+/* Return a pointer to the first byte of the currently readable buffer
+   data.  */
+void *gsti_buf_getptr (gsti_buffer_t buf);
+
+/* Return the character at the current offset in the buffer BUF in
+   R_CHR, and increase the offset to point to the byte following that
+   character.  Returns the GPG_ERR_INV_PACKET error code if there is
+   no more character in the buffer.  */
+gpg_error_t gsti_buf_getc (gsti_buffer_t buf, int *r_chr);
+
+/* Return the byte at the current offset in the buffer BUF in R_VAL, and
+   increase the offset to point to the byte following that character.
+   Returns the GPG_ERR_INV_PACKET error code if there is no more
+   character in the buffer.  */
+gpg_error_t gsti_buf_getbyte (gsti_buffer_t buf, gsti_byte_t *r_val);
+
+/* Return the boolean at the current offset in the buffer BUF in
+   R_VAL, and increase the offset to point to the byte following that
+   boolean.  Returns the GPG_ERR_INV_PACKET error code if there is no
+   boolean in the buffer.  */
+gpg_error_t gsti_buf_getbool (gsti_buffer_t buf, int *r_val);
+
+/* Return the 32-bit unsigned integer at the current offset in the
+   buffer BUF in R_VAL, and increase the offset to point to the byte
+   following that integer.  Returns the GPG_ERR_INV_PACKET error code
+   if there is no more character in the buffer.  */
+gpg_error_t gsti_buf_getuint32 (gsti_buffer_t buf, gsti_uint32_t *r_val);
+
+/* Return the string at the current offset in the buffer BUF in R_STR
+   and its length in R_LENGTH, and increase the offset to point to the
+   byte following that string.  Returns the GPG_ERR_INV_PACKET error
+   code if there is no valid string in the buffer.  The returned
+   string is allocated with malloc and must be freed by the user.  */
+gpg_error_t gsti_buf_getstr (gsti_buffer_t buf, char **r_str,
+			      size_t *r_length);
+
+/* Return the binary string at the current offset in the buffer BUF in
+   R_BSTR, and increase the offset to point to the byte following that
+   binary string.  Returns the GPG_ERR_INV_PACKET error code if there
+   is no valid binary string in the buffer.  */
+gpg_error_t gsti_buf_getbstr (gsti_buffer_t buf, gsti_bstr_t *r_bstr);
+
+/* Return the MPI at the current offset in the buffer BUF in R_VAL,
+   and increase the offset to point to the byte following that MPI.
+   Returns the GPG_ERR_INV_PACKET error code if there is no valid MPI
+   in the buffer.  */
+gpg_error_t gsti_buf_getmpi (gsti_buffer_t buf, gcry_mpi_t *r_val);
+
+/* Return AMOUNT bytes starting from the current offset in the buffer
+   BUF in DATA, and increase the offset to point to the byte following
+   that data.  Returns the GPG_ERR_INV_PACKET error code if there are
+   not AMOUNT bytes available in the buffer.  */
+gpg_error_t gsti_buf_getraw (gsti_buffer_t buf, char *data, size_t amount);
+
+
+#endif	/* GSTI_BUFFER_H */

@@ -1,4 +1,4 @@
-/* utils.c -  some utility functions
+/* utils.c - Some utility functions.
    Copyright (C) 1999 Werner Koch
    Copyright (C) 2002 Timo Schulz
    Copyright (C) 2004 g10 Code GmbH
@@ -202,19 +202,21 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
       }
     case TYPE_BSTRING:
       {
-	BSTRING a = opaque;
+	gsti_bstr_t a = opaque;
 	_gsti_log_info (0, "%s", prefix);
 	if (a)
-	  _gsti_print_string (a->d, a->len);
+	  _gsti_print_string (gsti_bstr_data (a), gsti_bstr_length (a));
 	_gsti_log_info (0, "\n");
 	break;
       }
     case TYPE_BUFFER:
       {
-	BUFFER buf = opaque;
-	int i;
-	for (i = buf->off; i < _gsti_buf_getlen (buf); i++)
-	  _gsti_log_info (0, "%4x", buf->d[i]);
+	gsti_buffer_t buf = opaque;
+	int amount = gsti_buf_readable (buf);
+	unsigned char *data = gsti_buf_getptr (buf);
+	
+	while (amount--)
+	  _gsti_log_info (0, "%4x", *(data++));
 	_gsti_log_info (0, "\n");
 	break;
       }
@@ -223,15 +225,15 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 }
 
 void
-_gsti_bstring_hash (gcry_md_hd_t md, BSTRING a)
+_gsti_bstring_hash (gcry_md_hd_t md, gsti_bstr_t a)
 {
   byte buf[4];
-  size_t n = a->len;
+  size_t n = gsti_bstr_length (a);
 
   buf[0] = n >> 24;
   buf[1] = n >> 16;
   buf[2] = n >> 8;
   buf[3] = n;
   gcry_md_write (md, buf, 4);
-  gcry_md_write (md, a->d, n);
+  gcry_md_write (md, gsti_bstr_data (a), n);
 }

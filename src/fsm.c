@@ -266,7 +266,8 @@ fsm_server_loop (gsti_ctx_t ctx)
 
 	case FSM_service_start:
 	  _gsti_log_info (ctx, "service `");
-	  _gsti_print_string (ctx->service_name->d, ctx->service_name->len);
+	  _gsti_print_string (gsti_bstr_data (ctx->service_name),
+			      gsti_bstr_length (ctx->service_name));
 	  _gsti_log_info (ctx, "' has been started (server)\n");
 	  ctx->state = FSM_auth_wait;
 	  break;
@@ -468,7 +469,8 @@ fsm_client_loop (gsti_ctx_t ctx)
 
 	case FSM_service_start:
 	  _gsti_log_info (ctx, "service `");
-	  _gsti_print_string (ctx->service_name->d, ctx->service_name->len);
+	  _gsti_print_string (gsti_bstr_data (ctx->service_name),
+			      gsti_bstr_length (ctx->service_name));
 	  _gsti_log_info (ctx, "' has been started (client)\n");
 	  ctx->state = FSM_auth_start;
 	  break;

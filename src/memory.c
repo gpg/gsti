@@ -1,25 +1,28 @@
-/* memory.c -  memory allocation wrappers
- *	Copyright (C) 1999, 2002 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+/* memory.c - Memory allocation wrappers.
+   Copyright (C) 1999, 2002 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with GSTI; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <gcrypt.h>
@@ -102,22 +105,4 @@ _gsti_strlist_free (STRLIST a)
       _gsti_free (a);
       a = a2;
     }
-}
-
-BSTRING
-_gsti_bstring_make (const byte * buffer, size_t length)
-{
-  BSTRING a;
-
-  a = _gsti_xmalloc (sizeof *a + length - 1);
-  a->len = length;
-  if (buffer)
-    memcpy (a->d, buffer, length);
-  return a;
-}
-
-void
-_gsti_bstring_free (BSTRING a)
-{
-  _gsti_free (a);
 }

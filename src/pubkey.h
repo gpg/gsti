@@ -37,12 +37,12 @@ struct gsti_key_s
   unsigned int secret:1;
 };
 
-BSTRING _gsti_key_getblob (gsti_key_t pk);
-gsti_key_t _gsti_key_fromblob (BSTRING blob);
+gsti_bstr_t _gsti_key_getblob (gsti_key_t pk);
+gsti_key_t _gsti_key_fromblob (gsti_bstr_t blob);
 
-BSTRING _gsti_sig_encode (gsti_key_t sk, const byte * hash);
-gsti_error_t _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
-			       gsti_key_t * r_pk);
+gsti_bstr_t _gsti_sig_encode (gsti_key_t sk, const byte * hash);
+gsti_error_t _gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig,
+			       const byte * hash, gsti_key_t * r_pk);
 
 byte *_gsti_ssh_get_pkname (int pktype, int asbstr, size_t * r_n);
 gsti_error_t _gsti_ssh_cmp_pkname (int pktype, const char *name, size_t len);

@@ -1,6 +1,4 @@
-/* types.h
-   Copyright (C) 1999 Werner Koch
-   Copyright (C) 2002 Timo Schulz
+/* bstring.h - Binary string handling.
    Copyright (C) 2004 g10 Code GmbH
 
    This file is part of GSTI.
@@ -19,44 +17,29 @@
    along with GSTI; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA  */
 
-#ifndef GSTI_TYPES_H
-#define GSTI_TYPES_H
+#ifndef GSTI_BSTRING_H
+#define GSTI_BSTRING_H	1
 
-/* all the user visible type are here */
-#include <gsti.h>
+
+/* Binary strings.  */
 
-#ifndef HAVE_BYTE_TYPEDEF
-#undef byte
-typedef unsigned char byte;
-#define HAVE_BYTE_TYPEDEF
-#endif
+/* Binary strings are strings which may contain binary zeroes.  */
+struct gsti_bstr;
+typedef struct gsti_bstr *gsti_bstr_t;
 
-#ifndef HAVE_U32_TYPEDEF
-#undef u32
-typedef unsigned int u32;
-#define HAVE_U32_TYPEDEF
-#endif
+/* Create a new binary string from AMOUNT bytes starting from DATA,
+   and return it in BSTR.  */
+gpg_error_t gsti_bstr_make (gsti_bstr_t *bstr,
+			    const gsti_byte_t *data, size_t amount);
 
-#ifndef HAVE_U16_TYPEDEF
-#undef u16
-typedef unsigned short u16;
-#define HAVE_U16_TYPEDEF
-#endif
+/* Free the binary string BSTR.  */
+void gsti_bstr_free (gsti_bstr_t bstr);
 
-typedef struct strlist_s
-{
-  struct strlist_s *next;
-  char d[1];
-} *STRLIST;
+/* Return the length of the binary string BSTR.  */
+size_t gsti_bstr_length (gsti_bstr_t bstr);
+
+/* Return the data of the binary string BSTR.  */
+gsti_byte_t *gsti_bstr_data (gsti_bstr_t bstr);
 
 
-#ifndef DIM
-#define DIM(v) (sizeof(v)/sizeof((v)[0]))
-#endif
-
-typedef byte gsti_byte_t;
-typedef u32 gsti_uint32_t;
-
-#include "bstring.h"
-
-#endif /* GSTI_TYPES_H */
+#endif	/* GSTI_BSTRING_H */

@@ -36,6 +36,8 @@ libgsti_la_SOURCES = \
 	gsti.h \
 	ssh.h \
 	error.c \
+	bstring.h bstring.c \
+	buffer.h buffer.c \
 	auth.c \
 	api.h \
 	types.h \
@@ -48,7 +50,6 @@ libgsti_la_SOURCES = \
 	stream.h stream.c \
 	packet.h packet.c \
 	kex.h kex.c \
-	buffer.c buffer.h \
 	zlib.c \
 	moduli.h
 

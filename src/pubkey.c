@@ -324,12 +324,13 @@ _gsti_key_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
 
 
 static gsti_error_t
-read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
+read_bstring (FILE * fp, int ismpi, gsti_bstr_t * r_a)
 {
   struct stat statbuf;
-  BSTRING a;
+  gsti_bstr_t a;
   byte buf[4];
   u32 len = 0, n;
+  byte *data;
 
   if (fstat (fileno (fp), &statbuf))
     return gsti_error_from_errno (errno);
@@ -341,33 +342,34 @@ read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
       _gsti_log_info (0, "read_bstring: %d: string larger than file.\n", len);
       return gsti_error (GPG_ERR_INV_OBJ);
     }
-  a = _gsti_bstring_make (NULL, ismpi ? len + 4 : len);
+  /* FIXME: Handle error.  */
+  gsti_bstr_make (&a, NULL, ismpi ? len + 4 : len);
+  data = gsti_bstr_data (a);
   if (ismpi)
     {
-      a->d[0] = len >> 24;
-      a->d[1] = len >> 16;
-      a->d[2] = len >> 8;
-      a->d[3] = len;
-      n = 4;
+      *(data++) = len >> 24;
+      *(data++) = len >> 16;
+      *(data++) = len >> 8;
+      *(data++) = len;
     }
-  else
-    n = 0;
   _gsti_log_debug (0, "got string with a length of %d\n", len);
   while (len--)
-    a->d[n++] = fgetc (fp);
+    *(data++) = fgetc (fp);
+
   *r_a = a;
   return 0;
 }
 
 
 static gcry_mpi_t
-bstring_to_sshmpi (BSTRING bstr)
+bstring_to_sshmpi (gsti_bstr_t bstr)
 {
   gcry_mpi_t a;
 
-  if (bstr->len < 5)
+  if (gsti_bstr_length (bstr) < 5)
     return NULL;
-  if (gcry_mpi_scan (&a, GCRYMPI_FMT_SSH, bstr->d, bstr->len, NULL))
+  if (gcry_mpi_scan (&a, GCRYMPI_FMT_SSH, gsti_bstr_data (bstr),
+		     gsti_bstr_length (bstr), NULL))
     return NULL;
 
   return a;
@@ -378,7 +380,7 @@ static gsti_error_t
 read_key (FILE * fp, gsti_key_t ctx, int n, int algo, int keytype)
 {
   gsti_error_t err;
-  BSTRING a;
+  gsti_bstr_t a;
   int i;
   
   for (i = 0; i < n; i++)
@@ -387,7 +389,7 @@ read_key (FILE * fp, gsti_key_t ctx, int n, int algo, int keytype)
       if (err)
 	return err;
       ctx->key[i] = bstring_to_sshmpi (a);
-      _gsti_bstring_free (a);
+      gsti_bstr_free (a);
     }
   /* XXX the GCRYMPI_FLAG_SECURE casues a segfault at the end in
      gsti_key_free, so do not use it for the moment */
@@ -402,7 +404,7 @@ static gsti_error_t
 read_rsa_key (FILE * fp, int keytype, gsti_key_t ctx)
 {
   gsti_error_t err;
-  BSTRING a;
+  gsti_bstr_t a;
   size_t n;
   
   n = pk_table[SSH_PK_RSA].nkey;
@@ -411,13 +413,14 @@ read_rsa_key (FILE * fp, int keytype, gsti_key_t ctx)
   err = read_bstring (fp, 0, &a);
   if (err)
     return err;
-  if (a->len != 7 || strncmp (a->d, "ssh-rsa", 7))
+  if (gsti_bstr_length (a) != 7 || strncmp (gsti_bstr_data (a), "ssh-rsa", 7))
     {
-      _gsti_log_info (0, "read_rsa_key: %s: not a rsa key blob\n", a->d);
-      _gsti_bstring_free (a);
+      _gsti_log_info (0, "read_rsa_key: %s: not a rsa key blob\n",
+		      gsti_bstr_data (a));
+      gsti_bstr_free (a);
       return gsti_error (GPG_ERR_INV_OBJ);
     }
-  _gsti_bstring_free (a);
+  gsti_bstr_free (a);
   err = read_key (fp, ctx, n, SSH_PK_RSA, keytype);
   return err;
 }
@@ -427,7 +430,7 @@ static gsti_error_t
 read_dss_key (FILE * fp, int keytype, gsti_key_t ctx)
 {
   gsti_error_t err;
-  BSTRING a;
+  gsti_bstr_t a;
   size_t n;
 
   n = pk_table[SSH_PK_DSS].nkey;
@@ -436,13 +439,14 @@ read_dss_key (FILE * fp, int keytype, gsti_key_t ctx)
   err = read_bstring (fp, 0, &a);
   if (err)
     return err;
-  if (a->len != 7 || strncmp (a->d, "ssh-dss", 7))
+  if (gsti_bstr_length (a) != 7 || strncmp (gsti_bstr_data (a), "ssh-dss", 7))
     {
-      _gsti_log_info (0, "read_dss_key: %s: not a dss key blob\n", a->d);
-      _gsti_bstring_free (a);
+      _gsti_log_info (0, "read_dss_key: %s: not a dss key blob\n",
+		      gsti_bstr_data (a));
+      gsti_bstr_free (a);
       return gsti_error (GPG_ERR_INV_OBJ);
     }
-  _gsti_bstring_free (a);
+  gsti_bstr_free (a);
   err = read_key (fp, ctx, n, SSH_PK_DSS, keytype);
   return err;
 }
@@ -479,20 +483,22 @@ static int
 pktype_from_file (FILE * fp)
 {
   gsti_error_t err;
-  BSTRING a;
+  gsti_bstr_t a;
   int type;
 
   err = read_bstring (fp, 0, &a);
   fseek (fp, 0, SEEK_SET);
   if (err)
     return 0;
-  if (a->len == 7 && !strcmp (a->d, "ssh-dss"))
+  if (gsti_bstr_length (a) == 7
+      && !strcmp (gsti_bstr_data (a), "ssh-dss"))
     type = SSH_PK_DSS;
-  else if (a->len == 7 && !strcmp (a->d, "ssh-rsa"))
+  else if (gsti_bstr_length (a) == 7
+	   && !strcmp (gsti_bstr_data (a), "ssh-rsa"))
     type = SSH_PK_RSA;
   else
     type = 0;
-  _gsti_bstring_free (a);
+  gsti_bstr_free (a);
   return type;
 }
 
@@ -521,7 +527,7 @@ gsti_error_t
 gsti_key_save (const char * file, int secpart, gsti_key_t ctx)
 {
   gsti_error_t err = 0;
-  BSTRING dat = NULL;
+  gsti_bstr_t dat = NULL;
   FILE * outp;
   int i, n;
   
@@ -533,8 +539,8 @@ gsti_key_save (const char * file, int secpart, gsti_key_t ctx)
     return gsti_error_from_errno (errno);
   dat = _gsti_key_getblob (ctx);
   if (dat)
-    fwrite (dat->d, 1, dat->len, outp);
-  _gsti_bstring_free (dat);
+    fwrite (gsti_bstr_data (dat), 1, gsti_bstr_length (dat), outp);
+  gsti_bstr_free (dat);
   if (secpart)
     {
       byte buf[512];
@@ -657,20 +663,30 @@ check_pubalgo (const char * s, int * algid)
 
 
 gsti_key_t
-_gsti_key_fromblob (BSTRING blob)
+_gsti_key_fromblob (gsti_bstr_t blob)
 {
   gsti_error_t err = 0;
-  BUFFER buf;
+  gsti_buffer_t buf;
   gsti_key_t pk = NULL;
-  byte * p = NULL;
+  char *p = NULL;
   size_t n, i;
   int algid;
 
-  if (blob->len == 4)
+  if (gsti_bstr_length (blob) == 4)
     return NULL;
-  _gsti_buf_init (&buf);
-  _gsti_buf_putraw (buf, blob->d, blob->len);
-  p = _gsti_buf_getstr (buf, &n);
+
+  err = gsti_buf_alloc (&buf);
+  if (err)
+    return NULL;
+
+  err = gsti_buf_putraw (buf, gsti_bstr_data (blob), gsti_bstr_length (blob));
+  if (err)
+    goto leave;
+
+  err = gsti_buf_getstr (buf, &p, &n);
+  if (err)
+    goto leave;
+
   if (check_pubalgo (p, &algid))
     {
       _gsti_free (p);
@@ -682,7 +698,7 @@ _gsti_key_fromblob (BSTRING blob)
   
   for (i = 0; i < pkalgo_get_nkey (0, p); i++)
     {
-      err = _gsti_buf_getmpi (buf, &pk->key[i], &n);
+      err = gsti_buf_getmpi (buf, &pk->key[i]);
       if (err)
 	goto leave;
     }
@@ -690,30 +706,40 @@ _gsti_key_fromblob (BSTRING blob)
   pk->nkey = pk_table[pk->type].nkey;
  leave:
   _gsti_free (p);
-  _gsti_buf_free (buf);
+  gsti_buf_free (buf);
   return pk;
 }
 
-BSTRING
+gsti_bstr_t
 _gsti_key_getblob (gsti_key_t pk)
 {
-  BUFFER buf;
-  BSTRING a;
+  gsti_buffer_t buf;
+  gsti_bstr_t a;
   byte *p;
   size_t n;
 
   if (!pk || pk->type > SSH_PK_LAST)
-    return _gsti_bstring_make (NULL, 4);
-  _gsti_buf_init (&buf);
+    {
+      /* FIXME: Handle error.  */
+      gsti_bstr_make (&a, NULL, 4);
+      return a;
+    }
+
+  /* FIXME: Handle error.  */
+  gsti_buf_alloc (&buf);
+    
   p = _gsti_ssh_get_pkname (pk->type, 0, &n);
-  _gsti_buf_putstr (buf, p, n);
+  /* FIXME: Handle error.  */
+  gsti_buf_putstr (buf, p, n);
   for (n = 0; n < pk_table[pk->type].nkey; n++)
-    _gsti_buf_putmpi (buf, pk->key[n]);
+    /* FIXME: Handle error.  */
+    gsti_buf_putmpi (buf, pk->key[n]);
   
-  a = _gsti_bstring_make (_gsti_buf_getptr (buf), _gsti_buf_getlen (buf));
+  /* FIXME: Handle error.  */
+  gsti_bstr_make (&a, gsti_buf_getptr (buf), gsti_buf_readable (buf));
 
   _gsti_free (p);
-  _gsti_buf_free (buf);
+  gsti_buf_free (buf);
 
   return a;
 }
@@ -767,29 +793,42 @@ gsti_key_free (gsti_key_t ctx)
 
 
 gsti_error_t
-_gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
+_gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte * hash,
 		  gsti_key_t * r_pk)
 {
   gsti_error_t err;
-  BUFFER buf;
+  gsti_buffer_t buf;
   gsti_key_t pk;
   gcry_mpi_t _sig[2];
-  byte *p = NULL, tmpbuf[20];
+  char *p = NULL, tmpbuf[20];
   size_t n;
 
   pk = _gsti_key_fromblob (key);
   if (!pk)
     return gsti_error (GPG_ERR_INV_OBJ);
-  _gsti_buf_init (&buf);
-  _gsti_buf_putraw (buf, sig->d, sig->len);
-  p = _gsti_buf_getstr (buf, &n);
+
+  err = gsti_buf_alloc (&buf);
+  if (err)
+    return err;
+
+  err = gsti_buf_putraw (buf, gsti_bstr_data (sig), gsti_bstr_length (sig));
+  if (err)
+    goto leave;
+
+  err = gsti_buf_getstr (buf, &p, &n);
+  if (err)
+    goto leave;
+
   if (check_pubalgo (p, NULL))
     {
       err = gsti_error (GPG_ERR_INV_OBJ);
       goto leave;
     }
   _gsti_free (p);
-  p = _gsti_buf_getstr (buf, &n);
+
+  err = gsti_buf_getstr (buf, &p, &n);
+  if (err)
+    goto leave;
   if (pk->type == SSH_PK_DSS && n != 40)
     {
       err = gsti_error (GPG_ERR_BUG);
@@ -818,26 +857,31 @@ _gsti_sig_decode (BSTRING key, BSTRING sig, const byte * hash,
   free_mpi_array (_sig, 2);
 
  leave:
+  /* FIXME: Double free!  */
   _gsti_free (p);
-  _gsti_buf_free (buf);
+  gsti_buf_free (buf);
   if (!err && r_pk)
     *r_pk = pk;
   return err;
 }
 
 
-BSTRING
+gsti_bstr_t
 _gsti_sig_encode (gsti_key_t sk, const byte * hash)
 {
   gsti_error_t err;
   gcry_mpi_t sig[2];
-  BUFFER buf;
-  BSTRING a;
+  gsti_buffer_t buf;
+  gsti_bstr_t a;
   byte *p, buffer[256];
   size_t n, n2;
 
   if (!sk)
-    return _gsti_bstring_make (NULL, 4);
+    {
+      /* FIXME: Handle error.  */
+      gsti_bstr_make (&a, NULL, 4);
+      return a;
+    }
   err = _gsti_key_sign (sk, hash, sig);
   if (err)
     {
@@ -845,8 +889,12 @@ _gsti_sig_encode (gsti_key_t sk, const byte * hash)
       return NULL;
     }
   p = _gsti_ssh_get_pkname (sk->type, 0, &n);
-  _gsti_buf_init (&buf);
-  _gsti_buf_putstr (buf, p, n);
+
+  /* FIXME: Handle error.  */
+  gsti_buf_alloc (&buf);
+
+  /* FIXME: Handle error.  */
+  gsti_buf_putstr (buf, p, n);
 
   if (sk->type == SSH_PK_DSS)
     {
@@ -856,27 +904,28 @@ _gsti_sig_encode (gsti_key_t sk, const byte * hash)
         err = gcry_mpi_print (GCRYMPI_FMT_USG, buffer + n, sizeof buffer - 1,
                               &n2, sig[1]);
       if (!err)
-        _gsti_buf_putstr (buf, buffer, n + n2);
+	err = gsti_buf_putstr (buf, buffer, n + n2);
     }
   else
     {
       err = gcry_mpi_print (GCRYMPI_FMT_USG, buffer, sizeof buffer-1,
                             &n, sig[0]);
       if (!err)
-        _gsti_buf_putstr (buf, buffer, n);
+        err = gsti_buf_putstr (buf, buffer, n);
       sig[1] = NULL;
     }
   
   free_mpi_array (sig, 2);
 
-  a = _gsti_bstring_make (_gsti_buf_getptr (buf), _gsti_buf_getlen (buf));
+  /* FIXME: Handle error.  */
+  gsti_bstr_make (&a, gsti_buf_getptr (buf), gsti_buf_readable (buf));
 
   _gsti_free (p);
-  _gsti_buf_free (buf);
+  gsti_buf_free (buf);
   if (err)
     {
       _gsti_log_info (0, "sig: mpi encoding failed %s\n", gsti_strerror (err));
-      _gsti_bstring_free (a);
+      gsti_bstr_free (a);
       return NULL;
     }
   return a;

@@ -41,14 +41,14 @@ typedef struct packet_buffer_s * packet_buffer_t;
 
 struct gsti_kex_s
 {
-  BSTRING h;		/* current exchange hash */
+  gsti_bstr_t h;	/* current exchange hash */
   gcry_mpi_t k;		/* the shared secret */
-  BSTRING iv_a;		/* IV client to server */
-  BSTRING iv_b;		/* IV server to client */
-  BSTRING key_c;	/* Enc client to server */
-  BSTRING key_d;	/* Enc server to client */
-  BSTRING mac_e;	/* Mac client to server */
-  BSTRING mac_f;	/* Mac server to client */
+  gsti_bstr_t iv_a;	/* IV client to server */
+  gsti_bstr_t iv_b;	/* IV server to client */
+  gsti_bstr_t key_c;	/* Enc client to server */
+  gsti_bstr_t key_d;	/* Enc server to client */
+  gsti_bstr_t mac_e;	/* Mac client to server */
+  gsti_bstr_t mac_f;	/* Mac server to client */
   int type;
 };
 typedef struct gsti_kex_s * gsti_kex_t;
@@ -70,16 +70,16 @@ struct gsti_context
   int state;			/* current state */
 
   int we_are_server;
-  BSTRING peer_version_string;	/* received from other end */
-  BSTRING host_kexinit_data;	/* the KEX data we have send to the peer */
-  BSTRING peer_kexinit_data;	/* the KEX data we have got from the peer */
+  gsti_bstr_t peer_version_string;	/* received from other end */
+  gsti_bstr_t host_kexinit_data;	/* the KEX data we sent to the peer */
+  gsti_bstr_t peer_kexinit_data;	/* the KEX data we got from the peer */
 
-  BSTRING service_name;
+  gsti_bstr_t service_name;
 
   struct packet_buffer_s pkt;
-  BUFFER pktbuf;
+  gsti_buffer_t pktbuf;
 
-  BSTRING session_id;		/* the exchange hash from the first KEX */
+  gsti_bstr_t session_id;	/* the exchange hash from the first KEX */
   u32 send_seqno;
   u32 recv_seqno;
 

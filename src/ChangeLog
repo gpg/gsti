@@ -1,5 +1,19 @@
 2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
 
+	Global: All users of bstring and buffer related types and
+	functions have changed.
+	
+	* Makefile.am (libgsti_la_SOURCES): Add bstring.h, bstring.c.
+	* bstring.h: New file.
+	* bstring.c: New file.
+	* memory.h (_gsti_bstring_make, _gsti_bstring_free): Remove prototypes.
+	* memory.c (_gsti_bstring_make, _gsti_bstring_free): Remove functions.
+	* types.h: Include "bstring.h".
+	(bstring_s, BUFFER): Remove types.
+	(gsti_byte_t, gsti_uint32_t): New types.
+	* buffer.h: Rewritten.
+	* buffer.c: Rewritten.
+
 	* Makefile.am (libgsti_la_SOURCES): Add ssh.h.
 	* ssh.h: New file.
 	* packet.h: Include "ssh.h".
