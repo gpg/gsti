@@ -37,7 +37,7 @@
 static int
 check_auth_id (const char *buf)
 {
-  if (!strncmp (buf, "publickey", 9))
+  if (!strncmp (buf, SSH_AUTH_PUBLICKEY, 9))
     return GSTI_AUTH_PUBLICKEY;
   return -1;			/* not supported */
 }
@@ -92,7 +92,7 @@ static gsti_error_t
 init_auth_request (MSG_auth_request * ath, const char *user, int false,
 		   gsti_key_t pk)
 {
-  const char *svc = "ssh-userauth", *mthd = "publickey";
+  const char *svc = "ssh-userauth", *mthd = SSH_AUTH_PUBLICKEY;
   byte *p;
   size_t n;
 

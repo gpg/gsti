@@ -39,7 +39,7 @@
 #include "moduli.h"
 
 static const char host_version_string[] =
-  "SSH-2.0-GSTI_0.2 GNU Transport Library";
+  SSH_IDENT_PREFIX SSH_VERSION_2 "-GSTI_0.2 GNU Transport Library";
 
 static const byte diffie_hellman_group1_prime[130] = { 0x04, 0x00,
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,
@@ -55,24 +55,48 @@ static const byte diffie_hellman_group1_prime[130] = { 0x04, 0x00,
   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
-static algorithm_list hmac_list[] = {
-  {"hmac-sha1", SSH_HMAC_SHA1, 0, 0, 20},
-  {"hmac-sha1-96", SSH_HMAC_SHA1, 0, 0, 12},
-  {"hmac-md5", SSH_HMAC_MD5, 0, 0, 16},
-  {"hmac-md5-96", SSH_HMAC_MD5, 0, 0, 12},
-  {"hmac-ripemd160", SSH_HMAC_RMD160, 0, 0, 20},
-  {0}
-};
+
+/* The table of supported MAC algorithms.  */
+static algorithm_list hmac_list[] =
+  {
+    /* Required.  */
+    { SSH_MAC_HMAC_SHA1, SSH_HMAC_SHA1, 0, 0, 20 },
+
+    /* Recommended.  */
+    { SSH_MAC_HMAC_SHA1_96, SSH_HMAC_SHA1, 0, 0, 12 },
+
+    /* Optional.  */
+    { SSH_MAC_HMAC_MD5, SSH_HMAC_MD5, 0, 0, 16 },
+    { SSH_MAC_HMAC_MD5_96, SSH_HMAC_MD5, 0, 0, 12 },
+
+    /* FIXME: This does not seem to be officially defined.  */
+    { "hmac-ripemd160", SSH_HMAC_RMD160, 0, 0, 20 },
+
+    { 0 }
+  };
 
 
-static algorithm_list cipher_list[] = {
-  {"3des-cbc", SSH_CIPHER_3DES, 8, GCRY_CIPHER_MODE_CBC, 24},
-  {"blowfish-cbc", SSH_CIPHER_BLOWFISH, 8, GCRY_CIPHER_MODE_CBC, 16},
-  {"cast128-cbc", SSH_CIPHER_CAST128, 8, GCRY_CIPHER_MODE_CBC, 16},
-  {"twofish256-cbc", SSH_CIPHER_TWOFISH256, 16, GCRY_CIPHER_MODE_CBC, 32},
-  {"aes128-cbc", SSH_CIPHER_AES128, 16, GCRY_CIPHER_MODE_CBC, 16},
-  {0}
-};
+/* The table of supported ciphers.  */
+static algorithm_list cipher_list[] =
+  {
+    /* Required.  */
+    { SSH_CIPHER_3DES_CBC,
+      SSH_CIPHER_3DES, 8, GCRY_CIPHER_MODE_CBC, 24 },
+
+    /* Optional.  */
+    { SSH_CIPHER_BLOWFISH_CBC,
+      SSH_CIPHER_BLOWFISH, 8, GCRY_CIPHER_MODE_CBC, 16 },
+    { SSH_CIPHER_CAST128_CBC,
+      SSH_CIPHER_CAST128, 8, GCRY_CIPHER_MODE_CBC, 16 },
+    { SSH_CIPHER_TWOFISH256_CBC,
+      SSH_CIPHER_TWOFISH256, 16, GCRY_CIPHER_MODE_CBC, 32 },
+
+    /* Recommended.  */
+    { SSH_CIPHER_AES128_CBC,
+      SSH_CIPHER_AES128, 16, GCRY_CIPHER_MODE_CBC, 16 },
+
+    { 0 }
+  };
 
 
 static int
@@ -115,40 +139,43 @@ kex_send_version (gsti_ctx_t ctx)
 gsti_error_t
 kex_wait_on_version (gsti_ctx_t ctx)
 {
-  static int initstr[4] = { 0x53, 0x53, 0x48, 0x2d };	/* "SSH-" in ascii */
   read_stream_t rst = ctx->read_stream;
   char version[300];
   int any = 0, pos = 0;
   int c;
 
-  /* wait for the initial 4 bytes */
+  /* Wait for the initial SSH_IDENT_PREFIX_LEN bytes.  */
   while ((c = _gsti_stream_get (rst)) != -1)
     {
       any = 1;
+
       if (c == '\n')
 	pos = 0;
-      else if (pos < 4)
+      else if (pos >= 0 && pos < SSH_IDENT_PREFIX_LEN)
 	{
-	  if (initstr[pos] != c)
-	    pos = 4;		/* skip this line */
-	  else if (pos == 3)
-	    break;
+	  if (SSH_IDENT_PREFIX[pos] != c)
+	    pos = -1; /* Skip this line.  */
 	  else
-	    pos++;
+	    {
+	      pos++;
+
+	      /* Check if we have read all of SSH_IDENT_PREFIX.  */
+	      if (pos == SSH_IDENT_PREFIX_LEN)
+		break;
+	    }
 	}
-      else if (pos < 100)	/* to avoid integer overflow ;-) */
-	pos++;
     }
   if (c == -1)
-    return any ? gsti_error (GPG_ERR_NO_DATA)
-      : gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
+    return any ? gsti_error (GPG_ERR_PROTOCOL_VIOLATION)
+      : gsti_error (GPG_ERR_NO_DATA);
 
   /* Store the version string.  */
-  memcpy (version, "SSH-", 4);
+  memcpy (version, SSH_IDENT_PREFIX, SSH_IDENT_PREFIX_LEN);
   c = 0;
-  for (pos = 4; pos < 256; pos++)
+  for (pos = SSH_IDENT_PREFIX_LEN; pos < sizeof (version) - 1; pos++)
     {
-      if ((c = _gsti_stream_get (rst)) == -1 || c == '\n')
+      c = _gsti_stream_get (rst);
+      if (c == -1 || c == '\n')
 	break;
       version[pos] = c;
     }
@@ -725,13 +752,13 @@ build_hmac_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 static void
 build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 {
-  *c2s = _gsti_strlist_insert (NULL, "none");
-  *s2c = _gsti_strlist_insert (NULL, "none");
+  *c2s = _gsti_strlist_insert (NULL, SSH_COMPRESSION_NONE);
+  *s2c = _gsti_strlist_insert (NULL, SSH_COMPRESSION_NONE);
 #ifdef USE_NEWZLIB
   if (ctx->zlib.use)
     {
-      *c2s = _gsti_strlist_insert (*c2s, "zlib");
-      *s2c = _gsti_strlist_insert (*s2c, "zlib");
+      *c2s = _gsti_strlist_insert (*c2s, SSH_COMPRESSION_ZLIB);
+      *s2c = _gsti_strlist_insert (*s2c, SSH_COMPRESSION_ZLIB);
     }
 #endif
 }
@@ -740,8 +767,9 @@ build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 static void
 build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 {
+  /* FIXME: Where is this defined?  */
   *lst = _gsti_strlist_insert (NULL, "diffie-hellman-group-exchange-sha1");
-  *lst = _gsti_strlist_insert (*lst, "diffie-hellman-group1-sha1");
+  *lst = _gsti_strlist_insert (*lst, SSH_KEX_DHG1_SHA1);
 
   ctx->kex.type = SSH_KEX_GROUP_EXCHANGE;
 }
@@ -750,7 +778,7 @@ build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 static void
 build_pkalgo_list (STRLIST * lst)
 {
-  *lst = _gsti_strlist_insert (NULL, "ssh-dss");
+  *lst = _gsti_strlist_insert (NULL, SSH_PKA_SSH_DSS);
 }
 
 

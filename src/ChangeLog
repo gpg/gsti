@@ -1,3 +1,26 @@
+2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
+
+	* Makefile.am (libgsti_la_SOURCES): Add ssh.h.
+	* ssh.h: New file.
+	* packet.h: Include "ssh.h".
+	(enum SSH_MSG_*): Removed enum.
+	(enum SSH_DISCONNECT_*): Removed enum.
+	* kex.c (host_version_string): Use SSH_IDENT_PREFIX.
+	(kex_wait_on_version): Remove variable initstr.  Rewrite parsing
+	of SSH_IDENT_PREFIX.  Fix inverted error return value (NO_DATA
+	vs. PROTOCOL_VIOLATION).
+	(build_compress_list): Use SSH_COMPRESSION_NONE and
+	SSH_COMPRESSION_ZLIB.
+	(hmac_list): Use SSH_MAC_HMAC_SHA1, SSH_MAC_HMAC_SHA1_96,
+	SSH_MAC_HMAC_MD5, and SSH_MAC_HMAC_MD5_96.
+	(cipher_list): Use SSH_CIPHER_3DES_CBC, SSH_CIPHER_BLOWFISH_CBC,
+	SSH_CIPHER_CAST128_CBC, SSH_CIPHER_TWOFISH256_CBC, and
+	SSH_CIPHER_AES128_CBC.
+	(build_kex_list): Use SSH_KEX_DHG1_SHA1.
+	(build_pkalgo_list): Use SSH_PKA_SSH_DSS.
+	* auth.c (check_auth_id): Use SSH_AUTH_PUBLICKEY.
+	(init_auth_request): Likewise.
+
 2004-06-07  Timo Schulz  <twoaday@g10code.de>
 
 	* gsti.h (GSTI_PKTDESC): Rename type to ...
