@@ -103,6 +103,13 @@ struct gsti_context
     unsigned int used:1;
   } gex;
 
+  struct
+  {
+    unsigned short encr[8];
+    unsigned short compr[4];
+    unsigned short hmac[4];
+  } prefs;
+
   byte cookie[16];
   int sent_newkeys;
   int req_newkeys;

@@ -250,6 +250,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_kex_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;
@@ -286,6 +287,11 @@ fsm_server_loop (gsti_ctx_t ctx)
 		  if (!err)
 		    ctx->state = FSM_kex_wait_newkeys;
 		  break;
+
+                default:
+                  log_error (ctx);
+                  ctx->state = FSM_kex_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;
@@ -305,6 +311,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_kex_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;
@@ -326,6 +333,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 	    default:
 	      log_error (ctx);
 	      ctx->state = FSM_kex_failed;
+              err = gsti_error (GPG_ERR_INV_PACKET);
 	    }
 	  break;
 
@@ -360,6 +368,7 @@ fsm_server_loop (gsti_ctx_t ctx)
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_auth_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;
@@ -533,6 +542,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_kex_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;
@@ -567,6 +577,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 	    default:
 	      log_error (ctx);
 	      ctx->state = FSM_kex_failed;
+              err = gsti_error (GPG_ERR_INV_PACKET);
 	    }
 	  break;
 
@@ -599,6 +610,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_auth_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;
@@ -624,6 +636,7 @@ fsm_client_loop (gsti_ctx_t ctx)
 		default:
 		  log_error (ctx);
 		  ctx->state = FSM_auth_failed;
+                  err = gsti_error (GPG_ERR_INV_PACKET);
 		}
 	    }
 	  break;

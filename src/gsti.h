@@ -165,11 +165,12 @@ enum gsti_hmac_algos
 
 enum gsti_cipher_algos
 {
-  GSTI_CIPHER_3DES = 0,
-  GSTI_CIPHER_BLOWFISH = 1,
-  GSTI_CIPHER_CAST128 = 2,
-  GSTI_CIPHER_TWOFISH = 3,
-  GSTI_CIPHER_AES128 = 4,
+  GSTI_CIPHER_3DES = 2,
+  GSTI_CIPHER_BLOWFISH = 4,
+  GSTI_CIPHER_CAST128 = 3,
+  GSTI_CIPHER_TWOFISH = 10,
+  GSTI_CIPHER_AES128 = 7,
+  GSTI_CIPHER_SERPENT128 = 304,
 };
 
 enum gsti_digest_algos
@@ -189,6 +190,12 @@ enum gsti_auth_methods
   GSTI_AUTH_PUBLICKEY = 1
 };
 
+enum gsti_prefs
+{
+  GSTI_PREFS_ENCR  = 1,
+  GSTI_PREFS_HMAC  = 2,
+  GSTI_PREFS_COMPR = 3
+};
 
 /* The context type.  */
 struct gsti_context;
@@ -251,6 +258,8 @@ gsti_error_t gsti_set_auth_method (gsti_ctx_t ctx, int methd);
 gsti_error_t gsti_set_compression (gsti_ctx_t ctx, int val);
 gsti_error_t gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
 			     unsigned int max);
+gsti_error_t gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
+                                 const unsigned short * prefs, size_t n);
 
 
 /* Logging interface.  */

@@ -22,6 +22,8 @@
 #define GSTI_KEX_H
 
 void _gsti_kex_set_defaults (gsti_ctx_t ctx);
+gsti_error_t _gsti_kex_check_alglist (int type, const
+                                      unsigned short * buf, size_t n);
 
 /* fixme: Internal function - prefix with _gsti. */
 gsti_error_t kex_send_version (gsti_ctx_t ctx);

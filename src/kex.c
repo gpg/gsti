@@ -98,6 +98,8 @@ static algorithm_list cipher_list[] =
       SSH_CIPHER_CAST128, 8, GCRY_CIPHER_MODE_CBC, 16 },
     { SSH_CIPHER_TWOFISH256_CBC,
       SSH_CIPHER_TWOFISH256, 16, GCRY_CIPHER_MODE_CBC, 32 },
+    { SSH_CIPHER_SERPENT128_CBC,
+      SSH_CIPHER_SERPENT128, 16, GCRY_CIPHER_MODE_CBC, 16 },
 
     /* Recommended.  */
     { SSH_CIPHER_AES128_CBC,
@@ -129,9 +131,65 @@ cmp_bstring (gsti_bstr_t a, gsti_bstr_t b)
 void
 _gsti_kex_set_defaults (gsti_ctx_t ctx)
 {
-  ctx->gex.min = MIN_GROUPSIZE;
-  ctx->gex.n = 2048;
-  ctx->gex.max = MAX_GROUPSIZE;  
+  ctx->gex.min = GEX_MINSIZE;
+  ctx->gex.n = GEX_DEFSIZE;
+  ctx->gex.max = GEX_MAXSIZE;
+}
+
+
+static int
+kex_check_algo (unsigned short algid, int type)
+{
+  const algorithm_list * l;
+  int i;
+  
+  if (type == GSTI_PREFS_ENCR)
+      l = cipher_list;
+  else if (type == GSTI_PREFS_HMAC)
+      l = hmac_list;
+    else
+        return -1;
+  
+  for (i=0; (l[i].name != NULL); i++)
+    {
+      if (algid == l[i].algid)
+        return 0;
+    }
+  
+  return -1;
+}
+
+
+static const char *
+kex_get_algo_name (unsigned short algid, int type)
+{
+  algorithm_list * l;
+  int i;
+
+  l = cipher_list;
+  /* FIXME: add other lists */
+  
+  for (i=0; (l[i].name != NULL); i++)
+    {
+      if (algid == l[i].algid)
+        return l[i].name;
+    }
+  return NULL;
+}
+
+
+gsti_error_t
+_gsti_kex_check_alglist (int type, const unsigned short * buf, size_t n)
+{
+  int i;
+  
+  for (i=0; i < n; i++)
+    {
+      if (kex_check_algo (buf[i], type))
+        return gsti_error (GPG_ERR_UNSUPPORTED_ALGORITHM);
+    }
+  
+  return 0;
 }
 
 
@@ -845,6 +903,20 @@ build_cipher_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
   const char *s;
   int i;
 
+  /* use the cipher preferences chosen by the user */
+  if (ctx->prefs.encr[0])
+    {
+      for (i=0; ctx->prefs.encr[i] != 0; i++)
+        ;
+      while (i--)
+        {
+          s = kex_get_algo_name (ctx->prefs.encr[i], GSTI_PREFS_ENCR);
+          *s2c = _gsti_strlist_insert (*s2c, s);
+          *c2s = _gsti_strlist_insert (*c2s, s);
+        }
+      return;
+    }
+  
   /* do it in reserved order so it's correct in the list */
   i = DIM (cipher_list) - 1;
   while (i--)
@@ -1679,10 +1751,10 @@ _gsti_kex_proc_gex_request (gsti_ctx_t ctx)
 
   if (gex.n < gex.min || gex.n > gex.max)
     return gsti_error (GPG_ERR_INV_PACKET);
-  if (gex.max > MAX_GROUPSIZE)
-    gex.max = MAX_GROUPSIZE;
+  if (gex.max > GEX_MAXSIZE)
+    gex.max = GEX_MAXSIZE;
   if (gex.n > gex.max)
-    gex.n = MAX_GROUPSIZE;
+    gex.n = GEX_MAXSIZE;
   else
     gex.n = choose_dh_size (gex.n);
 

@@ -419,6 +419,11 @@ gsti_set_dhgex (gsti_ctx_t ctx, unsigned int min, unsigned int n,
 
   if (n < min || n > max)
     return gsti_error (GPG_ERR_INV_ARG);
+  if (!n || !min || !max)
+    {
+      _gsti_kex_set_defaults (ctx);
+      return 0;
+    }
 
   ctx->gex.min = min;
   ctx->gex.n = n;
@@ -436,3 +441,52 @@ gsti_get_auth_key (gsti_ctx_t ctx)
     return NULL;
   return ctx->auth->key;
 }
+
+
+gsti_error_t
+gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
+                    const unsigned short * prefs, size_t n)
+{
+  gsti_error_t err = 0;
+  int i;
+
+  /* FIXME: warning this code does not work with the current KEX code! */
+  if (!ctx)
+    return gsti_error (GPG_ERR_INV_ARG);
+  if (!n)
+    return 0;
+  
+  switch (type)
+    {
+    case GSTI_PREFS_ENCR:
+      if (n > DIM (ctx->prefs.encr))
+        return gsti_error (GPG_ERR_TOO_LARGE);
+      err = _gsti_kex_check_alglist (type, prefs, n);
+      if (!err)
+        for (i=0; i < n; i++)
+          ctx->prefs.encr[i] = prefs[i];
+      break;
+
+    case GSTI_PREFS_COMPR:
+      if (n > DIM (ctx->prefs.compr))
+        return gsti_error (GPG_ERR_TOO_LARGE);
+      break;
+
+    case GSTI_PREFS_HMAC:
+      if (n > DIM (ctx->prefs.hmac))
+        return gsti_error (GPG_ERR_TOO_LARGE);
+      /* FIXME: implement this
+      err = _gsti_kex_check_alglist (type, prefs,n );
+      if (!err)
+        for (i=0; i < n; i++)
+          ctx->prefs.hmac[i] = prefs[i];
+      */
+      break;
+
+    default:
+      return gsti_error (GPG_ERR_INV_ATTR);
+    }
+
+  return err;
+}
+

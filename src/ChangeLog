@@ -1,3 +1,17 @@
+2004-07-08  Timo Schulz  <ts@g10code.de>
+
+	* fsm.c (fsm_server_loop): Return invalid packet if
+	an unexpected packet was received.
+	* kex.c (_gsti_kex_check_alglist): New.
+	(kex_check_algo): New.
+	(build_cipher_list): Support to use a pre-defined cipher list.
+	* gsti.h: Use gcrypt cipher constants.
+	* main.c (gsti_set_dhgex): Set default values if one argument
+	is zero.
+	(gsti_set_kex_prefs): New.
+	* api.h (gsti_ctx_t): Use ushort for the prefs since some
+	cipher id's are > 256 and thus larger than a byte.
+	
 2004-07-07  Timo Schulz  <ts@g10code.de>
 
 	* keyblob.c: Removed from the repository.
