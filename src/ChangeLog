@@ -1,5 +1,10 @@
 2004-07-07  Timo Schulz  <ts@g10code.de>
 
+	* keyblob.c: Removed from the repository.
+	* keyblob.h: Likewise.
+	
+2004-07-07  Timo Schulz  <ts@g10code.de>
+
 	* kex.c (check_dh_mpi_range): Add DH group support.
 	Prefixed all gex functions with _gsti_.
 	(parse_msg_kexdh_init): Likewise.
