@@ -15,7 +15,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
+   along with GSTI; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
 
 #if HAVE_CONFIG_H
@@ -63,6 +63,15 @@ check_auth_id (const char *buf)
 }
 
 
+static void
+dump_auth_banner (gsti_ctx_t ctx, MSG_auth_banner * ban)
+{
+  _gsti_log_debug (ctx, "MSG_auth_banner:\n");
+  _gsti_dump_bstring ("msg: ", ban->msg);
+  _gsti_dump_bstring ("lang: ", ban->lang);
+}
+  
+
 static gsti_error_t
 build_auth_banner (MSG_auth_banner * ban, packet_buffer_t pkt)
 {
@@ -70,11 +79,15 @@ build_auth_banner (MSG_auth_banner * ban, packet_buffer_t pkt)
   gsti_buffer_t buf;
   size_t len;
 
+  assert (pkt->size > (gsti_bstr_length (ban->msg)+8));
+  
   err = gsti_buf_alloc (&buf);
   if (err)
     return err;
 
-  err = gsti_buf_putbstr (buf, ban->msg);
+  err = gsti_buf_putc (buf, 0);
+  if (!err)
+    err = gsti_buf_putbstr (buf, ban->msg);
   if (!err)
     err = gsti_buf_putbstr (buf, ban->lang);
   if (!err)
@@ -102,14 +115,15 @@ parse_auth_banner (MSG_auth_banner * ban, const gsti_buffer_t buf)
     return gsti_error (GPG_ERR_TOO_SHORT);
 
   err = gsti_buf_getc (buf, &val);
-  if (err || val != SSH_MSG_USERAUTH_BANNER)
-    return gsti_error (GPG_ERR_INV_PACKET);
-
-  printf ("BUFFER LEN %d\n", gsti_buf_readable (buf));
+  if (err)
+    return err;
+  if (val != SSH_MSG_USERAUTH_BANNER)
+    return gsti_error (GPG_ERR_UNEXPECTED);
+  
   err = read_bstring (buf, &ban->msg);
   if (!err)
     err = read_bstring (buf, &ban->lang);
-  printf ("BUFFER LEN %d rc=%s\n", gsti_buf_readable (buf), gsti_strerror (err));
+
   if (!err && gsti_buf_readable (buf))
     err = gsti_error (GPG_ERR_INV_PACKET);
   return err;
@@ -121,10 +135,17 @@ init_auth_banner (MSG_auth_banner * ban, const char * msg, size_t msglen,
                   const char * lang, size_t llen)
 {
   gsti_error_t err;
-  
-  err = gsti_bstr_make (&ban->msg, msg? msg : NULL, msglen);
+
+  if (!msg)
+    return gsti_error (GPG_ERR_INV_ARG);
+  if (!lang)
+    {
+      lang = "en_US";
+      llen = 5;
+    }
+  err = gsti_bstr_make (&ban->msg, msg, msglen);
   if (!err)
-    err = gsti_bstr_make (&ban->lang, NULL, 0);
+    err = gsti_bstr_make (&ban->lang, lang, llen);
   return err;
 }
 
@@ -156,7 +177,8 @@ _gsti_auth_proc_banner_packet (gsti_ctx_t ctx, gsti_auth_t auth)
       auth->msg = ban.msg;
       ban.msg = NULL;
     }
-  
+
+  dump_auth_banner (ctx, &ban);
   free_auth_banner (&ban);
   return err;
 }
@@ -178,6 +200,7 @@ _gsti_auth_send_banner_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   if (!err)
     err = _gsti_packet_flush (ctx);
 
+  /*dump_auth_banner (ctx, &ban);*/
   free_auth_banner (&ban);
   return err;
 }
@@ -358,7 +381,7 @@ _gsti_auth_proc_success_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   packet_buffer_t pkt = &ctx->pkt;
 
   if (pkt->type != SSH_MSG_USERAUTH_SUCCESS)
-    return gsti_error (GPG_ERR_BUG);
+    return gsti_error (GPG_ERR_UNEXPECTED);
 
   if (pkt->payload_len != 1)
     return gsti_error (GPG_ERR_INV_PACKET);
@@ -462,7 +485,7 @@ _gsti_auth_proc_request_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   MSG_auth_request ath;
 
   if (ctx->pkt.type != SSH_MSG_USERAUTH_REQUEST)
-    return gsti_error (GPG_ERR_BUG);
+    return gsti_error (GPG_ERR_UNEXPECTED);
 
   err = parse_auth_request (&ath, ctx->pktbuf);
   if (err)
@@ -622,7 +645,7 @@ _gsti_auth_proc_pkok_packet (gsti_ctx_t ctx, gsti_auth_t auth)
   gsti_key_t a;
 
   if (ctx->pkt.type != SSH_MSG_USERAUTH_PK_OK)
-    return gsti_error (GPG_ERR_BUG);
+    return gsti_error (GPG_ERR_UNEXPECTED);
 
   err = parse_pkok_packet (&ok, ctx->pktbuf);
   if (err)

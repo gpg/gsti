@@ -1,3 +1,11 @@
+2007-07-14  Timo Schulz  <twoaday@g10code.de>
+
+	* auth.c: Return 'unexpected' and not 'bug' when the packet 
+	type is	that the required one.
+	(dump_auth_banner): New.
+	(build_auth_banner): Insert dummy byte for packet type.
+	* fsm.c (fsm_client_loop): For USERAUTH_BANNER use cb type 1.
+	
 2003-07-13  Timo Schulz  <twoaday@g10code.de>
 
 	* packet.h (MSG_auth_request): s/false/chk_key.

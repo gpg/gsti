@@ -642,7 +642,7 @@ fsm_client_loop (gsti_ctx_t ctx)
                   err = _gsti_auth_proc_banner_packet (ctx, ctx->auth);
                   if (!err)
                     {
-                      err = handle_auth_cb (ctx, 2);
+                      err = handle_auth_cb (ctx, 1);
                       goto cont_auth;
                     }
                   break;
