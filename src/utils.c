@@ -40,12 +40,12 @@
  * Take a comma separated list of algorithm identifiers and
  * return a STRLIST with these algorithms.
  */
-STRLIST
+gsti_strlist_t
 _gsti_algolist_parse (const byte * string, size_t length)
 {
   const byte *comma, *s;
   size_t n;
-  STRLIST item, list, *listp;
+  gsti_strlist_t item, list, *listp;
 
   list = NULL;
   listp = &list;
@@ -80,7 +80,7 @@ _gsti_algolist_parse (const byte * string, size_t length)
 }
 
 size_t
-_gsti_algolist_build (byte * buffer, size_t length, STRLIST list)
+_gsti_algolist_build (byte * buffer, size_t length, gsti_strlist_t list)
 {
   size_t n;
   int any = 0;
@@ -121,9 +121,9 @@ _gsti_algolist_build (byte * buffer, size_t length, STRLIST list)
 
 
 int
-_gsti_algolist_find (STRLIST list, const char *algo)
+_gsti_algolist_find (gsti_strlist_t list, const char *algo)
 {
-  STRLIST l;
+  gsti_strlist_t l;
 
   for (l = list; l; l = l->next)
     {
@@ -185,7 +185,7 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
       }
     case TYPE_STRLIST:
       {
-	STRLIST list = opaque;
+	gsti_strlist_t list = opaque;
 	int i;
 	for (i = 0; list; list = list->next, i++)
 	  _gsti_log_info (0, "%s[%d]: `%s'\n", prefix, i, list->d);

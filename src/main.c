@@ -223,7 +223,7 @@ gsti_set_writefnc (gsti_ctx_t ctx, gsti_write_fnc_t writefnc, void * opaque)
 gsti_error_t
 gsti_set_service (gsti_ctx_t ctx, const char *svcname)
 {
-  STRLIST s;
+  gsti_strlist_t s;
 
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);  
@@ -450,7 +450,6 @@ gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
   gsti_error_t err = 0;
   int i;
 
-  /* FIXME: warning this code does not work with the current KEX code! */
   if (!ctx)
     return gsti_error (GPG_ERR_INV_ARG);
   if (!n)
@@ -475,12 +474,10 @@ gsti_set_kex_prefs (gsti_ctx_t ctx, enum gsti_prefs type,
     case GSTI_PREFS_HMAC:
       if (n > DIM (ctx->prefs.hmac))
         return gsti_error (GPG_ERR_TOO_LARGE);
-      /* FIXME: implement this
       err = _gsti_kex_check_alglist (type, prefs,n );
       if (!err)
         for (i=0; i < n; i++)
           ctx->prefs.hmac[i] = prefs[i];
-      */
       break;
 
     default:

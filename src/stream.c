@@ -208,7 +208,8 @@ _gsti_stream_writen (write_stream_t a, const byte * buffer, size_t nbytes)
     }
   else
     {				/* write random padding */
-      byte *pad = gcry_random_bytes (nbytes, GCRY_WEAK_RANDOM);
+      byte * pad = _gsti_xcalloc (1, nbytes);
+      gcry_create_nonce (pad, nbytes);
       err = _gsti_stream_writen (a, pad, nbytes);
       gcry_free (pad);
     }

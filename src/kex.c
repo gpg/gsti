@@ -166,8 +166,12 @@ kex_get_algo_name (unsigned short algid, int type)
   algorithm_list * l;
   int i;
 
-  l = cipher_list;
-  /* FIXME: add other lists */
+  if (type == GSTI_PREFS_ENCR)
+    l = cipher_list;
+  else if (type == GSTI_PREFS_HMAC)
+    l = hmac_list;
+  else
+    return NULL;
   
   for (i=0; (l[i].name != NULL); i++)
     {
@@ -299,7 +303,7 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
 		   const gsti_buffer_t buf)
 {
   gsti_error_t err = 0;
-  STRLIST algolist[10] = { NULL };
+  gsti_strlist_t algolist[10] = { NULL };
   char *p;
   u32 len;
   int i;
@@ -318,7 +322,7 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
       goto leave;
     }
 
-  err = gsti_buf_getraw (buf, kex->cookie, 16);
+  err = gsti_buf_getraw (buf, kex->cookie, SSH_COOKIESIZE);
   if (err)
     goto leave;
 
@@ -327,7 +331,7 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
       /* We skip the cookie the server sent to us. This makes sure both
          sides can calculate the same key data. Instead we use the one
          we generated.  */
-      memcpy (kex->cookie, old_cookie, 16);
+      memcpy (kex->cookie, old_cookie, SSH_COOKIESIZE);
     }
 
   /* Get 10 strings.  */
@@ -382,7 +386,7 @@ leave:
 static gsti_error_t
 build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
 {
-  STRLIST algolist[10];
+  gsti_strlist_t algolist[10];
   byte *p = pkt->payload;
   size_t length = pkt->size, n;
   int i;
@@ -392,9 +396,9 @@ build_msg_kexinit (MSG_kexinit * kex, packet_buffer_t pkt)
   pkt->type = SSH_MSG_KEXINIT;
   p++;
   length--;
-  memcpy (p, kex->cookie, 16);
-  p += 16;
-  length -= 16;
+  memcpy (p, kex->cookie, SSH_COOKIESIZE);
+  p += SSH_COOKIESIZE;
+  length -= SSH_COOKIESIZE;
   /* Put 10 strings.  */
   algolist[0] = kex->kex_algo;
   algolist[1] = kex->server_host_key_algos;
@@ -433,7 +437,7 @@ static void
 dump_msg_kexinit (gsti_ctx_t ctx, MSG_kexinit * kex)
 {
   _gsti_log_debug (ctx, "MSG_kexinit:\n");
-  _gsti_dump_hexbuf ("cookie: ", kex->cookie, 16);
+  _gsti_dump_hexbuf ("cookie: ", kex->cookie, SSH_COOKIESIZE);
   _gsti_dump_strlist ("kex_algorithm", kex->kex_algo);
   _gsti_dump_strlist ("server_host_key_algos", kex->server_host_key_algos);
   _gsti_dump_strlist ("encr_algos_c2s", kex->encr_algos_c2s);
@@ -678,6 +682,9 @@ calc_dh_secret (gcry_mpi_t gex_g, gcry_mpi_t gex_p, gcry_mpi_t * ret_x)
     g = gcry_mpi_copy (gex_g);
   else
     g = gcry_mpi_set_ui (NULL, 2);
+
+  /* FIXME: we n bits for the private exponent,
+     where n is 2*derrived_key_material */
   x = gcry_mpi_snew (200);
   gcry_mpi_randomize (x, 200, GCRY_STRONG_RANDOM);
 
@@ -755,6 +762,11 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   if (err)
     return err;
 
+  _gsti_dump_hexbuf ("client kex data: ", gsti_bstr_data (i_c),
+                     gsti_bstr_length (i_c));
+  _gsti_dump_hexbuf ("server kex data: ", gsti_bstr_data (i_s),
+                     gsti_bstr_length (i_s));
+  
   if (ctx->we_are_server)
     {
       _gsti_bstring_hash (md, ctx->peer_version_string);
@@ -898,7 +910,7 @@ construct_keys (gsti_ctx_t ctx)
 
 
 static void
-build_cipher_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
+build_cipher_list (gsti_ctx_t ctx, gsti_strlist_t * c2s, gsti_strlist_t * s2c)
 {
   const char *s;
   int i;
@@ -929,11 +941,24 @@ build_cipher_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 
 
 static void
-build_hmac_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
+build_hmac_list (gsti_ctx_t ctx, gsti_strlist_t * c2s, gsti_strlist_t * s2c)
 {
   const char *s;
   int i;
 
+  if (ctx->prefs.hmac[0])
+    {
+      for (i=0; ctx->prefs.hmac[i] != 0; i++)
+        ;
+      while (i--)
+        {
+          s = kex_get_algo_name (ctx->prefs.hmac[i], GSTI_PREFS_HMAC);
+          *s2c = _gsti_strlist_insert (*s2c, s);
+          *c2s = _gsti_strlist_insert (*c2s, s);
+        }
+      return;
+    }
+  
   /* do it in reserved order so it's correct in the list */
   i = DIM (hmac_list) - 1;
   while (i--)
@@ -946,7 +971,7 @@ build_hmac_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 
 
 static void
-build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
+build_compress_list (gsti_ctx_t ctx, gsti_strlist_t * c2s, gsti_strlist_t * s2c)
 {
   *c2s = _gsti_strlist_insert (NULL, SSH_COMPRESSION_NONE);
   *s2c = _gsti_strlist_insert (NULL, SSH_COMPRESSION_NONE);
@@ -961,7 +986,7 @@ build_compress_list (gsti_ctx_t ctx, STRLIST * c2s, STRLIST * s2c)
 
 
 static void
-build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
+build_kex_list (gsti_ctx_t ctx, gsti_strlist_t * lst)
 {
   const char * kex_1 = SSH_GEX_DHG_SHA1, * kex_2 = SSH_KEX_DHG1_SHA1;
   
@@ -977,7 +1002,7 @@ build_kex_list (gsti_ctx_t ctx, STRLIST * lst)
 
 
 static void
-build_pkalgo_list (gsti_ctx_t ctx, STRLIST * lst)
+build_pkalgo_list (gsti_ctx_t ctx, gsti_strlist_t * lst)
 {
   *lst = _gsti_strlist_insert (NULL, SSH_PKA_SSH_RSA);
   *lst = _gsti_strlist_insert (*lst, SSH_PKA_SSH_DSS);
@@ -988,27 +1013,28 @@ gsti_error_t
 kex_send_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
-  MSG_kexinit kex;
+  MSG_kexinit * kex;
   const byte *p;
 
   /* First send our kexinit packet.  */
-  memset (&kex, 0, sizeof kex);
+  kex = ctx->host_kex = _gsti_xcalloc (1, sizeof *kex);
 
   /* We need the cookie later, so store it.  */
-  gcry_randomize (kex.cookie, 16, GCRY_STRONG_RANDOM);
-  memcpy (ctx->cookie, kex.cookie, 16);
+  gcry_randomize (kex->cookie, SSH_COOKIESIZE, GCRY_STRONG_RANDOM);
+  memcpy (ctx->cookie, kex->cookie, SSH_COOKIESIZE);
 
-  build_kex_list (ctx, &kex.kex_algo);
-  build_pkalgo_list (ctx, &kex.server_host_key_algos);
-  build_cipher_list (ctx, &kex.encr_algos_c2s, &kex.encr_algos_s2c);
-  build_hmac_list (ctx, &kex.mac_algos_c2s, &kex.mac_algos_s2c);
-  build_compress_list (ctx, &kex.compr_algos_c2s, &kex.compr_algos_s2c);
-  err = build_msg_kexinit (&kex, &ctx->pkt);
+  build_kex_list (ctx, &kex->kex_algo);
+  build_pkalgo_list (ctx, &kex->server_host_key_algos);
+  build_cipher_list (ctx, &kex->encr_algos_c2s, &kex->encr_algos_s2c);
+  build_hmac_list (ctx, &kex->mac_algos_c2s, &kex->mac_algos_s2c);
+  build_compress_list (ctx, &kex->compr_algos_c2s, &kex->compr_algos_s2c);
+  err = build_msg_kexinit (kex, &ctx->pkt);
   if (!err)
     err = _gsti_packet_write (ctx);
   if (err)
     {
-      free_msg_kexinit (&kex);
+      free_msg_kexinit (kex);
+      _gsti_free (kex);
       return err;
     }
   /* Must do it here because write_packet fills in the packet type.  */
@@ -1022,10 +1048,10 @@ kex_send_init_packet (gsti_ctx_t ctx)
 
 /* Choose a MAC algorithm that is supported by both sides.  */
 static gsti_error_t
-choose_mac_algo (gsti_ctx_t ctx, STRLIST cli, STRLIST srv)
+choose_mac_algo (gsti_ctx_t ctx, gsti_strlist_t cli, gsti_strlist_t srv)
 {
   gsti_error_t err = 0;
-  STRLIST l;
+  gsti_strlist_t l;
   const char *s;
   int i;
 
@@ -1052,10 +1078,10 @@ choose_mac_algo (gsti_ctx_t ctx, STRLIST cli, STRLIST srv)
 
 /* Choose a cipher algorithm which is available on both sides.  */
 static int
-choose_cipher_algo (gsti_ctx_t ctx, STRLIST cli, STRLIST srv)
+choose_cipher_algo (gsti_ctx_t ctx, gsti_strlist_t cli, gsti_strlist_t srv)
 {
   gsti_error_t err = 0;
-  STRLIST l;
+  gsti_strlist_t l;
   const char *s;
   int i;
 
@@ -1084,7 +1110,7 @@ choose_cipher_algo (gsti_ctx_t ctx, STRLIST cli, STRLIST srv)
 
 
 static gsti_error_t
-choose_kex_algo (gsti_ctx_t ctx, STRLIST peer)
+choose_kex_algo (gsti_ctx_t ctx, gsti_strlist_t peer)
 {
   char *p;
   int res;
@@ -1108,16 +1134,21 @@ kex_proc_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err;
   MSG_kexinit kex;
+  MSG_kexinit * kex2 = ctx->host_kex;
 
   if (ctx->pkt.type != SSH_MSG_KEXINIT)
     return gsti_error (GPG_ERR_BUG);
   err = parse_msg_kexinit (&kex, ctx->we_are_server, ctx->cookie, ctx->pktbuf);
   if (err)
     return err;
-  err = choose_mac_algo (ctx, kex.mac_algos_c2s, kex.mac_algos_s2c);
+  err = choose_mac_algo (ctx, kex.mac_algos_c2s, kex2->mac_algos_c2s);
   if (err)
     return err;
-  err = choose_cipher_algo (ctx, kex.encr_algos_c2s, kex.encr_algos_s2c);
+  
+  _gsti_dump_strlist ("kex1 ", kex.encr_algos_c2s);
+  _gsti_dump_strlist ("kex2 ", kex2->encr_algos_c2s);
+  
+  err = choose_cipher_algo (ctx, kex.encr_algos_c2s, kex2->encr_algos_c2s);
   if (err)
     return err;
   err = choose_kex_algo (ctx, kex.kex_algo);
@@ -1128,19 +1159,21 @@ kex_proc_init_packet (gsti_ctx_t ctx)
     {
       /* We replace the cookie inside with the right cookie to
          calculate a valid message digest.  */
-      memcpy (ctx->pkt.packet_buffer + 6, ctx->cookie, 16);
+      memcpy (ctx->pkt.packet_buffer + 6, ctx->cookie, SSH_COOKIESIZE);
       ctx->pkt.payload = ctx->pkt.packet_buffer + 5;
     }
   else
     {
       /* The server still has its own cookie in the host data, we need
          to replace this with the received (client) cookie.  */
-      memcpy (gsti_bstr_data (ctx->host_kexinit_data) + 1, kex.cookie, 16);
+      memcpy (gsti_bstr_data (ctx->host_kexinit_data) + 1,
+              kex.cookie, SSH_COOKIESIZE);
     }
   /* Make a copy of the received payload which we will need later.  */
   err = gsti_bstr_make (&ctx->peer_kexinit_data, ctx->pkt.payload,
-		  ctx->pkt.payload_len);
+                        ctx->pkt.payload_len);
 
+  free_msg_kexinit (ctx->host_kex); ctx->host_kex=NULL;
   dump_msg_kexinit (ctx, &kex);
   return err;
 }
@@ -1208,6 +1241,7 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
   /* Now we can calculate the shared secret.  */
   ctx->kex.k = calc_dh_key (ctx->kex.p, ctx->kexdh_e, y);
   gcry_mpi_release (y);
+
   /* And the hash.  */
   err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
 			    ctx->peer_kexinit_data,
@@ -1234,6 +1268,7 @@ gsti_error_t
 kex_proc_kexdh_reply (gsti_ctx_t ctx)
 {
   gsti_error_t err;
+  gsti_bstr_t t;
   MSG_kexdh_reply dhr;
   int pkttype = ctx->gex.used? SSH_MSG_KEX_DH_GEX_REPLY : SSH_MSG_KEXDH_REPLY;
   
@@ -1249,9 +1284,15 @@ kex_proc_kexdh_reply (gsti_ctx_t ctx)
   ctx->kex.k = calc_dh_key (ctx->kex.p, dhr.f, ctx->secret_x);
   gcry_mpi_release (ctx->secret_x);
 
+  /* swap the kexinit_data values */
+  t = ctx->host_kexinit_data;
+  ctx->host_kexinit_data = ctx->peer_kexinit_data;
+  ctx->peer_kexinit_data = t;
+  
   err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
-			    ctx->peer_kexinit_data,
-			    dhr.k_s, ctx->kexdh_e, dhr.f);
+                            ctx->peer_kexinit_data,
+                            dhr.k_s, ctx->kexdh_e, dhr.f);
+  
   gcry_mpi_release (ctx->kexdh_e);
   if (err)
     return err;

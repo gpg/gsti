@@ -26,6 +26,7 @@
 #include "stream.h"
 #include "utils.h"
 #include "auth.h"
+#include "ssh.h"
 
 struct packet_buffer_s
 {
@@ -71,7 +72,7 @@ struct gsti_context
   void * writectx;
   read_stream_t read_stream;
   write_stream_t write_stream;
-  STRLIST local_services;
+  gsti_strlist_t local_services;
 
   /* Logging.  */
   gio_stream_t log_stream;
@@ -94,6 +95,8 @@ struct gsti_context
   u32 recv_seqno;
 
   struct gsti_kex_s kex;
+
+  void * host_kex; /* save algorithm lists */
   
   struct
   {
@@ -110,7 +113,7 @@ struct gsti_context
     unsigned short hmac[4];
   } prefs;
 
-  byte cookie[16];
+  byte cookie[SSH_COOKIESIZE];
   int sent_newkeys;
   int req_newkeys;
 

@@ -154,13 +154,15 @@ enum gsti_ctl_cmds
 };
 
 
+/* FIXME: there is no gcrypt mapping possible if we have two hmac
+   modes for the same algorithm */
 enum gsti_hmac_algos
 {
-  GSTI_HMAC_SHA1 = 0,
-  GSTI_HMAC_SHA1_96 = 1,
-  GSTI_HMAC_MD5 = 2,
-  GSTI_HMAC_MD5_96 = 3,
-  GSTI_HMAC_RMD160 = 4,
+  GSTI_HMAC_SHA1 = 2,
+  /*GSTI_HMAC_SHA1_96 = 1,*/
+  GSTI_HMAC_MD5 = 1,
+  /*GSTI_HMAC_MD5_96 = 3,*/
+  GSTI_HMAC_RMD160 = 3,
 };
 
 enum gsti_cipher_algos

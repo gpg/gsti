@@ -70,15 +70,15 @@ typedef struct
 
 typedef struct
 {
-  byte cookie[16];
-  STRLIST kex_algo;
-  STRLIST server_host_key_algos;
-  STRLIST encr_algos_c2s;
-  STRLIST encr_algos_s2c;
-  STRLIST mac_algos_c2s;
-  STRLIST mac_algos_s2c;
-  STRLIST compr_algos_c2s;
-  STRLIST compr_algos_s2c;
+  byte cookie[SSH_COOKIESIZE];
+  gsti_strlist_t kex_algo;
+  gsti_strlist_t server_host_key_algos;
+  gsti_strlist_t encr_algos_c2s;
+  gsti_strlist_t encr_algos_s2c;
+  gsti_strlist_t mac_algos_c2s;
+  gsti_strlist_t mac_algos_s2c;
+  gsti_strlist_t compr_algos_c2s;
+  gsti_strlist_t compr_algos_s2c;
   int first_kex_packet_follows;
 } MSG_kexinit;
 

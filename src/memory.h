@@ -30,7 +30,7 @@ void *_gsti_xrealloc (void *p, size_t n);
 char *_gsti_xstrdup (const char *string);
 void _gsti_free (void *);
 
-STRLIST _gsti_strlist_insert (STRLIST head, const char *s);
-void _gsti_strlist_free (STRLIST a);
+gsti_strlist_t _gsti_strlist_insert (gsti_strlist_t head, const char *s);
+void _gsti_strlist_free (gsti_strlist_t a);
 
 #endif	/* GSTI_MEMORY_H */

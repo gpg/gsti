@@ -27,6 +27,9 @@
 /* List separator.  */
 #define SSH_SEPARATOR	','
 
+/* Used cookie size */
+#define SSH_COOKIESIZE 16
+
 
 /* Protocol versions.  */
 #define SSH_IDENT_PREFIX	"SSH-"

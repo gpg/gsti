@@ -1,5 +1,19 @@
 2004-07-08  Timo Schulz  <ts@g10code.de>
 
+	* stream.c (_gsti_stream_writen): Faster random generation.
+	* ssh.h: Added size of the cookie.
+	* kex.c (kex_proc_kexdh_reply): Swap the kexinit values to
+	calculate the right hash.
+	(kex_send_init_packet): Store the kexinit values for later use.
+	(kex_proc_init_packet): Use the host and the peer list for
+	(build_hmac_list): Implemented pre-defined hmac lists.
+	algorithm selection.
+	* types.h (STRLIST): Renamed to...
+	(gsti_strlist_t): ...this.
+	* gsti.h: Use gcrypt digest constants.
+	
+2004-07-08  Timo Schulz  <ts@g10code.de>
+
 	* fsm.c (fsm_server_loop): Return invalid packet if
 	an unexpected packet was received.
 	* kex.c (_gsti_kex_check_alglist): New.

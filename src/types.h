@@ -43,11 +43,13 @@ typedef unsigned short u16;
 #define HAVE_U16_TYPEDEF
 #endif
 
-typedef struct strlist_s
+struct gsti_strlist_s
 {
-  struct strlist_s *next;
+  struct gsti_strlist_s *next;
   char d[1];
-} *STRLIST;
+};
+typedef struct gsti_strlist_s *gsti_strlist_t;
+typedef struct gsti_strlist_s *STRLIST;
 
 
 #ifndef DIM

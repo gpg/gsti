@@ -84,10 +84,10 @@ _gsti_xstrdup (const char *string)
 }
 
 
-STRLIST
-_gsti_strlist_insert (STRLIST head, const char *s)
+gsti_strlist_t
+_gsti_strlist_insert (gsti_strlist_t head, const char *s)
 {
-  STRLIST item;
+  gsti_strlist_t item;
 
   item = _gsti_xmalloc (sizeof *item + strlen (s));
   item->next = head;
@@ -97,11 +97,11 @@ _gsti_strlist_insert (STRLIST head, const char *s)
 
 
 void
-_gsti_strlist_free (STRLIST a)
+_gsti_strlist_free (gsti_strlist_t a)
 {
   while (a)
     {
-      STRLIST a2 = a->next;
+      gsti_strlist_t a2 = a->next;
       _gsti_free (a);
       a = a2;
     }

@@ -34,9 +34,10 @@ enum
 
 void _gsti_bstring_hash (gcry_md_hd_t md, gsti_bstr_t a);
 
-STRLIST _gsti_algolist_parse (const byte * string, size_t length);
-size_t _gsti_algolist_build (byte * buffer, size_t length, STRLIST list);
-int _gsti_algolist_find (STRLIST list, const char *algo);
+gsti_strlist_t _gsti_algolist_parse (const byte * string, size_t length);
+size_t _gsti_algolist_build (byte * buffer, size_t length,
+                             gsti_strlist_t list);
+int _gsti_algolist_find (gsti_strlist_t list, const char *algo);
 void _gsti_dump_object (const char *prefix, int type, void *opaque,
 			size_t len);
 
