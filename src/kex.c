@@ -1,25 +1,28 @@
 /* kex.c - connect, key exchange and service request
- *	Copyright (C) 1999 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -320,9 +323,9 @@ build_msg_kexinit (MSG_kexinit * kex, struct packet_buffer_s *pkt)
 
 
 static void
-dump_msg_kexinit (MSG_kexinit * kex)
+dump_msg_kexinit (GSTIHD ctx, MSG_kexinit * kex)
 {
-  _gsti_log_debug ("MSG_kexinit:\n");
+  _gsti_log_debug (ctx, "MSG_kexinit:\n");
   _gsti_dump_hexbuf ("cookie: ", kex->cookie, 16);
   _gsti_dump_strlist ("kex_algorithm", kex->kex_algo);
   _gsti_dump_strlist ("server_host_key_algos", kex->server_host_key_algos);
@@ -333,8 +336,8 @@ dump_msg_kexinit (MSG_kexinit * kex)
   _gsti_dump_strlist ("compr_algos_c2s", kex->compr_algos_c2s);
   _gsti_dump_strlist ("compr_algos_s2c", kex->compr_algos_s2c);
   if (kex->first_kex_packet_follows)
-    _gsti_log_debug ("fist_kex_packet_follows\n");
-  _gsti_log_debug ("\n");
+    _gsti_log_debug (ctx, "fist_kex_packet_follows\n");
+  _gsti_log_debug (ctx, "\n");
 }
 
 
@@ -405,11 +408,11 @@ leave:
 
 
 static void
-dump_msg_kexdh_init (MSG_kexdh_init * kexdh)
+dump_msg_kexdh_init (GSTIHD ctx, MSG_kexdh_init * kexdh)
 {
-  _gsti_log_debug ("MSG_kexdh_init:\n");
+  _gsti_log_debug (ctx, "MSG_kexdh_init:\n");
   _gsti_dump_mpi ("e=", kexdh->e);
-  _gsti_log_debug ("\n");
+  _gsti_log_debug (ctx, "\n");
 }
 
 
@@ -452,7 +455,7 @@ parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, BUFFER buf)
   /* make sure the msg length matches */
   if (n)
     {
-      _gsti_log_info ("parse_msg_kexdh_reply: %lu bytes remain\n", (u32) n);
+      _gsti_log_info (0, "parse_msg_kexdh_reply: %lu bytes remain\n", (u32) n);
       rc = GSTI_INV_PKT;
     }
 leave:
@@ -498,13 +501,13 @@ leave:
 
 
 static void
-dump_msg_kexdh_reply (MSG_kexdh_reply * dhr)
+dump_msg_kexdh_reply (GSTIHD ctx, MSG_kexdh_reply * dhr)
 {
-  _gsti_log_debug ("MSG_kexdh_reply:\n");
+  _gsti_log_debug (ctx, "MSG_kexdh_reply:\n");
   _gsti_dump_bstring ("k_s=", dhr->k_s);
   _gsti_dump_mpi ("f=", dhr->f);
   _gsti_dump_bstring ("sig_h=", dhr->sig_h);
-  _gsti_log_debug ("\n");
+  _gsti_log_debug (ctx, "\n");
 }
 
 
@@ -546,7 +549,7 @@ hash_mpi (gcry_md_hd_t md, gcry_mpi_t a)
   size_t n;
 
   if (gcry_mpi_print (GCRYMPI_FMT_SSH, buf, sizeof buf - 1, &n, a))
-    _gsti_log_info ("Oops: MPI too large for hashing\n");
+    _gsti_log_info (0, "Oops: MPI too large for hashing\n");
   else
     gcry_md_write (md, buf, n);
 }
@@ -816,7 +819,7 @@ choose_mac_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
 	{
 	  if (!strcmp (s, l->d))
 	    {
-	      _gsti_log_debug ("chosen mac: %s (maclen %d)\n",
+	      _gsti_log_debug (hd, "chosen mac: %s (maclen %d)\n",
 			       hmac_list[i].name, hmac_list[i].len);
 	      hd->mac_algo = hmac_list[i].algid;
 	      hd->mac_len = hmac_list[i].len;
@@ -847,7 +850,7 @@ choose_cipher_algo (GSTIHD hd, STRLIST cli, STRLIST srv)
 	{
 	  if (!strcmp (s, l->d))
 	    {
-	      _gsti_log_debug ("chosen cipher: %s (blklen %d, keylen %d)\n",
+	      _gsti_log_debug (hd, "chosen cipher: %s (blklen %d, keylen %d)\n",
 			       cipher_list[i].name,
 			       cipher_list[i].blksize, cipher_list[i].len);
 	      hd->ciph_blksize = cipher_list[i].blksize;
@@ -874,7 +877,7 @@ choose_kex_algo (GSTIHD hd, STRLIST peer)
       res = p ? SSH_KEX_GROUP_EXCHANGE : SSH_KEX_GROUP1;
       if (hd->kex_type != res)
 	hd->kex_type = res;
-      _gsti_log_debug ("chosen kex-algo: %s\n", peer->d);
+      _gsti_log_debug (hd, "chosen kex-algo: %s\n", peer->d);
     }
   return 0;
 }
@@ -921,7 +924,7 @@ kex_proc_init_packet (GSTIHD hd)
   hd->peer_kexinit_data = _gsti_bstring_make (hd->pkt.payload,
 					      hd->pkt.payload_len);
 
-  dump_msg_kexinit (&kex);
+  dump_msg_kexinit (hd, &kex);
   return 0;
 }
 
@@ -967,7 +970,7 @@ kex_proc_kexdh_init (GSTIHD hd)
   /* we need the received e later */
   hd->kexdh_e = kexdh.e;
 
-  dump_msg_kexdh_init (&kexdh);
+  dump_msg_kexdh_init (hd, &kexdh);
   return 0;
 }
 
@@ -1000,7 +1003,7 @@ kex_send_kexdh_reply (GSTIHD hd)
 
   rc = build_msg_kexdh_reply (&dhr, &hd->pkt);
   if (!rc)
-    dump_msg_kexdh_reply (&dhr);
+    dump_msg_kexdh_reply (hd, &dhr);
   if (!rc)
     rc = _gsti_packet_write (hd);
   if (!rc)
@@ -1025,7 +1028,7 @@ kex_proc_kexdh_reply (GSTIHD hd)
   if (rc)
     return rc;
 
-  dump_msg_kexdh_reply (&dhr);
+  dump_msg_kexdh_reply (hd, &dhr);
 
   hd->kex.k = calc_dh_key (dhr.f, hd->secret_x);
   gcry_mpi_release (hd->secret_x);
@@ -1100,7 +1103,7 @@ kex_send_newkeys (GSTIHD hd)
 	}
     }
   if (rc)
-    return _gsti_log_rc (rc, "setup encryption keys failed\n");
+    return _gsti_log_err (hd, rc, "setup encryption keys failed\n");
   return rc;
 }
 
@@ -1159,7 +1162,7 @@ kex_proc_newkeys (GSTIHD hd)
     }
 
   if (rc)
-    return _gsti_log_rc (rc, "setup decryption keys failed\n");
+    return _gsti_log_err (hd, rc, "setup decryption keys failed\n");
   return rc;
 }
 
@@ -1216,7 +1219,7 @@ parse_msg_service (BSTRING * svcname, const BUFFER buf, int type)
   n = _gsti_buf_getlen (buf);
   if (n)
     {
-      _gsti_log_info ("parse_msg_service: %lu bytes remaining\n", (u32) n);
+      _gsti_log_info (0, "parse_msg_service: %lu bytes remaining\n", (u32) n);
       rc = GSTI_INV_PKT;
     }
 leave:
@@ -1236,7 +1239,7 @@ build_msg_service (BSTRING svcname, struct packet_buffer_s *pkt, int type)
   assert (pkt->size > 100);
   if (!svcname)
     {
-      _gsti_log_info ("build_msg_service: no service name\n");
+      _gsti_log_info (0, "build_msg_service: no service name\n");
       return GSTI_BUG;
     }
 
@@ -1300,7 +1303,7 @@ kex_proc_service_request (GSTIHD hd)
 
   /* store the servicename, so that it can later be answered */
   if (hd->service_name)
-    return _gsti_log_rc (GSTI_BUG, "a service is already in use\n");
+    return _gsti_log_err (hd, GSTI_BUG, "a service is already in use\n");
 
   hd->service_name = svcname;
   return rc;
@@ -1336,11 +1339,11 @@ kex_proc_service_accept (GSTIHD hd)
     return rc;
 
   if (!hd->service_name)
-    return _gsti_log_rc (GSTI_BUG, "no service request sent\n");
+    return _gsti_log_err (hd, GSTI_BUG, "no service request sent\n");
   rc = cmp_bstring (hd->service_name, svcname);
   _gsti_free (svcname);
   if (rc)
-    return _gsti_log_rc (GSTI_PROT_VIOL,
+    return _gsti_log_err (hd, GSTI_PROT_VIOL,
 			 "service name does not match requested one\n");
   return 0;
 }

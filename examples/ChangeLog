@@ -1,3 +1,8 @@
+2004-05-24  Marcus Brinkmann  <marcus@g10code.de>
+
+	* server.c (main): Add HD argument to gsti_set_log_level.
+	* client.c (make_connection): Likewise.
+
 2004-03-08  Werner Koch  <wk@gnupg.org>
 
         Changed indentation to GNU style.

@@ -1,23 +1,23 @@
 /* main.c - Main APIs
- *	Copyright (C) 1999 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
+
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
 
 #include <config.h>
 #include <stdlib.h>
@@ -34,11 +34,6 @@
 #include "packet.h"
 #include "api.h"
 #include "moduli.h"
-
-
-static GSTI_LOG_FNC log_handler = NULL;
-static void *log_handler_value = NULL;
-static int log_level = GSTI_LOG_NONE;
 
 
 static const char *
@@ -80,67 +75,6 @@ int
 map_gcry_rc (int rc)
 {
   return rc;
-}
-
-
-static void
-_gsti_logv (int level, const char *fmt, va_list arg_ptr)
-{
-  if (log_handler)
-    log_handler (log_handler_value, level, fmt, arg_ptr);
-  else
-    {
-      switch (level)
-	{
-	case GSTI_LOG_INFO:
-	  break;
-	case GSTI_LOG_DEBUG:
-	  fputs ("DBG: ", stderr);
-	  break;
-	case GSTI_LOG_NONE:
-	  return;
-	}
-      vfprintf (stderr, fmt, arg_ptr);
-    }
-}
-
-
-int
-_gsti_log_rc (int rc, const char *fmt, ...)
-{
-  va_list arg;
-
-  va_start (arg, fmt);
-  _gsti_logv (GSTI_LOG_DEBUG, fmt, arg);
-  va_end (arg);
-
-  return rc;
-}
-
-
-void
-_gsti_log_info (const char *fmt, ...)
-{
-  va_list arg;
-
-  if (log_level == GSTI_LOG_NONE)
-    return;
-  va_start (arg, fmt);
-  _gsti_logv (GSTI_LOG_INFO, fmt, arg);
-  va_end (arg);
-}
-
-
-void
-_gsti_log_debug (const char *fmt, ...)
-{
-  va_list arg;
-
-  if (log_level < GSTI_LOG_DEBUG)
-    return;
-  va_start (arg, fmt);
-  _gsti_logv (GSTI_LOG_DEBUG, fmt, arg);
-  va_end (arg);
 }
 
 
@@ -309,7 +243,7 @@ gsti_set_service (GSTIHD hd, const char *svcname)
     {
       if (!strchr (s->d, '@'))
 	;
-      _gsti_log_info ("service `%s'\n", s->d);
+      _gsti_log_info (hd, "service `%s'\n", s->d);
     }
   return 0;
 }
@@ -426,21 +360,6 @@ gsti_set_auth_method (GSTIHD hd, int methd)
 }
 
 
-void
-gsti_set_log_handler (GSTI_LOG_FNC logfnc, void *opaque)
-{
-  log_handler = logfnc;
-  log_handler_value = opaque;
-}
-
-
-void
-gsti_set_log_level (int level)
-{
-  log_level = level;
-}
-
-
 int
 gsti_set_compression (GSTIHD hd, int val)
 {
@@ -468,13 +387,6 @@ gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n, unsigned int max)
   hd->gex.max = max;
 
   return 0;
-}
-
-
-int
-_gsti_get_log_level (void)
-{
-  return log_level;
 }
 
 

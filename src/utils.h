@@ -1,25 +1,25 @@
 /* utils.h
- *	Copyright (C) 1999 Werner Koch
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2004 g10 Code GmbH
+
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
 
 #ifndef GSTI_UTILS_H
-#define GSTI_UTILS_H
+#define GSTI_UTILS_H	1
 
 #include <gcrypt.h>
 
@@ -57,11 +57,10 @@ _gsti_dump_object( (prefix), TYPE_BUFFER, (buf), 0 )
 
 void _gsti_print_string (const char *string, size_t n);
 
-/*-- main.c --*/
-void _gsti_log_info (const char *fmt, ...);
-int _gsti_log_rc (int rc, const char *fmt, ...);
-int _gsti_get_log_level (void);
-void _gsti_log_debug (const char *fmt, ...);
+/*-- logging.c --*/
+int _gsti_log_err (GSTIHD ctx, int rc, const char *fmt, ...);
+void _gsti_log_info (GSTIHD ctx, const char *fmt, ...);
+void _gsti_log_debug (GSTIHD ctx, const char *fmt, ...);
 
 /*-- zlib.c --*/
 void _gsti_compress_init (void);
@@ -72,4 +71,4 @@ int _gsti_decompress_block (byte * block, int len, byte ** outblock,
 			    int *outlen);
 
 
-#endif /* GSTI_UTILS_H */
+#endif	/* GSTI_UTILS_H */

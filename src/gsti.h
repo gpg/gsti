@@ -1,23 +1,23 @@
 /* gsti.h -  GNU Secure Transport Initiative (gsti)
- *	Copyright (C) 1999, 2000 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999, 2000 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
+
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
 
 #ifndef _GSTI_H
 #define _GSTI_H
@@ -42,6 +42,13 @@ extern "C"
  */
 #define GSTI_VERSION "0.3.0-cvs"
 
+
+/* I/O subsystem.  For now just a wrapper around the system I/O.  */
+#include <stdio.h>
+
+typedef FILE *gio_stream_t;
+
+
 enum
 {
   GSTI_SUCCESS = 0,		/* "no error" */
@@ -69,13 +76,6 @@ enum gsti_ctl_cmds
   GSTI_DISABLE_LOCKING = 1,
   GSTI_SECMEM_INIT = 2,
   GSTI_SECMEM_RELEASE = 3,
-};
-
-enum
-{
-  GSTI_LOG_NONE = 0,
-  GSTI_LOG_INFO = 1,
-  GSTI_LOG_DEBUG = 2,
 };
 
 
@@ -118,10 +118,9 @@ enum gsti_auth_methods
 struct gsti_context;
 typedef struct gsti_context *GSTIHD;
 
-/* some handy types */
+/* Some handy types.  */
 typedef int (*GSTI_READ_FNC) (GSTIHD, void *, size_t *);
 typedef int (*GSTI_WRITE_FNC) (GSTIHD, const void *, size_t);
-typedef void (*GSTI_LOG_FNC) (void *, int, const char *, va_list);
 
 typedef struct
 {
@@ -156,11 +155,28 @@ int gsti_set_compression (GSTIHD hd, int val);
 int gsti_set_dhgex (GSTIHD hd, unsigned int min, unsigned int n,
 		    unsigned int max);
 
-/* logging */
-void gsti_set_log_handler (GSTI_LOG_FNC logfnc, void *opaque);
-void gsti_set_log_level (int level);
+
+/* Logging interface.  */
 
+typedef enum
+  {
+    GSTI_LOG_NONE = 0,
+    GSTI_LOG_INFO = 128,
+    GSTI_LOG_DEBUG = 256,
 
+    /* This also enforces a minimum width for the used integer type.  */
+    GSTI_LOG_MAX = (1 << 30)
+  }
+gsti_log_level_t;
+
+/* Set the log stream for the context CTX to STREAM.  */
+void gsti_set_log_stream (GSTIHD ctx, gio_stream_t stream);
+
+/* Set the maximum level up to which messages are passed to the log
+   handler for the context CTX.  */
+void gsti_set_log_level (GSTIHD ctx, int level);
+
+
 /*-- fsm.c --*/
 int gsti_get_packet (GSTIHD hd, GSTI_PKTDESC * pkt);
 int gsti_put_packet (GSTIHD hd, GSTI_PKTDESC * pkt);

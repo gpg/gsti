@@ -1,25 +1,28 @@
 /* fsm.c - state machine for the transport protocol
- *	Copyright (C) 1999 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+ 
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of 
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -33,7 +36,7 @@
 #include "packet.h"
 #include "kex.h"
 
-#define logrc _gsti_log_rc
+#define logrc _gsti_log_err
 
 enum fsm_states
 {
@@ -110,7 +113,7 @@ handle_quit (GSTIHD hd)
 static void
 log_error (GSTIHD hd)
 {
-  _gsti_log_info ("FSM: at new_state: state=%d, packet=%d\n",
+  _gsti_log_info (hd, "FSM: at new_state: state=%d, packet=%d\n",
 		  hd->state, hd->pkt.type);
 }
 
@@ -125,7 +128,7 @@ request_packet (GSTIHD hd)
     {
       rc = _gsti_packet_read (hd);
       if (rc)
-	_gsti_log_info ("FSM: read packet at state %d failed: %s\n",
+	_gsti_log_info (hd, "FSM: read packet at state %d failed: %s\n",
 			hd->state, gsti_strerror (rc));
       else
 	pkttype = hd->pkt.type;
@@ -149,14 +152,15 @@ fsm_server_loop (GSTIHD hd)
       hd->state = FSM_read;
       break;
     default:
-      _gsti_log_info ("FSM: start fsm_loop: invalid state %d\n", hd->state);
+      _gsti_log_info (hd, "FSM: start fsm_loop: invalid state %d\n",
+		      hd->state);
       rc = GSTI_BUG;
       break;
     }
 
   while (!rc && hd->state != FSM_quit && hd->state != FSM_idle)
     {
-      _gsti_log_info ("** FSM (server) state=%d\n", hd->state);
+      _gsti_log_info (hd, "** FSM (server) state=%d\n", hd->state);
       switch (hd->state)
 	{
 	case FSM_wait_on_version:
@@ -199,7 +203,7 @@ fsm_server_loop (GSTIHD hd)
 	      switch (hd->pkt.type)
 		{
 		case SSH_MSG_KEXDH_REPLY:
-		  rc = logrc (GSTI_PROT_VIOL, "server got KEXDH_REPLY\n");
+		  rc = logrc (hd, GSTI_PROT_VIOL, "server got KEXDH_REPLY\n");
 		  break;
 
 		case SSH_MSG_KEXDH_INIT:
@@ -261,9 +265,9 @@ fsm_server_loop (GSTIHD hd)
 	  break;
 
 	case FSM_service_start:
-	  _gsti_log_info ("service `");
+	  _gsti_log_info (hd, "service `");
 	  _gsti_print_string (hd->service_name->d, hd->service_name->len);
-	  _gsti_log_info ("' has been started (server)\n");
+	  _gsti_log_info (hd, "' has been started (server)\n");
 	  hd->state = FSM_auth_wait;
 	  break;
 
@@ -325,12 +329,13 @@ fsm_server_loop (GSTIHD hd)
 
 	case FSM_quit:
 	  rc = handle_quit (hd);
-	  _gsti_log_info ("FSM: returning from quit state: %s\n",
+	  _gsti_log_info (hd, "FSM: returning from quit state: %s\n",
 			  gsti_strerror (rc));
 	  break;
 
 	default:
-	  _gsti_log_info ("FSM: at fsm_loop: invalid state %d\n", hd->state);
+	  _gsti_log_info (hd, "FSM: at fsm_loop: invalid state %d\n",
+			  hd->state);
 	  rc = GSTI_BUG;
 	}
     }
@@ -352,14 +357,15 @@ fsm_client_loop (GSTIHD hd)
       hd->state = FSM_write;
       break;
     default:
-      _gsti_log_info ("FSM: start fsm_loop: invalid state %d\n", hd->state);
+      _gsti_log_info (hd, "FSM: start fsm_loop: invalid state %d\n",
+		      hd->state);
       rc = GSTI_BUG;
       break;
     }
 
   while (!rc && hd->state != FSM_quit && hd->state != FSM_idle)
     {
-      _gsti_log_info ("** FSM (client) state=%d\n", hd->state);
+      _gsti_log_info (hd, "** FSM (client) state=%d\n", hd->state);
       switch (hd->state)
 	{
 	case FSM_send_version:
@@ -393,7 +399,7 @@ fsm_client_loop (GSTIHD hd)
 	      switch (hd->pkt.type)
 		{
 		case SSH_MSG_KEXDH_INIT:
-		  rc = logrc (GSTI_PROT_VIOL, "client got KEXDH_INIT\n");
+		  rc = logrc (hd, GSTI_PROT_VIOL, "client got KEXDH_INIT\n");
 		  break;
 
 		case SSH_MSG_KEXDH_REPLY:
@@ -431,12 +437,12 @@ fsm_client_loop (GSTIHD hd)
 	  break;
 
 	case FSM_send_service_request:
-	  _gsti_log_info ("is local service? (%d)\n",
+	  _gsti_log_info (hd, "is local service? (%d)\n",
 			  hd->local_services ? 1 : 0);
 	  rc = kex_send_service_request (hd, hd->local_services ?
 					 hd->local_services->d
 					 : "ssh-userauth");
-	  _gsti_log_info ("\n");
+	  _gsti_log_info (hd, "\n");
 	  if (!rc)
 	    {
 	      hd->state = FSM_wait_service_accept;
@@ -460,9 +466,9 @@ fsm_client_loop (GSTIHD hd)
 	  break;
 
 	case FSM_service_start:
-	  _gsti_log_info ("service `");
+	  _gsti_log_info (hd, "service `");
 	  _gsti_print_string (hd->service_name->d, hd->service_name->len);
-	  _gsti_log_info ("' has been started (client)\n");
+	  _gsti_log_info (hd, "' has been started (client)\n");
 	  hd->state = FSM_auth_start;
 	  break;
 
@@ -527,7 +533,8 @@ fsm_client_loop (GSTIHD hd)
 	  break;
 
 	default:
-	  _gsti_log_info ("FSM: at fsm_loop: invalid state %d\n", hd->state);
+	  _gsti_log_info (hd, "FSM: at fsm_loop: invalid state %d\n",
+			  hd->state);
 	  rc = GSTI_BUG;
 	}
     }

@@ -1,25 +1,28 @@
 /* utils.c -  some utility functions
- *	Copyright (C) 1999 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -140,24 +143,24 @@ _gsti_print_string (const char *string, size_t n)
     {
       if (iscntrl (*p))
 	{
-	  _gsti_log_info ("%c", '\\');
+	  _gsti_log_info (0, "%c", '\\');
 	  if (*p == '\n')
-	    _gsti_log_info ("%c", 'n');
+	    _gsti_log_info (0, "%c", 'n');
 	  else if (*p == '\r')
-	    _gsti_log_info ("%c", 'r');
+	    _gsti_log_info (0, "%c", 'r');
 	  else if (*p == '\f')
-	    _gsti_log_info ("%c", 'f');
+	    _gsti_log_info (0, "%c", 'f');
 	  else if (*p == '\v')
-	    _gsti_log_info ("%c", 'v');
+	    _gsti_log_info (0, "%c", 'v');
 	  else if (*p == '\b')
-	    _gsti_log_info ("%c", 'b');
+	    _gsti_log_info (0, "%c", 'b');
 	  else if (!*p)
-	    _gsti_log_info ("%c", '0');
+	    _gsti_log_info (0, "%c", '0');
 	  else
-	    _gsti_log_info ("x%02x", *p);
+	    _gsti_log_info (0, "x%02x", *p);
 	}
       else
-	_gsti_log_info ("%c", *p);
+	_gsti_log_info (0, "%c", *p);
     }
 }
 
@@ -165,8 +168,6 @@ _gsti_print_string (const char *string, size_t n)
 void
 _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 {
-  if (_gsti_get_log_level () < GSTI_LOG_DEBUG)
-    return;
   if (!opaque)
     return;
   switch (type)
@@ -174,10 +175,10 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
     case TYPE_HEXBUF:
       {
 	byte *buf = opaque;
-	_gsti_log_info ("%s", prefix);
+	_gsti_log_info (0, "%s", prefix);
 	for (; len; len--, buf++)
-	  _gsti_log_info ("%02X ", *buf);
-	_gsti_log_info ("\n");
+	  _gsti_log_info (0, "%02X ", *buf);
+	_gsti_log_info (0, "\n");
 	break;
       }
     case TYPE_STRLIST:
@@ -185,7 +186,7 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	STRLIST list = opaque;
 	int i;
 	for (i = 0; list; list = list->next, i++)
-	  _gsti_log_info ("%s[%d]: `%s'\n", prefix, i, list->d);
+	  _gsti_log_info (0, "%s[%d]: `%s'\n", prefix, i, list->d);
 	break;
       }
     case TYPE_MPI:
@@ -196,16 +197,16 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 
 	if (gcry_mpi_print (GCRYMPI_FMT_HEX, buf, sizeof buf, &n, a))
 	  strcpy (buf, "[can't print value]");
-	_gsti_log_info ("%s%s\n", prefix, buf);
+	_gsti_log_info (0, "%s%s\n", prefix, buf);
 	break;
       }
     case TYPE_BSTRING:
       {
 	BSTRING a = opaque;
-	_gsti_log_info ("%s", prefix);
+	_gsti_log_info (0, "%s", prefix);
 	if (a)
 	  _gsti_print_string (a->d, a->len);
-	_gsti_log_info ("\n");
+	_gsti_log_info (0, "\n");
 	break;
       }
     case TYPE_BUFFER:
@@ -213,8 +214,8 @@ _gsti_dump_object (const char *prefix, int type, void *opaque, size_t len)
 	BUFFER buf = opaque;
 	int i;
 	for (i = buf->off; i < _gsti_buf_getlen (buf); i++)
-	  _gsti_log_info ("%4x", buf->d[i]);
-	_gsti_log_info ("\n");
+	  _gsti_log_info (0, "%4x", buf->d[i]);
+	_gsti_log_info (0, "\n");
 	break;
       }
 

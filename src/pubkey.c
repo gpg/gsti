@@ -1,24 +1,27 @@
 /* pubkey.c
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdio.h>
 #include <sys/stat.h>
 #include <gcrypt.h>
@@ -197,7 +200,7 @@ read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
   len = buf[0] << 24 | buf[1] << 16 | buf[2] << 8 | buf[3];
   if (len > statbuf.st_size)
     {
-      _gsti_log_info ("read_bstring: %d: string larger than file.\n", len);
+      _gsti_log_info (0, "read_bstring: %d: string larger than file.\n", len);
       return GSTI_INV_OBJ;
     }
   a = _gsti_bstring_make (NULL, ismpi ? len + 4 : len);
@@ -211,7 +214,7 @@ read_bstring (FILE * fp, int ismpi, BSTRING * r_a)
     }
   else
     n = 0;
-  _gsti_log_debug ("got string with a length of %d\n", len);
+  _gsti_log_debug (0, "got string with a length of %d\n", len);
   while (len--)
     a->d[n++] = fgetc (fp);
   *r_a = a;
@@ -246,7 +249,7 @@ read_dss_key (FILE * fp, int keytype, GSTI_KEY ctx)
     return rc;
   if (a->len != 7 || strncmp (a->d, "ssh-dss", 7))
     {
-      _gsti_log_info ("read_dss_key: %s: not a dss key blob\n", a->d);
+      _gsti_log_info (0, "read_dss_key: %s: not a dss key blob\n", a->d);
       _gsti_bstring_free (a);
       return GSTI_INV_OBJ;
     }
@@ -580,7 +583,7 @@ _gsti_sig_encode (GSTI_KEY sk, const byte * hash)
   rc = _gsti_dss_sign (sk, hash, sig);
   if (rc)
     {
-      _gsti_log_info ("signing failed rc=%d\n", rc);
+      _gsti_log_info (0, "signing failed rc=%d\n", rc);
       return NULL;
     }
   p = _gsti_ssh_get_pkname (sk->type, 0, &n);

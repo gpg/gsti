@@ -1,25 +1,28 @@
 /* packet.c - packet read/write
- *	Copyright (C) 1999 Werner Koch
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -54,7 +57,7 @@ print_disconnect_msg (const byte * msg, size_t msglen)
 
   if (msglen < 13)
     {
-      _gsti_log_info ("SSH_MSG_DISCONNECT is not valid\n");
+      _gsti_log_info (0, "SSH_MSG_DISCONNECT is not valid\n");
       return;
     }
   _gsti_buf_init (&buf);
@@ -62,7 +65,7 @@ print_disconnect_msg (const byte * msg, size_t msglen)
   if (_gsti_buf_getc (buf) != SSH_MSG_DISCONNECT)
     goto leave;
   reason = _gsti_buf_getint (buf);
-  _gsti_log_info ("SSH_MSG_DISCONNECT: reason=%lu `", reason);
+  _gsti_log_info (0, "SSH_MSG_DISCONNECT: reason=%lu `", reason);
 
   if (_gsti_buf_getbstr (buf, &desc))
     goto leave;
@@ -78,7 +81,7 @@ leave:
   msglen = _gsti_buf_getlen (buf);
   _gsti_buf_free (buf);
   if (msglen)
-    _gsti_log_info ("print_msg_disconnect: %lu bytes remaining\n",
+    _gsti_log_info (0, "print_msg_disconnect: %lu bytes remaining\n",
 		    (u32) msglen);
 }
 
@@ -92,7 +95,7 @@ print_debug_msg (const byte * msg, size_t msglen)
 
   if (msglen < (1 + 1 + 4 + 4))
     {
-      _gsti_log_info ("SSH_MSG_DEBUG is not valid\n");
+      _gsti_log_info (0, "SSH_MSG_DEBUG is not valid\n");
       return;
     }
   _gsti_buf_init (&buf);
@@ -101,7 +104,7 @@ print_debug_msg (const byte * msg, size_t msglen)
     goto leave;
 
   display = _gsti_buf_getc (buf);
-  _gsti_log_info ("SSH_MSG_DEBUG:%s `", display ? " (always display)" : "");
+  _gsti_log_info (0, "SSH_MSG_DEBUG:%s `", display ? " (always display)" : "");
 
   if (_gsti_buf_getbstr (buf, &mesag))
     goto leave;
@@ -118,7 +121,7 @@ leave:
   msglen = _gsti_buf_getlen (buf);
   _gsti_buf_free (buf);
   if (msglen)
-    _gsti_log_info ("print_msg_debug: %lu bytes remaining\n", (u32) msglen);
+    _gsti_log_info (0, "print_msg_debug: %lu bytes remaining\n", (u32) msglen);
 }
 
 
@@ -220,14 +223,14 @@ again:
   /* read the first block so we can decipher the packet length */
   rc = _gsti_stream_readn (rst, hd->pkt.packet_buffer, blksize);
   if (rc)
-    return _gsti_log_rc (rc, "error reading packet header\n");
+    return _gsti_log_err (hd, rc, "error reading packet header\n");
 
   if (hd->decrypt_hd)
     {
       p = hd->pkt.packet_buffer;
       rc = gcry_cipher_decrypt (hd->decrypt_hd, p, blksize, NULL, 0);
       if (rc)
-	return _gsti_log_rc (rc, "error decrypting first block\n");
+	return _gsti_log_err (hd, rc, "error decrypting first block\n");
     }
 
   _gsti_dump_hexbuf ("begin of packet: ", hd->pkt.packet_buffer, blksize);
@@ -235,15 +238,15 @@ again:
   pktlen = buftou32 (hd->pkt.packet_buffer);
   /* FIXME: It should be 16 but NEWKEYS has 12 for some reason */
   if (pktlen < 12)		/* minimum packet size as per secsh draft */
-    return _gsti_log_rc (GSTI_TOO_SHORT, "received pktlen %lu \n",
+    return _gsti_log_err (hd, GSTI_TOO_SHORT, "received pktlen %lu \n",
 			 (u32) pktlen);
   if (pktlen > MAX_PKTLEN)
-    return _gsti_log_rc (GSTI_TOO_LARGE, "received pktlen %lu\n",
+    return _gsti_log_err (hd, GSTI_TOO_LARGE, "received pktlen %lu\n",
 			 (u32) pktlen);
 
   padlen = hd->pkt.packet_buffer[4];
   if (padlen < 4)
-    return _gsti_log_rc (GSTI_TOO_SHORT, "received padding is %lu\n",
+    return _gsti_log_err (hd, GSTI_TOO_SHORT, "received padding is %lu\n",
 			 (u32) padlen);
 
   hd->pkt.packet_len = pktlen;
@@ -252,7 +255,7 @@ again:
 
   n = 5 + paylen + padlen;
   if ((n % blksize))
-    _gsti_log_rc (GSTI_INV_PKT, "length packet is not a "
+    _gsti_log_err (hd, GSTI_INV_PKT, "length packet is not a "
 		  "multiple of the blksize\n");
 
   /* read the rest of the packet */
@@ -262,21 +265,21 @@ again:
   else
     n = 0;			/* oops: rest of packet is too short */
 
-  _gsti_log_debug ("packet_len=%lu padding=%lu payload=%lu "
+  _gsti_log_debug (hd, "packet_len=%lu padding=%lu payload=%lu "
 		   "maclen=%lu n=%lu\n",
 		   (u32) hd->pkt.packet_len, (u32) hd->pkt.padding_len,
 		   (u32) hd->pkt.payload_len, (u32) maclen, (u32) n);
 
   rc = _gsti_stream_readn (rst, hd->pkt.packet_buffer + blksize, n);
   if (rc)
-    return _gsti_log_rc (rc, "error reading rest of packet\n");
+    return _gsti_log_err (hd, rc, "error reading rest of packet\n");
   n -= maclen;			/* don't want the maclen anymore */
   if (hd->decrypt_hd)
     {
       p = hd->pkt.packet_buffer + blksize;
       rc = gcry_cipher_decrypt (hd->decrypt_hd, p, n, NULL, 0);
       if (rc)
-	return _gsti_log_rc (rc, "decrypt failed\n");
+	return _gsti_log_err (hd, rc, "decrypt failed\n");
       /* note: there is no reason to decrypt the padding, but we do
          it anyway becuase this is easier */
       _gsti_dump_hexbuf ("rest of packet: ", hd->pkt.packet_buffer + blksize,
@@ -284,7 +287,7 @@ again:
     }
 
   if (hd->recv_mac && !verify_mac (hd, seqno))
-    return _gsti_log_rc (GSTI_INV_MAC, "wrong MAC\n");
+    return _gsti_log_err (hd, GSTI_INV_MAC, "wrong MAC\n");
 
   if (hd->zlib.use && !hd->zlib.init)
     {
@@ -294,7 +297,7 @@ again:
   /* todo: do the uncompressions */
 
   hd->pkt.type = *hd->pkt.payload;
-  _gsti_log_info ("received packet %lu of type %d\n",
+  _gsti_log_info (hd, "received packet %lu of type %d\n",
 		  (u32) seqno, hd->pkt.type);
   _gsti_buf_free (hd->pktbuf);
   _gsti_buf_set (&hd->pktbuf, hd->pkt.payload, hd->pkt.payload_len);
@@ -344,7 +347,7 @@ _gsti_packet_write (GSTIHD hd)
   hd->pkt.payload[0] = hd->pkt.type;
   hd->pkt.packet_len = 1 + hd->pkt.payload_len + hd->pkt.padding_len;
 
-  _gsti_log_info ("sending packet %lu of type %d\n",
+  _gsti_log_info (hd, "sending packet %lu of type %d\n",
 		  (u32) seqno, hd->pkt.type);
 
   if (hd->zlib.use && !hd->zlib.init)

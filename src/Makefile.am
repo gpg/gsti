@@ -38,6 +38,7 @@ libgsti_la_SOURCES = \
 	api.h \
 	types.h \
 	pubkey.c pubkey.h \
+	logging.c \
 	main.c \
 	fsm.c \
 	memory.h memory.c \

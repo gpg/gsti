@@ -1,24 +1,27 @@
 /* auth.c - Public key authentication
- *      Copyright (C) 2002 Timo Schulz
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 2002 Timo Schulz
+   Copyright (C) 2004 g10 Code GmbH
 
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+
+#if HAVE_CONFIG_H
 #include <config.h>
+#endif
+
 #include <assert.h>
 #include <stdio.h>
 
@@ -112,16 +115,29 @@ init_auth_request (MSG_auth_request * ath, const char *user, int false,
 
 
 static void
-dump_auth_request (MSG_auth_request * ath)
+dump_auth_request (GSTIHD ctx, MSG_auth_request * ath)
 {
-  _gsti_log_debug ("\nMSG_auth_request:\n");
+  /* FIXME: What we really want here are format extensions for GIO, so
+     that we can dump objects by using a special format spec, eg %B,
+     for a binary string.  This will also preserve the log level etc.  */
+#if WE_EVENTUALLY_HAVE_A_FEATURE_COMPLETE_GIO
+  _gsti_log_debug (ctx, "\nMSG_auth_request:\n");
+  _gsti_log_debug (ctx, "user: %B\n", ath->user);
+  _gsti_log_debug (ctx, "service: %B\n", ath->svcname);
+  _gsti_log_debug (ctx, "method: %B\n", ath->method);
+  _gsti_log_debug (ctx, "false=%d\n", ath->false);
+  _gsti_log_debug (ctx, "key: %B\n", ath->key);
+  _gsti_log_debug (ctx, "signature: %B", ath->sig);
+#else
+  _gsti_log_debug (ctx, "\nMSG_auth_request:\n");
   _gsti_dump_bstring ("user: ", ath->user);
   _gsti_dump_bstring ("service: ", ath->svcname);
   _gsti_dump_bstring ("method: ", ath->method);
-  _gsti_log_debug ("false=%d\n", ath->false);
+  _gsti_log_debug (ctx, "false=%d\n", ath->false);
   _gsti_dump_bstring ("key: ", ath->key);
   _gsti_dump_bstring ("signature: ", ath->sig);
-  _gsti_log_debug ("\n");
+  _gsti_log_debug (ctx, "\n");
+#endif
 }
 
 
@@ -231,7 +247,7 @@ auth_proc_init_packet (GSTIHD hd)
   hd->auth.user = _gsti_xstrdup (ath.user->d);
   hd->auth.key = _gsti_key_fromblob (ath.key);
 
-  dump_auth_request (&ath);
+  dump_auth_request (hd, &ath);
   free_auth_request (&ath);
   return rc;
 }

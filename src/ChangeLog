@@ -1,3 +1,30 @@
+2004-05-24  Marcus Brinkmann  <marcus@g10code.de>
+
+
+	Everywhere: Pass context to invocation of _gsti_log_info and friends.
+	Change _gsti_log_rc to _gsti_log_err.
+	
+	* gsti.h (gsti_log_level_t): New type, using the existing enum for
+	GSTI_LOG_* symbols.  Add symbol GSTI_LOG_MAX.  Change the values
+	of GSTI_LOG_INFO and GSTI_LOG_DEBUG to make room for insertions.
+	(GSTI_LOG_FNC): Rename to ...
+	(gsti_log_cb_t): ... this.  Add new argument CTX, change type of
+	log level argument.
+	(gsti_set_log_handler): Removed.
+	(gsti_set_log_stream): New prototype.
+	(gsti_set_log_level): Add new argument CTX.
+	* utils.h (_gsti_log_rc, _gsti_log_info, _gsti_log_debug): Add
+	argument CTX to prototype.
+	(_gsti_get_log_level): Prototype removed.
+	* api.h (struct gsti_context): New members LOG_CB, LOG_CB_HOOK,
+	and LOG_LEVEL.
+	* main.c (log_handler, log_handler_value, log_level,
+	_gsti_get_log_level): Removed.
+	(_gsti_logv, _gsti_log_rc, _gsti_log_info, _gsti_log_debug,
+	gsti_set_log_level): Moved to ...
+	* logging.c: ... this new file.
+	* Makefile.am (libgsti_la_SOURCES): Add logging.c.
+
 2004-03-08  Werner Koch  <wk@gnupg.org>
 
         Changed indentation to GNU style.

@@ -1,22 +1,22 @@
 /* client.c  -	An example how to use gsti
- *	Copyright (C) 1999 Werner Koch
- *
- * This file is part of GSTI.
- *
- * GSTI is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * GSTI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
- */
+   Copyright (C) 1999 Werner Koch
+   Copyright (C) 2004 g10 Code GmbH
+
+   This file is part of GSTI.
+
+   GSTI is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   GSTI is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -140,8 +140,8 @@ main (int argc, char **argv)
 
   gsti_control (GSTI_SECMEM_INIT);
   gsti_control (GSTI_DISABLE_LOCKING);
-  gsti_set_log_level (GSTI_LOG_DEBUG);
   hd = gsti_init ();
+  gsti_set_log_level (hd, GSTI_LOG_DEBUG);
   gsti_set_readfnc (hd, myread);
   gsti_set_writefnc (hd, mywrite);
   gsti_set_client_key (hd, SECKEY);
