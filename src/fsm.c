@@ -325,7 +325,12 @@ fsm_server_loop (gsti_ctx_t ctx)
 	case FSM_read:
 	  err = request_packet (ctx);
 	  if (!err)
-	    ctx->state = FSM_idle;
+	    {
+	      if (ctx->pkt.type >= 80 && ctx->pkt.type <= 127)
+		err = _gsti_handle_channel_packet (ctx);
+	      else		  
+		ctx->state = FSM_idle;
+	    }
 	  break;
 
 	case FSM_quit:

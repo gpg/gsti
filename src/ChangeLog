@@ -1,5 +1,21 @@
 2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
 
+	* types.h (gsti_byte_t, gsti_uint32_t): Move to ...
+	* gsti.h (gsti_byte_t, gsti_uint32_t): ... here.
+	* api.h (struct gsti_context): New members channel_types,
+	channels, nr_channels, max_channels.
+	* gsti.h (gsti_channel_read_cb_t, gsti_channel_request_cb_t,
+	gsti_win_adj_cb_t, gsti_channel_close_cb_t,
+	gsti_channel_open_cb_t, gsti_channel_open_result_cb_t): New types.
+	(gsti_channel_open, gsti_channel_get_window_size,
+	gsti_channel_get_max_packet_size,
+	gsti_channel_get_rec_max_packet_size,
+	gsti_channel_get_rec_window_size, gsti_channel_write,
+	gsti_channel_window_adjust, gsti_channel_add_type): New prototypes.
+	* channel.c: New file.
+	* Makefile.am (libgsti_la_SOURCES): Add channel.c.
+	* fsm.c (fsm_server_loop): Call _gsti_handle_channel_packet.
+	
 	* buffer.c (gsti_buf_putbstr): Remove check for BSTR.
 
 	* stream.c (_gsti_stream_readn): Return EOF if EOF is encountered

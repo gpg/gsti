@@ -45,6 +45,7 @@ libgsti_la_SOURCES = \
 	logging.c \
 	main.c \
 	fsm.c \
+	channel.c \
 	memory.h memory.c \
 	utils.h utils.c \
 	stream.h stream.c \

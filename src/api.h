@@ -52,7 +52,15 @@ struct gsti_kex_s
   int type;
 };
 typedef struct gsti_kex_s * gsti_kex_t;
-  
+
+
+/* Channels.  */
+struct gsti_channel_type;
+typedef struct gsti_channel_type *gsti_channel_type_t;
+
+struct gsti_channel;
+typedef struct gsti_channel *gsti_channel_t;
+
 struct gsti_context
 {
   gsti_read_fnc_t readfnc;
@@ -129,6 +137,12 @@ struct gsti_context
   } zlib;
 
   unsigned long id;
+
+  gsti_channel_type_t channel_types;
+
+  gsti_channel_t channels;
+  size_t nr_channels;
+  size_t max_channels;
 };
 
 

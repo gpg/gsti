@@ -61,6 +61,11 @@ extern "C"
 typedef FILE *gio_stream_t;
 
 
+/* Basic types.  */
+typedef unsigned char gsti_byte_t;
+typedef unsigned int gsti_uint32_t;
+
+
 /* Error management.  */
 typedef gpg_error_t gsti_error_t;
 typedef gpg_err_code_t gsti_err_code_t;
@@ -270,6 +275,119 @@ void gsti_key_free (gsti_key_t ctx);
 /*-- auth.c --*/
 gsti_error_t gsti_auth_new (gsti_auth_t * r_ath);
 void gsti_auth_free (gsti_auth_t ath);
+
+
+/* This callback is invoked when data arrives on the channel.  */
+typedef void (*gsti_channel_read_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *read_cb_value,
+      char *data, size_t amount);
+
+/* This callback is invoked when a request is made.  */
+typedef int (*gsti_channel_request_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *request_cb_value,
+      gsti_uint32_t request_type, char *data, size_t amount);
+
+/* This callback is invoked when the window for sending data increases
+   in size.  */
+typedef void (*gsti_channel_win_adj_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *win_adj_cb_value,
+      gsti_uint32_t new_window_size);
+
+/* This callback is invoked when the channel is closed.  After this
+   callback returns, the channel ID becomes invalid.  */
+typedef void (*gsti_channel_close_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *close_cb_value);
+
+
+/* Channel sender side.  */
+
+/* This callback is invoked when a channel opened by us was confirmed
+   or failed.  It is followed up by an invocation of the window adjust
+   callback as soon as window space is available (immediately if the
+   initial window size is not 0).  If ERR is 0, then opening the
+   channel was confirmed, and DATA points to AMOUNT bytes with the
+   channel type specific data sent by the server.  Otherwise opening
+   the channel failed.  ERR will contain the error code returned by
+   the server (one of SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+   SSH_OPEN_CONNECT_FAILED, SSH_OPEN_UNKNOWN_CHANNEL_TYPE, and
+   SSH_OPEN_RESOURCE_SHORTAGE, FIXME), and DATA will point to AMOUNT
+   bytes with additional textual information (UTF-8).  If an error is
+   returned, then the channel number becomes invalid as soon as the
+   callback returns.  */
+typedef void (*gsti_channel_open_result_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *open_result_cb_value,
+      unsigned int err, char *data, size_t amount);
+
+
+/* Attempt to open a new channel in the context CTX.  Returns the
+   channel number in CHANNEL_ID or an error if the operation does not
+   succeed.  */
+gsti_error_t gsti_channel_open (gsti_ctx_t ctx, gsti_uint32_t *channel_id,
+				const char *channel_type,
+				unsigned int initial_window_size,
+				unsigned int maximum_packet_size,
+				gsti_channel_open_result_cb_t open_result_cb,
+				void *open_result_cb_value,
+				gsti_channel_read_cb_t read_cb,
+				void *read_cb_value,
+				gsti_channel_request_cb_t request_cb,
+				void *request_cb_value,
+				gsti_channel_win_adj_cb_t win_adj_cb,
+				void *win_adj_cb_value,
+				gsti_channel_close_cb_t close_cb,
+				void *close_cb_value);
+
+
+/* Return our current window size for the channel CHANNEL_ID in CTX.  */
+size_t gsti_channel_get_window_size (gsti_ctx_t ctx, gsti_uint32_t channel_id);
+
+/* Return our maximum packet size for the channel CHANNEL_ID in CTX.  */
+size_t gsti_channel_get_max_packet_size (gsti_ctx_t ctx,
+					 gsti_uint32_t channel_id);
+
+/* Return the maximum packet size of the other end for the channel
+   CHANNEL_ID in CTX.  */
+size_t gsti_channel_get_rec_max_packet_size (gsti_ctx_t ctx,
+					     gsti_uint32_t channel_id);
+
+/* Return the current window size of the other end for the channel
+   CHANNEL_ID in CTX.  */
+size_t gsti_channel_get_rec_window_size (gsti_ctx_t ctx,
+					 gsti_uint32_t channel_id);
+
+
+/* Write AMOUNT bytes of data starting from DATA to the channel
+   CHANNEL_ID in the context CTX.  */
+gsti_error_t gsti_channel_write (gsti_ctx_t ctx, gsti_uint32_t channel_id,
+				 char *data, size_t amount);
+
+/* Increase the window size of the channel CHANNEL_ID in the context
+   CTX by BYTES_TO_ADD bytes.  */
+gsti_error_t gsti_channel_window_adjust (gsti_ctx_t ctx,
+					 gsti_uint32_t channel_id,
+					 gsti_uint32_t bytes_to_add);
+
+
+/* Channel receiver side.  */
+
+typedef gsti_error_t (*gsti_channel_open_cb_t)
+     (gsti_ctx_t ctx, gsti_uint32_t channel_id,
+      void *open_cb_value, unsigned char *request, size_t request_len,
+      gsti_uint32_t *init_window_size, gsti_uint32_t *max_packet_size,
+      unsigned char *reply, size_t *reply_len,
+      gsti_channel_read_cb_t *read_cb, void **read_cb_value,
+      gsti_channel_request_cb_t *request_cb, void **request_cb_value,
+      gsti_channel_win_adj_cb_t *win_adj_cb, void **win_adj_cb_value,
+      gsti_channel_close_cb_t *close_cb, void **close_cb_value);
+
+
+/* Register a new channel type with the type name NAME for the context
+   CTX.  The channel uses the specified open callback with the given
+   hook value.  This allows the other end of a connection to attempt
+   to open a channel with this type.  */
+gsti_error_t
+gsti_channel_add_type (gsti_ctx_t ctx, const char *name,
+		       gsti_channel_open_cb_t open_cb, void *open_cb_value);
 
 
 #ifdef __cplusplus

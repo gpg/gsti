@@ -54,9 +54,6 @@ typedef struct strlist_s
 #define DIM(v) (sizeof(v)/sizeof((v)[0]))
 #endif
 
-typedef byte gsti_byte_t;
-typedef u32 gsti_uint32_t;
-
 #include "bstring.h"
 
 #endif /* GSTI_TYPES_H */
