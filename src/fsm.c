@@ -202,7 +202,7 @@ fsm_server_loop (GSTIHD hd)
 	      switch (hd->pkt.type)
 		{
 		case SSH_MSG_KEXDH_REPLY:
-		  err = logrc (hd, gsti_error (GPG_ERR_PROT_VIOL),
+		  err = logrc (hd, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
 			       "server got KEXDH_REPLY\n");
 		  break;
 
@@ -399,7 +399,7 @@ fsm_client_loop (GSTIHD hd)
 	      switch (hd->pkt.type)
 		{
 		case SSH_MSG_KEXDH_INIT:
-		  err = logrc (hd, gsti_error (GPG_ERR_PROT_VIOL),
+		  err = logrc (hd, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
 			       "client got KEXDH_INIT\n");
 		  break;
 

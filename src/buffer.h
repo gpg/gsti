@@ -41,7 +41,7 @@ void _gsti_buf_putstr (BUFFER ctx, const byte * buf, size_t len);
 byte *_gsti_buf_getstr (BUFFER ctx, size_t * r_n);
 gsti_error_t _gsti_buf_putmpi (BUFFER ctx, gcry_mpi_t a);
 gsti_error_t _gsti_buf_getmpi (BUFFER ctx, gcry_mpi_t * ret_a, size_t * r_n);
-int _gsti_buf_getbstr (BUFFER ctx, BSTRING * r_bstr);
+gsti_error_t _gsti_buf_getbstr (BUFFER ctx, BSTRING * r_bstr);
 void _gsti_buf_putbstr (BUFFER ctx, BSTRING bstr);
 void _gsti_buf_putc (BUFFER ctx, int val);
 int _gsti_buf_getc (BUFFER ctx);

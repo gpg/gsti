@@ -202,7 +202,7 @@ _gsti_buf_putbstr (BUFFER ctx, BSTRING bstr)
 }
 
 
-int
+gsti_error_t
 _gsti_buf_getbstr (BUFFER ctx, BSTRING * r_bstr)
 {
   BSTRING a;
@@ -211,7 +211,7 @@ _gsti_buf_getbstr (BUFFER ctx, BSTRING * r_bstr)
 
   p = _gsti_buf_getstr (ctx, &len);
   if (len < 4)
-    return GSTI_TOO_SHORT;
+    return gsti_error (GPG_ERR_TOO_SHORT);
   a = _gsti_bstring_make (p, len);
   *r_bstr = a;
   _gsti_free (p);

@@ -351,7 +351,7 @@ gsti_set_auth_method (GSTIHD hd, int methd)
       hd->auth.method = methd;
       break;
     default:
-      return gsti_error (GPG_ERR_PROT_VIOL);
+      return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
     }
 
   return 0;

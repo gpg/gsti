@@ -141,28 +141,6 @@ gsti_error_t gsti_err_make_from_errno (gsti_err_source_t source, int err);
 gsti_err_code_t gsti_error_from_errno (int err);
 
 
-enum
-{
-  GSTI_SUCCESS = 0,		/* "no error" */
-  GSTI_GENERAL = 1,		/* catch all the other errors code */
-  GSTI_BUG = 2,			/* internal error */
-  GSTI_INV_ARG = 3,		/* invalid argument */
-  GSTI_NO_DATA = 4,		/* no data to process (eof) */
-  GSTI_NOT_SSH = 5,		/* not connected to a SSH protocol stream */
-  GSTI_PRE_EOF = 6,		/* premature EOF */
-  GSTI_TOO_SHORT = 7,		/* some entity is too short */
-  GSTI_TOO_LARGE = 8,		/* .. too long */
-  GSTI_READ_ERROR = 9,
-  GSTI_WRITE_ERROR = 10,
-  GSTI_INV_PKT = 11,		/* invalid packet */
-  GSTI_INV_OBJ = 12,		/* invalid object */
-  GSTI_INV_MAC = 13,		/* invalid (bad) mac */
-  GSTI_PROT_VIOL = 14,		/* protocol violation detected */
-  GSTI_BAD_SIGNATURE = 15,
-  GSTI_FILE = 16,
-  GSTI_NOT_IMPL = 17,		/* not implemented */
-};
-
 enum gsti_ctl_cmds
 {
   GSTI_DISABLE_LOCKING = 1,

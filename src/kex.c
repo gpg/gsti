@@ -140,7 +140,8 @@ kex_wait_on_version (GSTIHD hd)
 	pos++;
     }
   if (c == -1)
-    return any ? gsti_error (GPG_ERR_NO_DATA) : gsti_error (GPG_ERR_PROT_VIOL);
+    return any ? gsti_error (GPG_ERR_NO_DATA)
+      : gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
 
   /* Store the version string.  */
   memcpy (version, "SSH-", 4);
@@ -152,7 +153,7 @@ kex_wait_on_version (GSTIHD hd)
       version[pos] = c;
     }
   if (c == -1)
-    return gsti_error (GPG_ERR_PROT_VIOL);
+    return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
   if (c != '\n')
     return gsti_error (GPG_ERR_TOO_LARGE);
   if (version[pos - 1] == '\r')
@@ -362,7 +363,7 @@ parse_msg_kexdh_init (MSG_kexdh_init * kexdh, const BUFFER buf)
   /* A value which is not in the range [1, p-1] is considered as a
      protocol violation.  */
   if ((n - 4) > sizeof diffie_hellman_group1_prime)
-    return gsti_error (GPG_ERR_PROT_VIOL);
+    return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
 
   /* Make sure the message length matches.  */
   if (_gsti_buf_getlen (buf))
@@ -390,7 +391,7 @@ build_msg_kexdh_init (MSG_kexdh_init * kexdh, struct packet_buffer_s *pkt)
     goto leave;
   len = _gsti_buf_getlen (buf);
   if (len > pkt->size - 1)
-    return GSTI_TOO_LARGE;
+    return gsti_error (GPG_ERR_TOO_LARGE);
   pkt->type = SSH_MSG_KEXDH_INIT;
   pkt->payload_len = len;
   memcpy (pkt->payload, _gsti_buf_getptr (buf), len);
@@ -438,7 +439,7 @@ parse_msg_kexdh_reply (MSG_kexdh_reply * dhr, BUFFER buf)
   /* A value which is not in the range [1, p-1] is considered as a
      protocol violation.  */
   if ((n - 4) > sizeof diffie_hellman_group1_prime)
-    return gsti_error (GPG_ERR_PROT_VIOL);
+    return gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
 
   err = _gsti_buf_getbstr (buf, &dhr->sig_h);
   if (err)
@@ -1317,7 +1318,7 @@ kex_proc_service_accept (GSTIHD hd)
   res = cmp_bstring (hd->service_name, svcname);
   _gsti_free (svcname);
   if (res)
-    return _gsti_log_err (hd, gsti_error (GPG_ERR_PROT_VIOL),
+    return _gsti_log_err (hd, gsti_error (GPG_ERR_PROTOCOL_VIOLATION),
 			 "service name does not match requested one\n");
   return 0;
 }
@@ -1457,7 +1458,7 @@ kex_proc_gex_request (GSTIHD hd)
     return err;
 
   if (gex.n < gex.min || gex.n > gex.max)
-    return GSTI_INV_PKT;
+    return gsti_error (GPG_ERR_INV_PACKET);
   if (gex.max > MAX_GROUPSIZE)
     gex.max = MAX_GROUPSIZE;
   if (gex.n > gex.max)

@@ -125,7 +125,7 @@ myread (GSTIHD hd, void *buffer, size_t * nbytes)
   if (n == -1)
     {
       fprintf (stderr, PGMNAME "myread: error: %s\n", strerror (errno));
-      return GSTI_READ_ERROR;
+      return -1;
     }
   /*dump_hexbuf( stderr, "myread: ", buffer, n ); */
   *nbytes = n;
@@ -148,7 +148,7 @@ mywrite (GSTIHD hd, const void *buffer, size_t nbytes)
       if (n == -1)
 	{
 	  fprintf (stderr, PGMNAME "mywrite: error: %s\n", strerror (errno));
-	  return GSTI_WRITE_ERROR;
+	  return -1;
 	}
       nbytes -= n;
       p += n;

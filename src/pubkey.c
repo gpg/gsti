@@ -433,11 +433,11 @@ pkalgo_get_nkey (int algid, const char *name)
 GSTI_KEY
 _gsti_key_fromblob (BSTRING blob)
 {
+  gsti_error_t err = 0;
   BUFFER buf;
   GSTI_KEY pk = NULL;
   byte *p;
   size_t n, i;
-  int rc = 0;
 
   if (blob->len == 4)
     return NULL;
@@ -447,24 +447,25 @@ _gsti_key_fromblob (BSTRING blob)
   if (n != 7 || strcmp (p, "ssh-dss"))
     {
       _gsti_free (p);
-      rc = GSTI_BUG;
+      err = gsti_error (GPG_ERR_BUG);
       goto leave;		/* not supported */
     }
   pk = _gsti_xcalloc (1, sizeof *pk);
   pk->secret = 0;
   for (i = 0; i < pkalgo_get_nkey (0, p); i++)
     {
-      rc = _gsti_buf_getmpi (buf, &pk->key[i], &n);
-      if (rc)
+      err = _gsti_buf_getmpi (buf, &pk->key[i], &n);
+      if (err)
 	break;
     }
   _gsti_free (p);
 leave:
   _gsti_buf_free (buf);
-  if (!rc)
-    pk->type = SSH_PK_DSS;
-  if (!rc)
-    pk->nkey = 4;
+  if (!err)
+    {
+      pk->type = SSH_PK_DSS;
+      pk->nkey = 4;
+    }
   return pk;
 }
 
