@@ -193,7 +193,9 @@ gsti_buf_putstr (gsti_buffer_t buf, const char *data, size_t amount)
 gpg_error_t
 gsti_buf_putbstr (gsti_buffer_t buf, gsti_bstr_t bstr)
 {
-  return gsti_buf_putstr (buf, gsti_bstr_data (bstr), gsti_bstr_length (bstr));
+  return gsti_buf_putstr (buf,
+                          (const char*)gsti_bstr_data (bstr),
+                          gsti_bstr_length (bstr));
 }
 
 
@@ -216,7 +218,7 @@ gsti_buf_putmpi (gsti_buffer_t buf, gcry_mpi_t mpi)
 
 /* Append AMOUNT bytes starting from DATA to the buffer BUF.  */
 gsti_error_t
-gsti_buf_putraw (gsti_buffer_t buf, const char *data, size_t amount)
+gsti_buf_putraw (gsti_buffer_t buf, const void *data, size_t amount)
 {
   gsti_error_t err;
 
@@ -426,7 +428,7 @@ gsti_buf_getmpi (gsti_buffer_t buf, gcry_mpi_t *r_val)
    that data.  Returns the GPG_ERR_INV_PACKET error code if there are
    not AMOUNT bytes available in the buffer.  */
 gsti_error_t
-gsti_buf_getraw (gsti_buffer_t buf, char *data, size_t amount)
+gsti_buf_getraw (gsti_buffer_t buf, void *data, size_t amount)
 {
   if (amount > gsti_buf_readable (buf))
     return gsti_error (GPG_ERR_INV_PACKET);

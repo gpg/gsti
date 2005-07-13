@@ -264,7 +264,8 @@ main (int argc, char **argv)
   for (i = 0; i < 2; i++)
     {
       memset (&pkt, 0, sizeof pkt);
-      pkt.data = "\xf0\x01\x00\x00\x00\x04" "hallo" "\x00\x00\x00\x00";
+      pkt.data = ((const unsigned char*)
+                  "\xf0\x01\x00\x00\x00\x04" "hallo" "\x00\x00\x00\x00");
       pkt.datalen = 15;
       err = gsti_put_packet (ctx, &pkt);
       log_rc (err, "put_packet");

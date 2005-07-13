@@ -78,8 +78,8 @@ gsti_error_t _gsti_write_stream_new (write_stream_t * r_shd,
 void _gsti_write_stream_free (write_stream_t a);
 
 int _gsti_stream_putbyte (write_stream_t a, int c);
-gsti_error_t _gsti_stream_writen (write_stream_t a, const byte * buffer,
-				  size_t nbytes);
+gsti_error_t _gsti_stream_writen (write_stream_t a, 
+                                  const void *buffer, size_t nbytes);
 gsti_error_t _gsti_stream_flush (write_stream_t a);
 
 

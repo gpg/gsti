@@ -41,9 +41,9 @@
  * return a STRLIST with these algorithms.
  */
 gsti_strlist_t
-_gsti_algolist_parse (const byte * string, size_t length)
+_gsti_algolist_parse (const char * string, size_t length)
 {
-  const byte *comma, *s;
+  const char *comma, *s;
   size_t n;
   gsti_strlist_t item, list, *listp;
 
@@ -55,7 +55,8 @@ _gsti_algolist_parse (const byte * string, size_t length)
       n = comma ? (comma - string) : length;
       if (n)
 	{
-	  for (s = string; n && *s && isspace (*s); n--, s++)
+	  for (s = string; n && *s && isspace (*(const unsigned char*)s);
+               n--, s++)
 	    ;
 	  if (*s && n)
 	    {			/* we have at least one non-space charcater */
@@ -63,7 +64,7 @@ _gsti_algolist_parse (const byte * string, size_t length)
 	      item->next = NULL;
 	      memcpy (item->d, string, n);
 	      /* and trim trailing spaces */
-	      for (n--; n && isspace (item->d[n]); n--)
+	      for (n--; n && isspace ((unsigned int)item->d[n]); n--)
 		;
 	      item->d[++n] = 0;
 	      *listp = item;
@@ -137,7 +138,7 @@ _gsti_algolist_find (gsti_strlist_t list, const char *algo)
 void
 _gsti_print_string (gsti_ctx_t ctx, const char *string, size_t n)
 {
-  const byte *p = string;
+  const unsigned char *p = (const unsigned char*)string;
 
   for (; n; n--, p++)
     {
@@ -199,11 +200,11 @@ _gsti_dump_object (gsti_ctx_t ctx,
     case TYPE_MPI:
       {
 	gcry_mpi_t a = opaque;
-	byte buf[400];
+	unsigned char buf[400];
 	size_t n;
 
 	if (gcry_mpi_print (GCRYMPI_FMT_HEX, buf, sizeof buf, &n, a))
-	  strcpy (buf, "[can't print value]");
+	  strcpy ((char*)buf, "[can't print value]");
 	_gsti_log_debug (ctx, "%s%s\n", prefix, buf);
 	break;
       }

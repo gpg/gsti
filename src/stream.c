@@ -188,10 +188,10 @@ _gsti_stream_flush (write_stream_t a)
 /* Write NBYTES from buffer. If BUFFER is NULL the strong random bytes
    are written.  Returns 0 on success or an error code.  */
 gsti_error_t
-_gsti_stream_writen (write_stream_t a, const byte * buffer, size_t nbytes)
+_gsti_stream_writen (write_stream_t a, const void *buffer, size_t nbytes)
 {
   gsti_error_t err = 0;
-  const byte *s = buffer;
+  const unsigned char *s = buffer;
 
   if (buffer)
     {

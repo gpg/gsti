@@ -779,7 +779,7 @@ _gsti_key_getblob (gsti_key_t pk, gsti_bstr_t * r_blob)
   gsti_buffer_t buf;
   gsti_bstr_t a;
   gsti_error_t err;
-  byte *p;
+  unsigned char *p;
   size_t n;
 
   *r_blob = NULL;
@@ -795,7 +795,7 @@ _gsti_key_getblob (gsti_key_t pk, gsti_bstr_t * r_blob)
     return err;
   err = _gsti_ssh_get_pkname (pk->type, 0, &p, &n);
   if (!err)
-    err = gsti_buf_putstr (buf, p, n);
+    err = gsti_buf_putstr (buf, (char*)p, n);
   if (err)
     {
       gsti_buf_free (buf);
@@ -954,7 +954,7 @@ _gsti_sig_encode (gsti_key_t sk,
   gcry_mpi_t sig[2];
   gsti_buffer_t buf;
   gsti_bstr_t a;
-  byte *p = NULL, buffer[256];
+  unsigned char *p = NULL, buffer[256];
   size_t n, n2;
 
   *r_sig = NULL;
@@ -977,7 +977,7 @@ _gsti_sig_encode (gsti_key_t sk,
       free_mpi_array (sig, 2);
       return err;
     }
-  err = gsti_buf_putstr (buf, p, n);
+  err = gsti_buf_putstr (buf, (char*)p, n);
   _gsti_free (p);
   p = NULL;
   if (err)
@@ -994,14 +994,14 @@ _gsti_sig_encode (gsti_key_t sk,
         err = gcry_mpi_print (GCRYMPI_FMT_USG, buffer + n, sizeof buffer - 1,
                               &n2, sig[1]);
       if (!err)
-	err = gsti_buf_putstr (buf, buffer, n + n2);
+	err = gsti_buf_putstr (buf, (char*)buffer, n + n2);
     }
   else
     {
       err = gcry_mpi_print (GCRYMPI_FMT_USG, buffer, sizeof buffer-1,
                             &n, sig[0]);
       if (!err)
-        err = gsti_buf_putstr (buf, buffer, n);
+        err = gsti_buf_putstr (buf, (char*)buffer, n);
       sig[1] = NULL;
     }
   

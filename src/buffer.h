@@ -88,8 +88,8 @@ gpg_error_t gsti_buf_putbstr (gsti_buffer_t buf, gsti_bstr_t bstr);
 gpg_error_t gsti_buf_putmpi (gsti_buffer_t buf, gcry_mpi_t mpi);
 
 /* Append AMOUNT bytes starting from DATA to the buffer BUF.  */
-gpg_error_t gsti_buf_putraw (gsti_buffer_t buf, const char *data,
-			      size_t amount);
+gpg_error_t gsti_buf_putraw (gsti_buffer_t buf, const void *data,
+                             size_t amount);
 
 
 /* Functions for reading from the buffer.  These functions usually
@@ -151,7 +151,7 @@ gpg_error_t gsti_buf_getmpi (gsti_buffer_t buf, gcry_mpi_t *r_val);
    BUF in DATA, and increase the offset to point to the byte following
    that data.  Returns the GPG_ERR_INV_PACKET error code if there are
    not AMOUNT bytes available in the buffer.  */
-gpg_error_t gsti_buf_getraw (gsti_buffer_t buf, char *data, size_t amount);
+gpg_error_t gsti_buf_getraw (gsti_buffer_t buf, void *data, size_t amount);
 
 
 #endif	/* GSTI_BUFFER_H */

@@ -73,7 +73,7 @@ wait_connection (int * listen_fd, int * conn_fd)
 {
   struct sockaddr_in name;
   struct sockaddr_in peer_name;
-  int namelen;
+  socklen_t namelen;
   int one = 1;
 
   if (*listen_fd != -1)

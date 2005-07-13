@@ -1032,7 +1032,7 @@ gsti_channel_open (gsti_ctx_t ctx, gsti_uint32_t *channel_id,
    CHANNEL_ID in the context CTX.  */
 gsti_error_t
 gsti_channel_write (gsti_ctx_t ctx, gsti_uint32_t channel_id,
-		    const char *data, size_t amount)
+		    const void *data, size_t amount)
 {
   gsti_error_t err;
   gsti_channel_t channel = channel_lookup (ctx, channel_id);

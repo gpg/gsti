@@ -41,10 +41,12 @@
 static void
 print_fpr (unsigned char *fpr, int n)
 {
-  unsigned char *fprhex;
+  char *fprhex;
   int i;
 
   fprhex = calloc (1, 128);
+  if (!fprhex)
+    abort ();
   for (i = 0; i < n; i++)
     {
       int c = (i != (n - 1)) ? ':' : ' ';

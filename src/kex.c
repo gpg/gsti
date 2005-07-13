@@ -359,14 +359,18 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
     goto leave;
 
   /* Make sure that the reserved value is zero.  */
-  err = gsti_buf_getuint32 (buf, &val);
-  if (err)
-    goto leave;
-  if (val)
-    {
-      err = gsti_error (GPG_ERR_INV_PACKET);
+  {
+    gsti_uint32_t aval;
+
+    err = gsti_buf_getuint32 (buf, &aval);
+    if (err)
       goto leave;
-    }
+    if (aval)
+      {
+        err = gsti_error (GPG_ERR_INV_PACKET);
+        goto leave;
+      }
+  }
 
   /* Make sure the message length matches.  */
   if (gsti_buf_readable (buf))
@@ -896,12 +900,18 @@ construct_keys (gsti_ctx_t ctx)
   maclen = ctx->mac_len;
   keylen = gcry_cipher_get_algo_keylen (ctx->ciph_algo);
 
-  ctx->kex.iv_a = construct_one_key (ctx, md, algo, "\x41", blksize);
-  ctx->kex.iv_b = construct_one_key (ctx, md, algo, "\x42", blksize);
-  ctx->kex.key_c = construct_one_key (ctx, md, algo, "\x43", keylen);
-  ctx->kex.key_d = construct_one_key (ctx, md, algo, "\x44", keylen);
-  ctx->kex.mac_e = construct_one_key (ctx, md, algo, "\x45", maclen);
-  ctx->kex.mac_f = construct_one_key (ctx, md, algo, "\x46", maclen);
+  ctx->kex.iv_a = construct_one_key (ctx, md, algo,
+                                     (const unsigned char*)"\x41", blksize);
+  ctx->kex.iv_b = construct_one_key (ctx, md, algo,
+                                     (const unsigned char*)"\x42", blksize);
+  ctx->kex.key_c = construct_one_key (ctx, md, algo,
+                                      (const unsigned char*)"\x43", keylen);
+  ctx->kex.key_d = construct_one_key (ctx, md, algo,
+                                      (const unsigned char*)"\x44", keylen);
+  ctx->kex.mac_e = construct_one_key (ctx, md, algo,
+                                      (const unsigned char*)"\x45", maclen);
+  ctx->kex.mac_f = construct_one_key (ctx, md, algo,
+                                      (const unsigned char*)"\x46", maclen);
   gcry_md_close (md);
 
   _gsti_dump_hexbuf (ctx, "key A=", gsti_bstr_data (ctx->kex.iv_a),

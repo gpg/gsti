@@ -30,7 +30,7 @@ typedef struct gsti_bstr *gsti_bstr_t;
 /* Create a new binary string from AMOUNT bytes starting from DATA,
    and return it in BSTR.  */
 gpg_error_t gsti_bstr_make (gsti_bstr_t *bstr,
-			    const gsti_byte_t *data, size_t amount);
+			    const void *data, size_t amount);
 
 /* Free the binary string BSTR.  */
 void gsti_bstr_free (gsti_bstr_t bstr);
@@ -39,7 +39,7 @@ void gsti_bstr_free (gsti_bstr_t bstr);
 size_t gsti_bstr_length (gsti_bstr_t bstr);
 
 /* Return the data of the binary string BSTR.  */
-gsti_byte_t *gsti_bstr_data (gsti_bstr_t bstr);
+void *gsti_bstr_data (gsti_bstr_t bstr);
 
 
 #endif	/* GSTI_BSTRING_H */

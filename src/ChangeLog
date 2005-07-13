@@ -1,3 +1,16 @@
+2005-07-13  Werner Koch  <wk@g10code.com>
+
+	* Makefile.am (libgsti_la_SOURCES): Include auth.h
+
+	* utils.c (_gsti_algolist_parse): Changed STRING to a plain char*.
+	* gsti.h (gsti_channel_read_cb_t, gsti_channel_request_cb_t): Use
+	void* for DATA.
+	* channel.c (gsti_channel_write): Ditto.
+	* buffer.c (gsti_buf_getraw, gsti_buf_putraw): Ditto.
+	* stream.c (gsti_stream_writen): Ditto.
+	* bstring.c (gsti_bstr_make): Ditto.
+	(gsti_bstr_data): Return a void*.
+
 2004-07-20  Marcus Brinkmann  <marcus@g10code.de>
 
 	* gsti.h (gsti_set_readfnc, gsti_read, gsti_write): Prototypes

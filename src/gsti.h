@@ -50,7 +50,7 @@ extern "C"
    autoconf (using the AM_PATH_GSTI macro) check that this header
    matches the installed library.
 
-   NOTE: Please do not chnange the formatting of this line; configure
+   NOTE: Please do not change the formatting of this line; configure
    may set it to the correct version.  */
 #define GSTI_VERSION "0.3.0-cvs"
 
@@ -371,12 +371,12 @@ void gsti_auth_free (gsti_auth_t ath);
 /* This callback is invoked when data arrives on the channel.  */
 typedef void (*gsti_channel_read_cb_t)
      (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *read_cb_value,
-      char *data, size_t amount);
+      void *data, size_t amount);
 
 /* This callback is invoked when a request is made.  */
 typedef int (*gsti_channel_request_cb_t)
      (gsti_ctx_t ctx, gsti_uint32_t channel_id, void *request_cb_value,
-      gsti_uint32_t request_type, char *data, size_t amount);
+      gsti_uint32_t request_type, void *data, size_t amount);
 
 /* This callback is invoked when the window for sending data increases
    in size.  */
@@ -456,7 +456,7 @@ size_t gsti_channel_get_rec_window_size (gsti_ctx_t ctx,
 /* Write AMOUNT bytes of data starting from DATA to the channel
    CHANNEL_ID in the context CTX.  */
 gsti_error_t gsti_channel_write (gsti_ctx_t ctx, gsti_uint32_t channel_id,
-				 const char *data, size_t amount);
+				 const void *data, size_t amount);
 
 /* Increase the window size of the channel CHANNEL_ID in the context
    CTX by BYTES_TO_ADD bytes.  */
