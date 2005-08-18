@@ -7,7 +7,7 @@ dnl Autoconf macros for libgsti
 dnl AM_PATH_GSTI([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND ]]])
 dnl Test for gsti, and define GSTI_CFLAGS and GSTI_LIBS
 dnl
-AC_DEFUN(AM_PATH_GSTI,
+AC_DEFUN([AM_PATH_GSTI],
 [dnl
 dnl Get the cflags and libraries from the gsti-config script
 dnl
@@ -152,4 +152,3 @@ main ()
   rm -f conf.gstitest
 ])
 
-dnl *-*wedit:notab*-*  Please keep this as the last line.

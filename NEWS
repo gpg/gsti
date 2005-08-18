@@ -1,4 +1,4 @@
-Noteworthy changes in version 0.3.0 (unreleased)
+Noteworthy changes in version 0.3.0 (2005-08-18)
 ------------------------------------------------
 
 * Now using the libgcrypt 1.2 API and libgpg-error

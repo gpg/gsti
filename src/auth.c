@@ -315,10 +315,11 @@ init_auth_request (MSG_auth_request * ath, const char *user, int false,
 static void
 dump_auth_request (gsti_ctx_t ctx, MSG_auth_request * ath)
 {
-  /* FIXME: What we really want here are format extensions for GIO, so
-     that we can dump objects by using a special format spec, eg %B,
-     for a binary string.  This will also preserve the log level etc.  */
-#if WE_EVENTUALLY_HAVE_A_FEATURE_COMPLETE_GIO
+  /* FIXME: What we really want here are format extensions for
+     libestreamGIO, so that we can dump objects by using a special
+     format spec, eg %B, for a binary string.  This will also preserve
+     the log level etc.  */
+#if WE_EVENTUALLY_HAVE_A_FEATURE_COMPLETE_LIBESTREAM
   _gsti_log_debug (ctx, "MSG_auth_request:\n");
   _gsti_log_debug (ctx, "user: %B\n", ath->user);
   _gsti_log_debug (ctx, "service: %B\n", ath->svcname);

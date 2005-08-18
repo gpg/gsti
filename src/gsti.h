@@ -22,11 +22,12 @@
 #ifndef _GSTI_H
 #define _GSTI_H
 
+#include <stdio.h>
 #include <stdarg.h>
-
 #include <gpg-error.h>
+#include <gcrypt.h>
 
-
+
 #ifdef __GNUC__
 #define _GSTI_INLINE __inline__
 #elif __STDC_VERSION__ >= 199901L
@@ -52,12 +53,10 @@ extern "C"
 
    NOTE: Please do not change the formatting of this line; configure
    may set it to the correct version.  */
-#define GSTI_VERSION "0.3.0-cvs"
+#define GSTI_VERSION "0.3.0"
 
-
+
 /* I/O subsystem.  For now just a wrapper around the system I/O.  */
-#include <stdio.h>
-
 typedef FILE *gio_stream_t;
 
 
@@ -233,7 +232,6 @@ typedef struct gsti_key_s *gsti_key_t;
 /* Hmmm, we depend on Libgcrypt here.  Should we really do this or
    better change the callback typedef to take canonical encoded
    S-expressions? */
-#include <gcrypt.h>
 typedef gsti_error_t (*gsti_sign_fnc_t) (void *, gcry_sexp_t *result,
                                          gcry_sexp_t data, gcry_sexp_t skey);
 
@@ -473,7 +471,7 @@ gsti_error_t gsti_channel_eof (gsti_ctx_t ctx, gsti_uint32_t channel_id);
 /* Send request to close the channel.  */
 gsti_error_t gsti_channel_close (gsti_ctx_t ctx, gsti_uint32_t channel_id);
 
-
+
 /* Channel receiver side.  */
 
 typedef gsti_error_t (*gsti_channel_open_cb_t)
@@ -496,12 +494,8 @@ gsti_error_t
 gsti_channel_add_type (gsti_ctx_t ctx, const char *name,
 		       gsti_channel_open_cb_t open_cb, void *open_cb_value);
 
-
+
 #ifdef __cplusplus
-#if 0
-{				/*(keep Emacs' auto-indent happy) */
-#endif
 }
 #endif
-
 #endif	/* _GSTI_H */

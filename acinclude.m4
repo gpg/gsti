@@ -5,7 +5,7 @@ dnl (this is easier than to have a .in file just for one substitution)
 dnl We must use a temp file in the current directory because make distcheck 
 dnl install all sourcefiles RO.
 dnl
-AC_DEFUN(GNUPG_FIX_HDR_VERSION,
+AC_DEFUN([GNUPG_FIX_HDR_VERSION],
   [ sed "s/^#define $2 \".*/#define $2 \"$VERSION\"/" $srcdir/$1 > fixhdr.tmp
     if cmp -s $srcdir/$1 fixhdr.tmp 2>/dev/null; then
         rm -f fixhdr.tmp

@@ -20,12 +20,12 @@
 #
 # (Process this file with autoconf to produce a configure script.)
 AC_PREREQ(2.59)
-min_automake_version="1.7.9"
+min_automake_version="1.9.3"
 
 # Version number: Remember to change it immediately *after* a release
 # but remove a "-cvs" prefix right *before* a release and append it
 # soon later.
-AC_INIT(gsti, 0.3.0-cvs, gcrypt-devel@gnupg.org)
+AC_INIT(gsti, 0.3.0, gcrypt-devel@gnupg.org)
 
 # LT Version numbers, remember to change them just *before* a release.
 #   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
@@ -33,7 +33,7 @@ AC_INIT(gsti, 0.3.0-cvs, gcrypt-devel@gnupg.org)
 #   (No interfaces changed:                   REVISION++)
 LIBGSTI_LT_CURRENT=0
 LIBGSTI_LT_AGE=0
-LIBGSTI_LT_REVISION=0
+LIBGSTI_LT_REVISION=1
 
 # If the API is changed in an incompatible way: increment the next counter.
 LIBGSTI_CONFIG_API_VERSION=1
@@ -41,10 +41,10 @@ LIBGSTI_CONFIG_API_VERSION=1
 #
 # Required library versions.
 #
-NEED_GPG_ERROR_VERSION=0.6
+NEED_GPG_ERROR_VERSION=1.0
 
 NEED_LIBGCRYPT_API=1
-NEED_LIBGCRYPT_VERSION=1.1.93
+NEED_LIBGCRYPT_VERSION=1.2.0
 
 
 #

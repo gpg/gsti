@@ -1,14 +1,14 @@
+GSTI's ToDo list                                       -*- outline -*-
 
-    * find a way to handle the first packet to establish a connection.
-      2002-10-01: partly done. but it's not really clean.
+* Find a way to handle the first packet to establish a connection.
+  2002-10-01: partly done. but it's not really clean.
       
-    * implement all code for sections which are marked with 'fixme' or 'todo'
+* Implement all code for sections which are marked with 'fixme' or 'todo'
 
-    * we need a way to merge BSTRING and BUFFER together. They do the
-      the same things so they are redundant.
+* We need a way to merge BSTRING and BUFFER together. 
+  They do the same things so they are redundant.
 
-    * implement the rest of the compression code in packet.c
+* implement the rest of the compression code in packet.c
 
-After the code base is somewhat stable
-
-    * integrate the SecureFTP code.
+* After the code base is somewhat stable
+** Integrate SecureFTP code.
