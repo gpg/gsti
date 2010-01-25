@@ -1,7 +1,7 @@
-/* gsti.h -  GNU Secure Transport Initiative (gsti)
+/* gsti.h -  GNU Secure Transport Initiative (gsti)       -*- c -*-
    Copyright (C) 1999, 2000 Werner Koch
    Copyright (C) 2002 Timo Schulz
-   Copyright (C) 2004 g10 Code GmbH
+   Copyright (C) 2004, 2010 g10 Code GmbH
 
    This file is part of GSTI.
 
@@ -16,8 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA  */
+   along with this program; if not, see <http://www.gnu.org/licenses/>.  */
 
 #ifndef _GSTI_H
 #define _GSTI_H

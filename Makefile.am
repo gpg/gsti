@@ -24,7 +24,7 @@ AUTOMAKE_OPTIONS = dist-bzip2
 
 EXTRA_DIST = README-alpha autogen.sh
 
-SUBDIRS = src examples tests doc
+SUBDIRS = m4 src examples tests doc
 
 
 dist-hook:

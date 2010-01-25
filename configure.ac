@@ -15,22 +15,29 @@
 # License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
+# along with this program; if not, see <http://www.gnu.org/licenses/>.
 #
 # (Process this file with autoconf to produce a configure script.)
 AC_PREREQ(2.59)
-min_automake_version="1.9.3"
+min_automake_version="1.10"
 
-# Version number: Remember to change it immediately *after* a release
-# but remove a "-cvs" prefix right *before* a release and append it
-# soon later.
-AC_INIT(gsti, 0.3.0, gcrypt-devel@gnupg.org)
+# Remember to change the version number immediately *after* a release.
+# Set my_issvn to "yes" for non-released code.  Remember to run an
+# "svn up" and "autogen.sh" right before creating a distribution.
+m4_define([my_version], [0.3.0])
+m4_define([my_issvn], [yes])
+
+m4_define([svn_revision], m4_esyscmd([printf "%d" $(svn info 2>/dev/null \
+          | sed -n '/^Revision:/ s/[^0-9]//gp'|head -1)]))
+AC_INIT([gsti], 
+        [my_version[]m4_if(my_issvn,[yes],[-svn[]svn_revision])],
+        [bug-libgcrypt@gnupg.org])
 
 # LT Version numbers, remember to change them just *before* a release.
-#   (Interfaces removed:    CURRENT++, AGE=0, REVISION=0)
-#   (Interfaces added:      CURRENT++, AGE++, REVISION=0)
-#   (No interfaces changed:                   REVISION++)
+#   (Code changed:			REVISION++)
+#   (Interfaces added/removed/changed:	CURRENT++, REVISION=0)
+#   (Interfaces added:			AGE++)
+#   (Interfaces removed:		AGE=0)
 LIBGSTI_LT_CURRENT=0
 LIBGSTI_LT_AGE=0
 LIBGSTI_LT_REVISION=1
@@ -44,7 +51,7 @@ LIBGSTI_CONFIG_API_VERSION=1
 NEED_GPG_ERROR_VERSION=1.0
 
 NEED_LIBGCRYPT_API=1
-NEED_LIBGCRYPT_VERSION=1.2.0
+NEED_LIBGCRYPT_VERSION=1.4.0
 
 
 #
@@ -53,9 +60,10 @@ NEED_LIBGCRYPT_VERSION=1.2.0
 PACKAGE=$PACKAGE_NAME
 VERSION=$PACKAGE_VERSION
 
-AC_CONFIG_SRCDIR([src/gsti.h])
-AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
+AC_CONFIG_SRCDIR([src/gsti.h.in])
+AM_INIT_AUTOMAKE([])
 AM_CONFIG_HEADER(config.h)
+AC_CONFIG_MACRO_DIR([m4])
 
 AC_SUBST(LIBGSTI_LT_CURRENT)
 AC_SUBST(LIBGSTI_LT_AGE)
@@ -71,8 +79,6 @@ AM_MAINTAINER_MODE
 
 have_gpg_error=no
 have_libgcrypt=no 
-
-
 
 
 #
@@ -106,7 +112,9 @@ AC_PROG_MAKE_SET
 
 AC_C_INLINE
 
-AM_PROG_LIBTOOL
+LT_PREREQ([2.2.6])
+LT_INIT([win32-dll disable-shared])
+LT_LANG([Windows Resource])
 
 if test "$GCC" = yes; then
     CFLAGS="$CFLAGS -Wall -Wcast-align -Wshadow -Wstrict-prototypes"
@@ -153,12 +161,6 @@ AM_PATH_LIBGCRYPT("$NEED_LIBGCRYPT_API:$NEED_LIBGCRYPT_VERSION",
 #
 
 #
-# Make the version number in src/gsti.h is the same as the one here.
-# (this is easier than to have a .in file just for one substitution)
-#
-GNUPG_FIX_HDR_VERSION([src/gsti.h], GSTI_VERSION)
-
-#
 # Stuff to be used is gsti-config
 #
 LIBGSTI_CONFIG_LIBS="-lgsti"
@@ -179,7 +181,7 @@ if test "$have_gpg_error" = "no"; then
 ***  
 *** You need libgpg-error to build this program.
 **  This library is for example available at
-***   ftp://ftp.gnupg.org/pub/gcrypt/alpha/libgpg-error
+***   ftp://ftp.gnupg.org/gcrypt/libgpg-error
 *** (at least version $NEED_GPG_ERROR_VERSION is required.)
 ***]])
 fi
@@ -189,7 +191,7 @@ if test "$have_libgcrypt" = "no"; then
 ***  
 *** You need libgcrypt to build this program.
 **  This library is for example available at
-***   ftp://ftp.gnupg.org/pub/gcrypt/alpha/libgcrypt/
+***   ftp://ftp.gnupg.org/gcrypt/libgcrypt
 *** (at least version $NEED_LIBGCRYPT_VERSION using API $NEED_LIBGCRYPT_API) is required.)
 ***]])
 fi
@@ -207,7 +209,9 @@ fi
 #
 AC_CONFIG_FILES([
 Makefile
+m4/Makefile
 src/Makefile
+src/gsti.h
 src/gsti-config
 examples/Makefile
 tests/Makefile

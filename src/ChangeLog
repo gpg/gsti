@@ -1,6 +1,10 @@
+2010-01-25  Werner Koch  <wk@g10code.com>
+
+	* gsti.h: Rename to gsti.h.in.
+
 2005-07-13  Werner Koch  <wk@g10code.com>
 
-	* Makefile.am (libgsti_la_SOURCES): Include auth.h
+	* Makefile.am (libgsti_la_SOURCES): Include auth.h.
 
 	* utils.c (_gsti_algolist_parse): Changed STRING to a plain char*.
 	* gsti.h (gsti_channel_read_cb_t, gsti_channel_request_cb_t): Use
@@ -47,7 +51,7 @@
 	(_gsti_packet_read): Prototype removed.
 	(_gsti_packet_write): Add new argument PKT to prototype.
 	(_gsti_handle_packet_data, _gsti_write_packet_from_buffer): New
-	prototypes.	
+	prototypes.
 	* packet.c: Include <errno.h>.
 	(generate_mac): Accept new argument PKT.  Use it instead of the
 	packet in CTX.
@@ -65,7 +69,7 @@
 	SSH_MSG_CHANNEL_END, SSH_MSG_RESERVED_BEGIN, SSH_MSG_RESERVED_END,
 	SSH_MSG_USER_BEGIN and SSH_MSG_USER_END.
 	* utils.h: Include <sys/types.h>, "bstring.h" and "memory.h".
-	
+
 2004-07-19  Werner Koch  <wk@gnupg.org>
 
 	Some logging cleanups.
@@ -74,7 +78,7 @@
 	* utils.c (_gsti_dump_object): Use log_debug and not log_info. Add
 	new CTX arg.  Changed all caller to apss a context.
 	(_gsti_print_string): Add arg CTX.  Changed all callers.
-	* packet.c (_gsti_packet_read, _gsti_packet_write) 
+	* packet.c (_gsti_packet_read, _gsti_packet_write)
 	(print_disconnect_msg): Reformat messages.  Add new arg CTX.
 	(print_debug_msg): Ditto.
 	* gsti.h: New log level GSTI_LOG_ERROR.
@@ -91,12 +95,12 @@
 
 2007-07-14  Timo Schulz  <twoaday@g10code.de>
 
-	* auth.c: Return 'unexpected' and not 'bug' when the packet 
+	* auth.c: Return 'unexpected' and not 'bug' when the packet
 	type is	that the required one.
 	(dump_auth_banner): New.
 	(build_auth_banner): Insert dummy byte for packet type.
 	* fsm.c (fsm_client_loop): For USERAUTH_BANNER use cb type 1.
-	
+
 2003-07-13  Timo Schulz  <twoaday@g10code.de>
 
 	* packet.h (MSG_auth_request): s/false/chk_key.
@@ -114,7 +118,7 @@
 	* bstring.c (gsti_bstr_length, gsti_bstr_data): Allow for NULL
 	pointers.
 	* main.c (gsti_set_auth_banner): New.
-	
+
 2004-07-10  Timo Schulz  <twoaday@g10code.de>
 
 	* gsti.h (gsti_auth_cb_t): New.
@@ -126,7 +130,7 @@
 	(handle_auth_cb): New.
 	* auth.c (gsti_auth_free): Free key blob.
 	(_gsti_auth_proc_init_packet): Store keyblob.
-	
+
 2004-07-10  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (gsti_key_fingerprint): Use _gsti_xmalloc.
@@ -139,7 +143,7 @@
 	(read_bstring): Return an error code.
 	(auth_proc_second_packet): Merged with...
 	(auth_proc_init_packet): ...this function.
-	
+
 2004-07-09  Marcus Brinkmann  <marcus@g10code.de>
 
 	* ssh.h (ssh_msg_id_t): Add SSH_MSG_KEX_DH_GEX_REQUEST_OLD.
@@ -158,7 +162,7 @@
 	* types.h (STRLIST): Renamed to...
 	(gsti_strlist_t): ...this.
 	* gsti.h: Use gcrypt digest constants.
-	
+
 2004-07-08  Timo Schulz  <ts@g10code.de>
 
 	* fsm.c (fsm_server_loop): Return invalid packet if
@@ -172,12 +176,12 @@
 	(gsti_set_kex_prefs): New.
 	* api.h (gsti_ctx_t): Use ushort for the prefs since some
 	cipher id's are > 256 and thus larger than a byte.
-	
+
 2004-07-07  Timo Schulz  <ts@g10code.de>
 
 	* keyblob.c: Removed from the repository.
 	* keyblob.h: Likewise.
-	
+
 2004-07-07  Timo Schulz  <ts@g10code.de>
 
 	* kex.c (check_dh_mpi_range): Add DH group support.
@@ -186,7 +190,7 @@
 	(parse_msg_kexdh_reply): Likewise.
 	(build_kex_list): Likewise.
 	* fsm.c (fsm_client_loop): Change order of DH group exchange.
-	
+
 2004-07-06  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (_gsti_key_fromblob): Return an error for
@@ -201,12 +205,12 @@
 	(calc_dh_key): Support DH group exchange.
 	(calc_dh_secret): Likewise.
 	* auth.c (check_auth_id): Use the length of the table string.
-	
+
 2004-07-05  Timo Schulz  <twoaday@freakmail.de>
 
 	* packet.c (_gsti_packet_write): Use gcry_create_nonce to
 	make random generation faster.
-	
+
 2004-07-02  Werner Koch  <wk@gnupg.org>
 
 	* main.c (gsti_get_hostkey): New.
@@ -233,13 +237,12 @@
 	(_gsti_sig_encode): Release p in case of an error.
 	(_gsti_ssh_get_pkname): Return error code and not the buffer.
 	* main.c (gsti_get_auth_key): Return NULL for an invalid ctx.
-	
 
 2004-06-30  Marcus Brinkmann  <marcus@g10code.de>
 
 	* gsti.h (gsti_get_auth_key): Add prototype.
 	* main.c (gsti_get_auth_key): New function.
-	
+
 	* gsti.h (gsti_channel_close): Add prototype.
 
 2004-06-29  Marcus Brinkmann  <marcus@g10code.de>
@@ -255,7 +258,7 @@
 	(check_dh_mpi_range): New.
 	(parse_msg_kexdh_init): Check range of returned MPI.
 	(parse_msg_kexdh_reply): Likewise.
-	
+
 2004-06-29  Werner Koch  <wk@gnupg.org>
 
 	* fsm.c (state_to_string): New.
@@ -301,7 +304,7 @@
 	* fsm.c (fsm_server_loop): Send SSH auth failure packet.
 	* packet.c (_gsti_packet_write): Make sure the seq-no does
 	not cause an overflow.
-	
+
 2004-06-14  Timo Schulz  <twoaday@g10code.de>
 
 	* stream.c (_gsti_read_new_stream): Return error code
@@ -320,7 +323,7 @@
         (construct_one_key): Likewise.
         (kex_proc_init_packet): Likewise.
 	* packet.c (_gsti_packet_read): Ditto.
-	
+
 2004-06-14  Werner Koch  <wk@gnupg.org>
 
 	* api.h (_gsti_handle_channel_packet): Include prototype.
@@ -346,7 +349,7 @@
 	* channel.c: New file.
 	* Makefile.am (libgsti_la_SOURCES): Add channel.c.
 	* fsm.c (fsm_server_loop): Call _gsti_handle_channel_packet.
-	
+
 	* buffer.c (gsti_buf_putbstr): Remove check for BSTR.
 
 	* stream.c (_gsti_stream_readn): Return EOF if EOF is encountered
@@ -359,7 +362,7 @@
 	* pubkey.c (read_bstring): Add error handling.
 	(check_pubalgo): Additional parameter to support bstrings.
 	(pktype_from_file): Use check_pubalgo to figure out the algid.
-	
+
 	(_gsti_key_getblob): Return error code and not the context.
 	Changed all callers.
 	(_gsti_key_fromblob): Likewise.
@@ -425,7 +428,7 @@
 	(_gsti_stream_putbyte): Likewise.
 	(_gsti_stream_writen, _gsti_stream_readn): Return the
 	stored return value in case of an error.
-	
+
 2004-06-06  Timo Schulz  <twoaday@g10code.de>
 
 	* auth.c (gsti_auth_new): New.
@@ -438,13 +441,13 @@
 
 	* gsti.h (gsti_read_fnc_t, gsti_write_fnc_t): Changed prototypes.
 	* stream.c: Likewise.
-	
+
 2004-06-02  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (gsti_key_save): New.
 	(_gsti_key_fromblob): RSA support.
 	(_gsti_rsa_sign, _gsti_rsa_verify): Likewise.
-	
+
 2004-06-01  Timo Schulz  <twoaday@g10code.de>
 
 	* pubkey.c (sexp_from_buffer): PKCS#1 support.
@@ -457,23 +460,23 @@
 	on a s-exp struct created by Libgcrypt.
 
 	* Add nskey to the pubkey table structure.
-	
+
 2004-05-28  Timo Schulz  <twoaday@freakmail.de>
 
 	* pubkey.c (gsti_key_load): Open file in binary mode.
 
 	* pubkey.h: Removed unused prototypes.
-	
+
 2004-05-28  Timo Schulz  <twoaday@freakmail.de>
 
 	* pubkey.c: Change GSTI_KEY to gsti_key_t and some
 	cleanups.
-	
+
 2004-05-27  Timo Schulz  <twoaday@freakmail.de>
-	
+
 	* pubkey.c (_gsti_sig_decode): separate the MPI values, the
 	new Libgcrypt interface does not support the old way.
-                                                                               
+
 2004-05-26  Marcus Brinkmann  <marcus@g10code.de>
 
 	* gsti.h (GSTIHD): Rename type to ...
@@ -581,7 +584,7 @@
 
 	Everywhere: Pass context to invocation of _gsti_log_info and friends.
 	Change _gsti_log_rc to _gsti_log_err.
-	
+
 	* gsti.h (gsti_log_level_t): New type, using the existing enum for
 	GSTI_LOG_* symbols.  Add symbol GSTI_LOG_MAX.  Change the values
 	of GSTI_LOG_INFO and GSTI_LOG_DEBUG to make room for insertions.
@@ -606,7 +609,7 @@
 2004-03-08  Werner Koch  <wk@gnupg.org>
 
         Changed indentation to GNU style.
-	
+
 2004-03-08  Werner Koch  <wk@gnupg.org>
 
 	* main.c (map_gcry_rc): Shortcut code as we are now using
@@ -622,7 +625,7 @@
 	to the FSF but this actually never happened and frankly there has
 	been no real release as the code lived his life for most time
 	merely as a test bed for libgcrypt.
-	
+
 	* ChangeLog: Merged my entries from 2000.  Obviously I forgot to
 	commit the Changelog to the CVS when moving the files from the
 	local PRCS repository to CVS.
@@ -644,7 +647,7 @@
 	(auth_proc_second_packet): New.
 	* utils.c (_gsti_bstring_hash): Moved from kex.c and
 	renamed from hash_bstring. Now it's global.
-	
+
 2002-10-06  Timo Schulz  <ts@winpt.org>
 
 	* fsm.c (fsm_server_loop): New.
@@ -656,13 +659,14 @@
 	(auth_send_second_packet): Ditto.
 
 2002-10-06  Timo Schulz  <ts@winpt.org>
+
 	* auth.c (auth_send_pkok_packet): New.
 	(auth_proc_pkok_packet): New.
 	* fsm.c (fsm_server_loop): Send the SSH_MSG_USERAUTH_PK_OK and
 	not the SSH_MSG_USERAUTH_SUCCESS twice.
 	(fsm_client_loop): Proc the new packets.
 	(pubkey.h): Prefix key context with gsti_.
-	
+
 2002-10-07  Timo Schulz  <ts@winpt.org>
 
 	* pubkey.c (read_dss_key): Store 'x' in secure memory.
@@ -678,7 +682,7 @@
 	* main.c (gsti_set_compression): New.
 	* kex.c (build_compress_list): New.
 	(kex_send_init_packet): Use it here.
-	
+
 2002-10-08  Timo Schulz  <ts@winpt.org>
 
 	* utils.c (_gsti_dump_object): Use the logging stuff and
@@ -694,7 +698,7 @@
 	(_gsti_xrealloc): Ditto.
 	(_gsti_xcalloc): Ditto.
 	(_gsti_xstrdup): Ditto.
-	
+
 2002-10-19  Timo Schulz  <ts@winpt.org>
 
 	* pubkey.c (pktype_from_file): New.
@@ -702,8 +706,7 @@
 	* packet.c (print_debug_msg): Free buffer.
 	* moduli.h: New. Contains various modulus values for the
 	DH group exchange method.
-	
-	
+
 2002-10-19  Timo Schulz  <ts@winpt.org>
 
 	* packet.h: Added DH group numbers.
@@ -714,7 +717,7 @@
 	(select_dh_modulus): New.
 	(choose_dh_size): New.
 	(kex_send_gex_group): New.
-	
+
 2002-10-20  Timo Schulz  <ts@winpt.org>
 
 	* api.h: Use a BUFFER to read from the payload.
@@ -726,7 +729,7 @@
 	* auth.c (parse_xxx): Some as kex.c
 	* main.c (init_gex_default): New.
 	(gsti_init): Use it here.
-	
+
 2000-10-10  Werner Koch  <wk@gnupg.org>
 
 	* api.h (gsti_context): Replaced *mac_{inner,outer}_hd by *mac_hd.
@@ -734,5 +737,5 @@
 	changed args and adjusted all callers.
 	(prepare_hmac_pad): Removed.
 	* packet.c (generate_mac, verify_mac): Use libgcrypt function.
-	
-	
+
+

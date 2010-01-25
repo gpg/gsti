@@ -1,3 +1,9 @@
+2010-01-25  Werner Koch  <wk@g10code.com>
+
+	* configure.ac (AC_CONFIG_FILES): Add src/gsti.h.
+
+	* autogen.sh: Update from libgpg-error.
+
 2005-08-18  Werner Koch  <wk@g10code.com>
 
 	Released 0.3.0.
@@ -14,7 +20,7 @@
 2002-10-03 23:18:16  Timo Schulz  (ts@winpt.org)
 
 	* set version to 0.2.0
-	
+
 2000-01-31 14:36:40  Werner Koch  (wk@bilbo.gnupg.de)
 
 	* set version to 0.0.1
