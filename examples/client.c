@@ -185,7 +185,8 @@ main (int argc, char **argv)
   gpg_error_t err;
   gsti_ctx_t ctx;
   struct gsti_pktdesc_s pkt;
-  unsigned short c_prefs[8] = {0}, h_prefs[3] = {0};
+  unsigned short c_prefs[8] = {0};
+  unsigned short h_prefs[4] = {0};
   int i;
   int ready = 0;
 
@@ -248,7 +249,7 @@ main (int argc, char **argv)
   log_rc (rc, "set-service");
 #endif
 
-  /* Create a conenction to the host given on the command line or to
+  /* Create a connection to the host given on the command line or to
      localhost if no args are given. */
   make_connection (&fd.conn_fd, argc ? *argv : "localhost");
 

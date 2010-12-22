@@ -1,5 +1,5 @@
-/* auth.h - SSH authentication
-   Copyright (C) 2004 g10 Code GmbH
+/* banner.h - SSH userauth banner
+   Copyright (C) 2010 g10 Code GmbH
  
    This file is part of GSTI.
  
@@ -17,22 +17,11 @@
    along with GSTI; if not, write to the Free Software Foundation,
    Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA  */
 
-#ifndef GSTI_AUTH_H
-#define GSTI_AUTH_H 1
+#ifndef GSTI_BANNER_H
+#define GSTI_BANNER_H 1
 
+gsti_error_t _gsti_auth_send_banner_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_auth_proc_banner_packet (gsti_ctx_t ctx);
+gsti_error_t _gsti_banner_run_auth_cb (gsti_ctx_t ctx);
 
-/*-- auth.c --*/
-gsti_error_t _gsti_auth_send_success_packet (gsti_ctx_t ctx);
-gsti_error_t _gsti_auth_proc_success_packet (gsti_ctx_t ctx);
-
-gsti_error_t _gsti_auth_send_pkok_packet (gsti_ctx_t ctx);
-gsti_error_t _gsti_auth_proc_pkok_packet (gsti_ctx_t ctx);
-
-gsti_error_t _gsti_auth_send_request_packet (gsti_ctx_t ctx);
-gsti_error_t _gsti_auth_proc_request_packet (gsti_ctx_t ctx);
-
-gsti_error_t _gsti_auth_send_failure_packet (gsti_ctx_t ctx, gsti_auth_t auth);
-
-gsti_error_t _gsti_auth_run_auth_cb (gsti_ctx_t ctx);
-
-#endif /*GSTI_AUTH_H*/
+#endif /*GSTI_BANNER_H*/

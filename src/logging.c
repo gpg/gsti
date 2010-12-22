@@ -43,9 +43,18 @@ _gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
 	    const char *fmt, va_list arg_ptr)
 {
   gio_stream_t log_stream;
+  int iscont = (level == GSTI_LOG_CONT);
 
-  if (ctx && ctx->log_level < level)
-    return;
+  if (ctx)
+    {
+      if (level == GSTI_LOG_CONT)
+        level = ctx->last_log_level;
+      else
+        ctx->last_log_level = level;
+      
+      if (ctx->log_level < level)
+        return;
+    }
 
   if (ctx && ctx->log_stream)
     log_stream = ctx->log_stream;
@@ -55,7 +64,7 @@ _gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
 
   /* FIXME: This is not atomic.  Also, it does not show the context in
      which the error occured.  */
-  if (level != GSTI_LOG_CONT)
+  if (!iscont)
     fputs ("gsti: ", log_stream);
   switch (level)
     {
@@ -68,7 +77,8 @@ _gsti_logv (gsti_ctx_t ctx, gsti_log_level_t level,
 
     case GSTI_LOG_DEBUG:
       /* FIXME: Reimplement this in terms of GIO, when it is written.  */
-      fputs ("DBG: ", log_stream);
+      if (!iscont)
+        fputs ("DBG: ", log_stream);
       break;
 
     case GSTI_LOG_NONE:

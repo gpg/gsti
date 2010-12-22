@@ -1,3 +1,57 @@
+2010-10-11  Werner Koch  <wk@g10code.com>
+
+	* channel.c (ssh_msg_channel_data): Change arg DATA to const void*.
+
+	* auth.c (_gsti_auth_run_auth_cb): New.
+
+	* fsm.c (handle_auth_cb): Remove. Replace callers by new functions.
+
+	* gsti.h.in (gsti_auth_ids): Rename to gsti_authcb_types.  Change
+	constants accordingly.
+
+	* auth.c: Factor all banner related code out to ...
+
+	* banner.c: .. new.
+	(_gsti_banner_run_auth_cb): New.
+	* banner.h: New.
+
+	* packet.h (MSG_auth_request, MSG_auth_banner, MSG_auth_pkok):
+	Remove.
+
+	* bstring.c (gsti_bstr_match_str_p): New.
+	(gsti_bstr_copy): New.
+
+	* ssh.h (SSH_AUTH_NONE, SSH_AUTH_PUBLICKEY, SSH_AUTH_PASSWORD)
+	(SSH_AUTH_HOSTBASED): Remove.
+	* auth.h (struct gsti_auth_s): Move to ..
+	* auth.c: .. here.
+	(check_auth_id): Remove.
+	(_gsti_auth_transfer_banner): New.
+
+	* pubkey.c (_gsti_sig_encode): Add arg DATALEN and pass down to
+	sign function.  Change all callers.
+	(_gsti_key_sign): Ditto.
+	(_gsti_dss_sign, _gsti_rsa_sign): Ditto.  SHA-1 hash the data.
+
+	* api.h (struct gsti_context): Add gex.PEER_MAX, gex.PEER_MIN,
+	gex.PEER_N and BANNER.
+
+	* kex.c (_gsti_kex_proc_gex_request): Save peer's gex values.
+	(calc_exchange_hash): Hash them in the server casse.
+
+2010-10-10  Werner Koch  <wk@g10code.com>
+
+	* kex.c (_gsti_kex_send_init_packet): Remove unused variable.
+
+2010-09-21  Werner Koch  <wk@g10code.com>
+
+	* utils.c (_gsti_print_string): Detect suitable dump format.
+	* logging.c (_gsti_logv): Properly implement GSTI_LOG_CONT.
+	* api.h (struct gsti_context): Add field LAST_LOG_LEVEL.
+
+	* fsm.c (client_handle_packet) <FSM_kex_start>: Send a reply
+	and not an init.
+
 2010-01-25  Werner Koch  <wk@g10code.com>
 
 	* gsti.h: Rename to gsti.h.in.
@@ -371,12 +425,12 @@
 
 	* auth.c (init_auth_request): Error handling.
 	(auth_send_pkok_packet): Likewise.
-	
+
 2004-06-09  Marcus Brinkmann  <marcus@g10code.de>
 
 	Global: All users of bstring and buffer related types and
 	functions have changed.
-	
+
 	* Makefile.am (libgsti_la_SOURCES): Add bstring.h, bstring.c.
 	* bstring.h: New file.
 	* bstring.c: New file.
@@ -676,7 +730,7 @@
 	* pubkey.c (_gsti_ssh_cmp_keys): New.
 	(_gsti_ssh_cmp_pkname): New.
 	* zlib.c: New. Taken from PuTTY. It's a MIT style license
-	and so it's compatible with the GPL. 
+	and so it's compatible with the GPL.
 	But we don't use compression by default.
 	* utils.h: Provide zlib prototypes or dummies.
 	* main.c (gsti_set_compression): New.

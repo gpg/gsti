@@ -1,6 +1,7 @@
 2010-01-25  Werner Koch  <wk@g10code.com>
 
 	* configure.ac (AC_CONFIG_FILES): Add src/gsti.h.
+	(GNUPG_FIX_HDR_VERSION): Remove.
 
 	* autogen.sh: Update from libgpg-error.
 

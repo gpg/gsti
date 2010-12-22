@@ -156,18 +156,20 @@ free_mpi_array (gcry_mpi_t * a, size_t na)
 
 
 gsti_error_t
-_gsti_rsa_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
+_gsti_rsa_sign (gsti_key_t ctx, const void *data, size_t datalen,
+                gcry_mpi_t sig[2])
 {
   gsti_error_t err;
   gcry_sexp_t s_hash = NULL, s_key = NULL, s_sig = NULL;
-  int dlen = gcry_md_get_algo_dlen (GCRY_MD_SHA1);
+  unsigned char sha1_digest[20];
   
   if (ctx->type != SSH_PK_RSA)
     return gsti_error (GPG_ERR_BUG);
   if (!ctx->secret && !ctx->sign_fnc)
     return gsti_error (GPG_ERR_INV_OBJ);
   
-  err = sexp_from_buffer (&s_hash, hash, dlen, 1);
+  gcry_md_hash_buffer (GCRY_MD_SHA1, sha1_digest, data, datalen);
+  err = sexp_from_buffer (&s_hash, sha1_digest, sizeof sha1_digest, 1);
   if (!err)
     {
       /* Usually it does not make sense to use a public key for signing.
@@ -213,18 +215,20 @@ _gsti_rsa_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
 
 
 gsti_error_t
-_gsti_dss_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
+_gsti_dss_sign (gsti_key_t ctx, const void *data, size_t datalen,
+                gcry_mpi_t sig[2])
 {
   gsti_error_t err;
   gcry_sexp_t s_hash = NULL, s_key = NULL, s_sig = NULL;
-  int dlen = gcry_md_get_algo_dlen (GCRY_MD_SHA1);
+  unsigned char sha1_digest[20];
 
   if (ctx->type != SSH_PK_DSS)
     return gsti_error (GPG_ERR_BUG);
   if (!ctx->secret && !ctx->sign_fnc)
     return gsti_error (GPG_ERR_INV_OBJ);
 
-  err = sexp_from_buffer (&s_hash, hash, dlen, 0);
+  gcry_md_hash_buffer (GCRY_MD_SHA1, sha1_digest, data, datalen);
+  err = sexp_from_buffer (&s_hash, sha1_digest, sizeof sha1_digest, 0);
   if (!err)
     {
       /* Usually it does not make sense to use a public key for signing.
@@ -352,7 +356,8 @@ _gsti_key_verify (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
     
 
 gsti_error_t
-_gsti_key_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
+_gsti_key_sign (gsti_key_t ctx, const void *data, size_t datalen,
+                gcry_mpi_t sig[2])
 {
   if (!ctx)
     return gsti_error (GPG_ERR_BUG);
@@ -360,9 +365,9 @@ _gsti_key_sign (gsti_key_t ctx, const byte * hash, gcry_mpi_t sig[2])
   switch (ctx->type)
     {
     case SSH_PK_DSS:
-      return _gsti_dss_sign (ctx, hash, sig);
+      return _gsti_dss_sign (ctx, data, datalen, sig);
     case SSH_PK_RSA:
-      return _gsti_rsa_sign (ctx, hash, sig);
+      return _gsti_rsa_sign (ctx, data, datalen, sig);
     default:
       return gsti_error (GPG_ERR_BUG);
     }
@@ -720,8 +725,6 @@ check_pubalgo (const char * s, int slen, int * algid)
 }
 
 
-/* Fixme: we could enhance this fucntion to aslo read secret keys by
-   detecting trhough the unread space. */
 gsti_error_t
 _gsti_key_fromblob (gsti_bstr_t blob, gsti_key_t * r_key)
 {
@@ -871,8 +874,8 @@ gsti_key_free (gsti_key_t ctx)
 
 
 gsti_error_t
-_gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte * hash,
-		  gsti_key_t * r_pk)
+_gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte *hash,
+		  gsti_key_t *r_pk)
 {
   gsti_error_t err;
   gsti_buffer_t buf;
@@ -947,8 +950,8 @@ _gsti_sig_decode (gsti_bstr_t key, gsti_bstr_t sig, const byte * hash,
 /* Create a signature for HASH using the key SK and return the
    signature at R_SIG. */
 gsti_error_t
-_gsti_sig_encode (gsti_key_t sk,
-                  const unsigned char  * hash, gsti_bstr_t * r_sig)
+_gsti_sig_encode (gsti_key_t sk, const void *data, size_t datalen,
+                  gsti_bstr_t * r_sig)
 {
   gsti_error_t err;
   gcry_mpi_t sig[2];
@@ -963,7 +966,7 @@ _gsti_sig_encode (gsti_key_t sk,
       err = gsti_bstr_make (r_sig, NULL, 4);
       return err;
     }
-  err = _gsti_key_sign (sk, hash, sig);
+  err = _gsti_key_sign (sk, data, datalen, sig);
   if (err)
     {
       _gsti_log_info (0, "signing failed: %s\n", gsti_strerror (err));

@@ -407,8 +407,8 @@ gsti_set_auth_banner (gsti_ctx_t ctx, const char * data, int isfile)
   
   if (!isfile)
     {
-      gsti_bstr_free (ctx->auth->msg);
-      err = gsti_bstr_make (&ctx->auth->msg, data, strlen (data));
+      gsti_bstr_free (ctx->banner);
+      err = gsti_bstr_make (&ctx->banner, data, strlen (data));
     }
   else
     ; /* FIXME: todo */

@@ -32,6 +32,9 @@ typedef struct gsti_bstr *gsti_bstr_t;
 gpg_error_t gsti_bstr_make (gsti_bstr_t *bstr,
 			    const void *data, size_t amount);
 
+/* Create a new binary string from the binary string BSTR.  */
+gsti_error_t gsti_bstr_copy (gsti_bstr_t *r_bstr, gsti_bstr_t bstr);
+
 /* Free the binary string BSTR.  */
 void gsti_bstr_free (gsti_bstr_t bstr);
 
@@ -40,6 +43,9 @@ size_t gsti_bstr_length (gsti_bstr_t bstr);
 
 /* Return the data of the binary string BSTR.  */
 void *gsti_bstr_data (gsti_bstr_t bstr);
+
+/* Return true if BSTR matches STR.  */
+int gsti_bstr_match_str_p (gsti_bstr_t bstr, const char *str);
 
 
 #endif	/* GSTI_BSTRING_H */

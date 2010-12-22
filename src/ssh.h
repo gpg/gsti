@@ -123,42 +123,36 @@ typedef enum
 ssh_disconnect_code_t;
 
 
-/* Authentication.  */
-#define SSH_AUTH_NONE		"none"
-#define SSH_AUTH_PUBLICKEY	"publickey"
-#define SSH_AUTH_PASSWORD	"password"
-#define SSH_AUTH_HOSTBASED	"hostbased"
-
-
 /* Message Numbers.  */
 typedef enum
   {
     /* Transport Layer 11 Summary of Message Numbers.  */
-    SSH_MSG_DISCONNECT = 1,
-    SSH_MSG_IGNORE = 2,
-    SSH_MSG_UNIMPLEMENTED = 3,
-    SSH_MSG_DEBUG = 4,
-    SSH_MSG_SERVICE_REQUEST = 5,
-    SSH_MSG_SERVICE_ACCEPT = 6,
+    SSH_MSG_DISCONNECT = 1,                  /*[ssh-trans]*/
+    SSH_MSG_IGNORE = 2,                      /*[ssh-trans]*/
+    SSH_MSG_UNIMPLEMENTED = 3,               /*[ssh-trans]*/
+    SSH_MSG_DEBUG = 4,                       /*[ssh-trans]*/
+    SSH_MSG_SERVICE_REQUEST = 5,             /*[ssh-trans]*/
+    SSH_MSG_SERVICE_ACCEPT = 6,              /*[ssh-trans]*/
+                                             
+    SSH_MSG_KEXINIT = 20,                    /*[ssh-trans]*/
+    SSH_MSG_NEWKEYS = 21,                    /*[ssh-trans]*/
 
-    SSH_MSG_KEXINIT = 20,
-    SSH_MSG_NEWKEYS = 21,
+    /* Standard RFC4253 Key Exchange Message Numbers. */
+    SSH_MSG_KEXDH_INIT = 30,                 /*[ssh-trans]*/
+    SSH_MSG_KEXDH_REPLY = 31,                /*[ssh-trans]*/
 
-    SSH_MSG_KEXDH_INIT = 30,
-    SSH_MSG_KEXDH_REPLY = 31,
-
-    /* Diffie-Hellman Group Exchange 7 Summary of Message Numbers.  */
-    SSH_MSG_KEX_DH_GEX_REQUEST_OLD = 30,
-    SSH_MSG_KEX_DH_GEX_GROUP = 31,
-    SSH_MSG_KEX_DH_GEX_INIT = 32,
-    SSH_MSG_KEX_DH_GEX_REPLY = 33,
-    SSH_MSG_KEX_DH_GEX_REQUEST = 34,
+    /* Diffie-Hellman Group Exchange as per RFC4419. */
+    SSH_MSG_KEX_DH_GEX_REQUEST_OLD = 30,     /*[rfc-4419]*/
+    SSH_MSG_KEX_DH_GEX_GROUP = 31,           /*[rfc-4419]*/
+    SSH_MSG_KEX_DH_GEX_INIT = 32,            /*[rfc-4419]*/
+    SSH_MSG_KEX_DH_GEX_REPLY = 33,           /*[rfc-4419]*/
+    SSH_MSG_KEX_DH_GEX_REQUEST = 34,         /*[rfc-4419]*/
 
     /* Authentication 3.2 Authentication Protocol Message Numbers.  */
-    SSH_MSG_USERAUTH_REQUEST = 50,
-    SSH_MSG_USERAUTH_FAILURE = 51,
-    SSH_MSG_USERAUTH_SUCCESS = 52,
-    SSH_MSG_USERAUTH_BANNER = 53,
+    SSH_MSG_USERAUTH_REQUEST = 50,           /*[ssh-userauth]*/ 
+    SSH_MSG_USERAUTH_FAILURE = 51,           /*[ssh-userauth]*/
+    SSH_MSG_USERAUTH_SUCCESS = 52,           /*[ssh-userauth]*/
+    SSH_MSG_USERAUTH_BANNER = 53,            /*[ssh-userauth]*/
 
     /* Authentication 3.3 "publickey".  */
     SSH_MSG_USERAUTH_PK_OK = 60,
@@ -170,20 +164,20 @@ typedef enum
     SSH_MSG_CHANNEL_BEGIN = 80,
     SSH_MSG_CHANNEL_END = 127,
 
-    SSH_MSG_GLOBAL_REQUEST = 80,
-    SSH_MSG_REQUEST_SUCCESS = 81,
-    SSH_MSG_REQUEST_FAILURE = 82,
-    SSH_MSG_CHANNEL_OPEN = 90,
-    SSH_MSG_CHANNEL_OPEN_CONFIRMATION = 91,
-    SSH_MSG_CHANNEL_OPEN_FAILURE = 92,
-    SSH_MSG_CHANNEL_WINDOW_ADJUST = 93,
-    SSH_MSG_CHANNEL_DATA = 94,
-    SSH_MSG_CHANNEL_EXTENDED_DATA = 95,
-    SSH_MSG_CHANNEL_EOF = 96,
-    SSH_MSG_CHANNEL_CLOSE = 97,
-    SSH_MSG_CHANNEL_REQUEST = 98,
-    SSH_MSG_CHANNEL_SUCCESS = 99,
-    SSH_MSG_CHANNEL_FAILURE = 100,
+    SSH_MSG_GLOBAL_REQUEST = 80,             /*[ssh-connect]*/
+    SSH_MSG_REQUEST_SUCCESS = 81,            /*[ssh-connect]*/
+    SSH_MSG_REQUEST_FAILURE = 82,            /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_OPEN = 90,               /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_OPEN_CONFIRMATION = 91,  /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_OPEN_FAILURE = 92,       /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_WINDOW_ADJUST = 93,      /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_DATA = 94,               /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_EXTENDED_DATA = 95,      /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_EOF = 96,                /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_CLOSE = 97,              /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_REQUEST = 98,            /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_SUCCESS = 99,            /*[ssh-connect]*/
+    SSH_MSG_CHANNEL_FAILURE = 100,           /*[ssh-connect]*/
 
     /* The beginning and end of the reserved block.  */
     SSH_MSG_RESERVED_BEGIN = 128,

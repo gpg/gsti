@@ -24,7 +24,7 @@ min_automake_version="1.10"
 # Remember to change the version number immediately *after* a release.
 # Set my_issvn to "yes" for non-released code.  Remember to run an
 # "svn up" and "autogen.sh" right before creating a distribution.
-m4_define([my_version], [0.3.0])
+m4_define([my_version], [0.5.0])
 m4_define([my_issvn], [yes])
 
 m4_define([svn_revision], m4_esyscmd([printf "%d" $(svn info 2>/dev/null \
@@ -203,6 +203,12 @@ if test "$die" = "yes"; then
 ***]])
 fi
 
+#
+# Substitutions to set generated files in a Emacs buffer to read-only.
+#
+AC_SUBST(emacs_local_vars_begin, ['Local Variables:'])
+AC_SUBST(emacs_local_vars_read_only, ['buffer-read-only: t'])
+AC_SUBST(emacs_local_vars_end, ['End:'])
 
 #
 # Write config files

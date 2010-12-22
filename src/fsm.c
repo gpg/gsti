@@ -266,36 +266,8 @@ handle_ident_data (gsti_ctx_t ctx, char *data, size_t data_len,
   return 0;
 }
 
+
 
-static gsti_error_t
-handle_auth_cb (gsti_ctx_t ctx, int state)
-{
-  gsti_error_t err = 0;
-
-  if (state == 1)
-    err = ctx->auth_cb (ctx->auth_cb_val,
-                        GSTI_AUTHID_BANNER,
-                        gsti_bstr_data (ctx->auth->msg),
-                        gsti_bstr_length (ctx->auth->msg));
-  else if (state == 2)
-    {
-      err = ctx->auth_cb (ctx->auth_cb_val,
-                          GSTI_AUTHID_USER,
-                          ctx->auth->user,
-                          strlen (ctx->auth->user));
-      if (!err)
-        err = ctx->auth_cb (ctx->auth_cb_val,
-                            GSTI_AUTHID_PUBKEY,
-                            gsti_bstr_data (ctx->auth->blob),
-                            gsti_bstr_length (ctx->auth->blob));
-      if (err)
-        _gsti_auth_send_failure_packet (ctx, ctx->auth);
-    }
-
-  return err;
-}
-
-
 /* Handle an incoming packet for the context CTX on the server side.  */
 static gsti_error_t
 server_handle_packet (gsti_ctx_t ctx)
@@ -404,21 +376,17 @@ server_handle_packet (gsti_ctx_t ctx)
       switch (ctx->pkt.type)
 	{
 	case SSH_MSG_USERAUTH_REQUEST:
-	  err = _gsti_auth_proc_request_packet (ctx, ctx->auth);
+	  err = _gsti_auth_proc_request_packet (ctx);
 	  if (!err)
-	    {
-	      if (ctx->auth_cb)
-		err = handle_auth_cb (ctx, 2);
-	      if (!err && ctx->auth->msg)
-		err = _gsti_auth_send_banner_packet (ctx, ctx->auth);
-	      if (!err)
-		{
-		  err = _gsti_auth_send_pkok_packet (ctx, ctx->auth);
-		  if (!err)
-		    ctx->state = FSM_auth_wait_request;
-		}
-	    }
-	  else
+            err = _gsti_auth_run_auth_cb (ctx);
+          if (!err && ctx->banner)
+            err = _gsti_auth_send_banner_packet (ctx);
+	  if (!err)
+            err = _gsti_auth_send_pkok_packet (ctx);
+
+          if (!err)
+            ctx->state = FSM_auth_wait_request;
+          else
 	    err = _gsti_auth_send_failure_packet (ctx, ctx->auth);
 	  break;
 	  
@@ -433,9 +401,9 @@ server_handle_packet (gsti_ctx_t ctx)
       switch (ctx->pkt.type)
 	{
 	case SSH_MSG_USERAUTH_REQUEST:
-	  err = _gsti_auth_proc_request_packet (ctx, ctx->auth);
+	  err = _gsti_auth_proc_request_packet (ctx);
 	  if (!err)
-	    err = _gsti_auth_send_success_packet (ctx, ctx->auth);
+	    err = _gsti_auth_send_success_packet (ctx);
 	  if (!err)
 	    {
 	      /* Signal to the user that the connection can be used now.  */
@@ -502,7 +470,7 @@ client_handle_packet (gsti_ctx_t ctx)
       else
 	{
 	  if (!err)
-	    err = _gsti_kex_send_kexdh_init (ctx);
+	    err = kex_send_kexdh_reply (ctx);
 	  if (!err)
 	    ctx->state = FSM_kex_wait;
 	}
@@ -583,7 +551,7 @@ client_handle_packet (gsti_ctx_t ctx)
 				  gsti_bstr_length (ctx->service_name));
 	      _gsti_log_cont (ctx, "' has been started (client)\n");
 
-	      err = _gsti_auth_send_request_packet (ctx, ctx->auth);
+	      err = _gsti_auth_send_request_packet (ctx);
 	      if (!err)
 		ctx->state = FSM_auth_wait_pkok;
 	    }
@@ -600,16 +568,16 @@ client_handle_packet (gsti_ctx_t ctx)
       switch (ctx->pkt.type)
 	{
 	case SSH_MSG_USERAUTH_BANNER:
-	  err = _gsti_auth_proc_banner_packet (ctx, ctx->auth);
+	  err = _gsti_auth_proc_banner_packet (ctx);
 	  if (!err)
-	    err = handle_auth_cb (ctx, 1);
+            err = _gsti_banner_run_auth_cb (ctx);
 	  break;
                   
 	case SSH_MSG_USERAUTH_PK_OK:
-	  err = _gsti_auth_proc_pkok_packet (ctx, ctx->auth);
+	  err = _gsti_auth_proc_pkok_packet (ctx);
 	  if (!err)
 	    {
-	      err = _gsti_auth_send_request_packet (ctx, ctx->auth);
+	      err = _gsti_auth_send_request_packet (ctx);
 	      if (!err)
 		ctx->state = FSM_auth_wait_success;
 	    }
@@ -632,7 +600,7 @@ client_handle_packet (gsti_ctx_t ctx)
       switch (ctx->pkt.type)
 	{
 	case SSH_MSG_USERAUTH_SUCCESS:
-	  err = _gsti_auth_proc_success_packet (ctx, ctx->auth);
+	  err = _gsti_auth_proc_success_packet (ctx);
 	  if (!err)
 	    {
 	      /* Signal to the user that the connection can be used now.  */

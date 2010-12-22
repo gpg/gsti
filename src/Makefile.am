@@ -37,6 +37,7 @@ libgsti_la_SOURCES = \
 	error.c \
 	bstring.h bstring.c \
 	buffer.h buffer.c \
+	banner.c banner.h \
 	auth.c auth.h \
 	api.h \
 	types.h \

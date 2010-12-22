@@ -26,6 +26,7 @@
 #include "stream.h"
 #include "utils.h"
 #include "auth.h"
+#include "banner.h"
 #include "ssh.h"
 
 struct packet_buffer_s
@@ -75,14 +76,16 @@ struct gsti_context
   /* Logging.  */
   gio_stream_t log_stream;
   gsti_log_level_t log_level;
+  gsti_log_level_t last_log_level;
 
 
   /* True if this is the server side.  This is set by
      gsti_set_hostkey.  */
   int we_are_server;
-  gsti_bstr_t peer_version_string;	/* received from other end */
-  gsti_bstr_t host_kexinit_data;	/* the KEX data we sent to the peer */
-  gsti_bstr_t peer_kexinit_data;	/* the KEX data we got from the peer */
+
+  gsti_bstr_t peer_version_string;	/* Received from the peer. */
+  gsti_bstr_t host_kexinit_data;	/* KEX data sent to the peer. */
+  gsti_bstr_t peer_kexinit_data;	/* KEX data received from the peer. */
 
   gsti_bstr_t service_name;
 
@@ -102,6 +105,9 @@ struct gsti_context
     unsigned int min;
     unsigned int max;
     unsigned int n;
+    unsigned int peer_min;
+    unsigned int peer_max;
+    unsigned int peer_n;
     unsigned int used:1;
   } gex;
 
@@ -141,9 +147,11 @@ struct gsti_context
 
   gsti_key_t hostkey;
 
-  gsti_auth_t auth;
-  gsti_auth_cb_t auth_cb;
-  void *auth_cb_val;
+  gsti_auth_t auth;             /* Current authentication info. */
+  gsti_auth_cb_t auth_cb;       /* Authentication callback.  */
+  void *auth_cb_val;            /* First arg used for AUTH_CB.  */
+
+  gsti_bstr_t banner;           /* The current banner.  */
 
   struct
   {

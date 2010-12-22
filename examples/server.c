@@ -189,10 +189,10 @@ mypkt_handler (gsti_ctx_t ctx, void *arg, gsti_pktdesc_t pkt)
 }
 
 
-/* Example how to influence the authentication in depence of its values.
-   For example to reject one or more users system access or to perform checks
-   if the users public key is valid (too short, not expired, revoked or
-   whatever the local system policy is) */
+/* Example how to influence the authentication depending on its
+   values.  For example to reject one or more users system access or
+   to perform checks if the user's public key is valid (too short, not
+   expired, revoked or whatever the local system policy is) */
 static gsti_error_t
 my_auth_cb (void * ctx, int authid, const void * buf, size_t buflen)
 {

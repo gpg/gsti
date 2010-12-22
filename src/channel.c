@@ -714,7 +714,7 @@ ssh_msg_channel_window_adjust_S (gsti_ctx_t ctx)
 /* The SSH_MSG_CHANNEL_DATA message, sender side.  */
 static gsti_error_t
 ssh_msg_channel_data (gsti_ctx_t ctx, gsti_uint32_t recipient_channel,
-		      char *data, size_t amount)
+		      const void *data, size_t amount)
 {
   gsti_error_t err;
   gsti_buffer_t buf;

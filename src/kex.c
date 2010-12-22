@@ -326,13 +326,14 @@ parse_msg_kexinit (MSG_kexinit * kex, int we_are_server, byte * old_cookie,
   if (err)
     goto leave;
 
-  if (!we_are_server)
-    {
-      /* We skip the cookie the server sent to us. This makes sure both
-         sides can calculate the same key data. Instead we use the one
-         we generated.  */
-      memcpy (kex->cookie, old_cookie, SSH_COOKIESIZE);
-    }
+#warning disabled for testing
+  /* if (!we_are_server) */
+  /*   { */
+  /*     /\* We skip the cookie the server sent to us. This makes sure both */
+  /*        sides can calculate the same key data. Instead we use the one */
+  /*        we generated.  *\/ */
+  /*     memcpy (kex->cookie, old_cookie, SSH_COOKIESIZE); */
+  /*   } */
 
   /* Get 10 strings.  */
   for (i = 0; i < 10; i++)
@@ -441,18 +442,17 @@ static void
 dump_msg_kexinit (gsti_ctx_t ctx, MSG_kexinit * kex)
 {
   _gsti_log_debug (ctx, "MSG_kexinit:\n");
-  _gsti_dump_hexbuf  (ctx, "cookie: ", kex->cookie, SSH_COOKIESIZE);
-  _gsti_dump_strlist (ctx, "kex_algorithm", kex->kex_algo);
-  _gsti_dump_strlist (ctx, "server_host_key_algos",kex->server_host_key_algos);
-  _gsti_dump_strlist (ctx, "encr_algos_c2s", kex->encr_algos_c2s);
-  _gsti_dump_strlist (ctx, "encr_algos_s2c", kex->encr_algos_s2c);
-  _gsti_dump_strlist (ctx, "mac_algos_c2s", kex->mac_algos_c2s);
-  _gsti_dump_strlist (ctx, "mac_algos_s2c", kex->mac_algos_s2c);
-  _gsti_dump_strlist (ctx, "compr_algos_c2s", kex->compr_algos_c2s);
-  _gsti_dump_strlist (ctx, "compr_algos_s2c", kex->compr_algos_s2c);
+  _gsti_dump_hexbuf  (ctx, " cookie: ", kex->cookie, SSH_COOKIESIZE);
+  _gsti_dump_strlist (ctx, " kex_algorithm", kex->kex_algo);
+  _gsti_dump_strlist (ctx, " server_host_key_algos",kex->server_host_key_algos);
+  _gsti_dump_strlist (ctx, " encr_algos_c2s", kex->encr_algos_c2s);
+  _gsti_dump_strlist (ctx, " encr_algos_s2c", kex->encr_algos_s2c);
+  _gsti_dump_strlist (ctx, " mac_algos_c2s", kex->mac_algos_c2s);
+  _gsti_dump_strlist (ctx, " mac_algos_s2c", kex->mac_algos_s2c);
+  _gsti_dump_strlist (ctx, " compr_algos_c2s", kex->compr_algos_c2s);
+  _gsti_dump_strlist (ctx, " compr_algos_s2c", kex->compr_algos_s2c);
   if (kex->first_kex_packet_follows)
-    _gsti_log_debug (ctx, "fist_kex_packet_follows\n");
-  _gsti_log_debug (ctx, "\n");
+    _gsti_log_debug (ctx, " first_kex_packet_follows\n");
 }
 
 
@@ -468,6 +468,7 @@ check_dh_mpi_range (gcry_mpi_t gex_p, gcry_mpi_t chk)
       p = gcry_mpi_copy (gex_p);
   else if (gcry_mpi_scan (&p, GCRYMPI_FMT_STD, diffie_hellman_group1_prime,
                           sizeof diffie_hellman_group1_prime, NULL))
+#warning why abort?
     abort ();
   if (gcry_mpi_cmp (chk, p) > 0 || gcry_mpi_get_nbits (chk) < 2)
     err = gsti_error (GPG_ERR_PROTOCOL_VIOLATION);
@@ -556,8 +557,7 @@ static void
 dump_msg_kexdh_init (gsti_ctx_t ctx, MSG_kexdh_init * kexdh)
 {
   _gsti_log_debug (ctx, "MSG_kexdh_init:\n");
-  _gsti_dump_mpi (ctx, "e=", kexdh->e);
-  _gsti_log_debug (ctx, "\n");
+  _gsti_dump_mpi (ctx, " e=", kexdh->e);
 }
 
 
@@ -660,10 +660,9 @@ static void
 dump_msg_kexdh_reply (gsti_ctx_t ctx, MSG_kexdh_reply * dhr)
 {
   _gsti_log_debug (ctx, "MSG_kexdh_reply:\n");
-  _gsti_dump_bstring (ctx, "k_s=", dhr->k_s);
-  _gsti_dump_mpi (ctx, "f=", dhr->f);
-  _gsti_dump_bstring (ctx, "sig_h=", dhr->sig_h);
-  _gsti_log_debug (ctx, "\n");
+  _gsti_dump_bstring (ctx, " k_s=", dhr->k_s);
+  _gsti_dump_mpi (ctx, " f=", dhr->f);
+  _gsti_dump_bstring (ctx, " sig_h=", dhr->sig_h);
 }
 
 
@@ -729,6 +728,22 @@ hash_mpi (gcry_md_hd_t md, gcry_mpi_t a)
     gcry_md_write (md, buf, n);
 }
 
+/* static void */
+/* hash_mpi_dump (gsti_ctx_t ctx, const char *prefix, */
+/*                gcry_md_hd_t md, gcry_mpi_t a) */
+/* { */
+/*   byte buf[512]; */
+/*   size_t n; */
+
+/*   if (gcry_mpi_print (GCRYMPI_FMT_SSH, buf, sizeof buf - 1, &n, a)) */
+/*     _gsti_log_info (0, "Oops: MPI too large for hashing\n"); */
+/*   else */
+/*     { */
+/*       _gsti_dump_hexbuf (ctx, prefix, buf, n); */
+/*       gcry_md_write (md, buf, n); */
+/*     } */
+/* } */
+
 
 static gcry_mpi_t
 calc_dh_key (gcry_mpi_t gex_p, gcry_mpi_t f, gcry_mpi_t x)
@@ -762,6 +777,20 @@ hash_32bit (gcry_md_hd_t md, unsigned a)
   gcry_md_write (md, tmp, 4);
 }
 
+/* static void */
+/* hash_32bit_dump (gsti_ctx_t ctx, const char *prefix, */
+/*                  gcry_md_hd_t md, unsigned a) */
+/* { */
+/*   byte tmp[4]; */
+
+/*   tmp[0] = a >> 24; */
+/*   tmp[1] = a >> 16; */
+/*   tmp[2] = a >>  8; */
+/*   tmp[3] = a >>  0; */
+/*   _gsti_dump_hexbuf (ctx, prefix, tmp, 4); */
+/*   gcry_md_write (md, tmp, 4); */
+/* } */
+
   
 /* Calculate the exchange hash value and put it into the handle.  */
 static gsti_error_t
@@ -772,16 +801,19 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   gcry_md_hd_t md;
   gsti_bstr_t pp;
   const char *ver = host_version_string;
-  int algo = GCRY_MD_SHA1, dlen;
+  int algo = GCRY_MD_SHA1;
+  int dlen;
 
   err = gcry_md_open (&md, algo, 0);
   if (err)
     return err;
+  
+  /* gcry_md_debug (md, "hash"); */
 
-/*   _gsti_dump_hexbuf (ctx, "client kex data: ", gsti_bstr_data (i_c), */
-/*                      gsti_bstr_length (i_c)); */
-/*   _gsti_dump_hexbuf (ctx, "server kex data: ", gsti_bstr_data (i_s), */
-/*                      gsti_bstr_length (i_s)); */
+  /* _gsti_dump_hexbuf (ctx, "client kex data: ", gsti_bstr_data (i_c), */
+  /*                    gsti_bstr_length (i_c)); */
+  /* _gsti_dump_hexbuf (ctx, "server kex data: ", gsti_bstr_data (i_s), */
+  /*                    gsti_bstr_length (i_s)); */
   
   if (ctx->we_are_server)
     {
@@ -806,9 +838,18 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
   _gsti_bstring_hash (md, k_s);
   if (ctx->gex.used)
     {
-      hash_32bit (md, ctx->gex.min);
-      hash_32bit (md, ctx->gex.n);
-      hash_32bit (md, ctx->gex.max);
+      if (ctx->we_are_server)
+        {
+          hash_32bit (md, ctx->gex.peer_min);
+          hash_32bit (md, ctx->gex.peer_n);
+          hash_32bit (md, ctx->gex.peer_max);
+        }
+      else
+        {
+          hash_32bit (md, ctx->gex.min);
+          hash_32bit (md, ctx->gex.n);
+          hash_32bit (md, ctx->gex.max);
+        }
       hash_mpi (md, ctx->kex.p);
       hash_mpi (md, ctx->kex.g);
     } 
@@ -823,7 +864,7 @@ calc_exchange_hash (gsti_ctx_t ctx, gsti_bstr_t i_c, gsti_bstr_t i_s,
       gcry_md_close (md);
       return err;
     }
-  if (!ctx->session_id)		/* initialize the session id the first time */
+  if (!ctx->session_id)	/* Initialize the session id the first time.  */
     err = gsti_bstr_make (&ctx->session_id, gcry_md_read (md, algo), dlen);
   gcry_md_close (md);
   _gsti_dump_hexbuf (ctx, "SesID=", gsti_bstr_data (ctx->session_id),
@@ -1036,7 +1077,6 @@ _gsti_kex_send_init_packet (gsti_ctx_t ctx)
 {
   gsti_error_t err = 0;
   MSG_kexinit * kex;
-  const byte *p;
 
   /* First send our kexinit packet.  */
   kex = ctx->host_kex = _gsti_xcalloc (1, sizeof *kex);
@@ -1060,8 +1100,8 @@ _gsti_kex_send_init_packet (gsti_ctx_t ctx)
       return err;
     }
   /* Must do it here because write_packet fills in the packet type.  */
-  p = ctx->pkt.payload;
-  err = gsti_bstr_make (&ctx->host_kexinit_data, p, ctx->pkt.payload_len);
+  err = gsti_bstr_make (&ctx->host_kexinit_data,
+                        ctx->pkt.payload, ctx->pkt.payload_len);
   if (!err)
     err = _gsti_packet_flush (ctx);
   return err;
@@ -1188,8 +1228,9 @@ _gsti_kex_proc_init_packet (gsti_ctx_t ctx)
     {
       /* The server still has its own cookie in the host data, we need
          to replace this with the received (client) cookie.  */
-      memcpy (gsti_bstr_data (ctx->host_kexinit_data) + 1,
-              kex.cookie, SSH_COOKIESIZE);
+#warning disabled for testing
+      /* memcpy (gsti_bstr_data (ctx->host_kexinit_data) + 1, */
+      /*         kex.cookie, SSH_COOKIESIZE); */
     }
   /* Make a copy of the received payload which we will need later.  */
   err = gsti_bstr_make (&ctx->peer_kexinit_data, ctx->pkt.payload,
@@ -1265,13 +1306,16 @@ kex_send_kexdh_reply (gsti_ctx_t ctx)
   gcry_mpi_release (y);
 
   /* And the hash.  */
-  err = calc_exchange_hash (ctx, ctx->host_kexinit_data,
+  err = calc_exchange_hash (ctx,
 			    ctx->peer_kexinit_data,
+                            ctx->host_kexinit_data,
 			    dhr.k_s, ctx->kexdh_e, dhr.f);
   gcry_mpi_release (ctx->kexdh_e);
   if (err)
     return err;
-  err = _gsti_sig_encode (ctx->hostkey, gsti_bstr_data (ctx->kex.h),
+  err = _gsti_sig_encode (ctx->hostkey,
+                          gsti_bstr_data (ctx->kex.h), 
+                          gsti_bstr_length (ctx->kex.h),
                           &dhr.sig_h);
   if (!err)
       err = build_msg_kexdh_reply (&dhr, ctx->gex.used, &ctx->pkt);
@@ -1780,7 +1824,8 @@ choose_dh_size (unsigned int n)
   unsigned int nbits = 0;
 
   if (n >= 1024 && n < 1536)
-    nbits = 1023;
+    nbits = 1536; /* 1023 is not acceptable; that might have chnaged
+                     since the I-D.  */
   else if (n >= 1536 && n < 2048)
     nbits = 1534;
   else if (n >= 2048 && n < 3190)
@@ -1825,6 +1870,9 @@ _gsti_kex_proc_gex_request (gsti_ctx_t ctx)
   if (err)
     return err;
   dump_gex_request (ctx, &gex);
+  ctx->gex.peer_n   = gex.n;
+  ctx->gex.peer_min = gex.min;
+  ctx->gex.peer_max = gex.max;
 
   if (gex.n < gex.min || gex.n > gex.max)
     return gsti_error (GPG_ERR_INV_PACKET);

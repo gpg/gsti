@@ -67,9 +67,10 @@ msg_id_to_str (int msg_id)
     case SSH_MSG_KEXINIT:        s = "kexinit"; break;
     case SSH_MSG_NEWKEYS:        s = "newkeys"; break;
 
-      /* Duplicated value:
+      /* Duplicated values:
          case SSH_MSG_KEXDH_INIT:     s = "kexdh_init"; break;
-         case SSH_MSG_KEXDH_REPLY:    s = "kexdh_reply"; break; */
+         case SSH_MSG_KEXDH_REPLY:    s = "kexdh_reply"; break;
+         We use the more specific ones (rfc-4419) below.  */
 
     case SSH_MSG_KEX_DH_GEX_REQUEST_OLD: s = "kex_dh_gex_request_old"; break;
     case SSH_MSG_KEX_DH_GEX_GROUP:   s = "kex_dh_gex_group"; break;
@@ -497,6 +498,9 @@ _gsti_handle_packet_data (gsti_ctx_t ctx, char *data, size_t data_len,
 	  print_debug_msg (ctx, ctx->pkt.payload, ctx->pkt.payload_len);
 	  break;
 	  
+        case SSH_MSG_IGNORE:
+          break;
+
 	case SSH_MSG_DISCONNECT:
 	  print_disconnect_msg (ctx, ctx->pkt.payload, ctx->pkt.payload_len);
 	  break;

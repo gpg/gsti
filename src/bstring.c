@@ -1,5 +1,5 @@
 /* bstring.c - Binary string management for GSTI.
-   Copyright (C) 2004 g10 Code GmbH
+   Copyright (C) 2004, 2010 g10 Code GmbH
 
    This file is part of GSTI.
 
@@ -58,6 +58,20 @@ gsti_bstr_make (gsti_bstr_t *bstr, const void *data, size_t amount)
 }
 
 
+/* Create a new binary string from the binary string BSTR.  */
+gsti_error_t
+gsti_bstr_copy (gsti_bstr_t *r_bstr, gsti_bstr_t bstr)
+{
+  if (!bstr)
+    {
+      *r_bstr = NULL;
+      return 0;
+    }
+
+  return gsti_bstr_make (r_bstr, bstr->data, bstr->length);
+}
+
+
 /* Free the binary string BSTR.  */
 void
 gsti_bstr_free (gsti_bstr_t bstr)
@@ -87,4 +101,19 @@ gsti_bstr_data (gsti_bstr_t bstr)
 }
 
 
+/* Return true if BSTR matches STR.  */
+int
+gsti_bstr_match_str_p (gsti_bstr_t bstr, const char *str)
+{
+  size_t len;
+
+  if (!bstr && !str)
+    return 1;
+  if (!bstr || !str)
+    return 0;
+  len = strlen (str);
+  if (bstr->length != len)
+    return 0;
+  return !memcmp (bstr->data, str, len);
+}
 

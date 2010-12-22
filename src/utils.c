@@ -139,31 +139,22 @@ void
 _gsti_print_string (gsti_ctx_t ctx, const char *string, size_t n)
 {
   const unsigned char *p = (const unsigned char*)string;
+  size_t i;
 
-  for (; n; n--, p++)
+  for (i=0; i < n; i++)
+    if (p[i] < 32 || p[i] > 126)
+      break;
+  if (i < n || *p == '\"')
     {
-      if (*p < 32 || *p > 126 || *p == '\\')
-	{
-	  _gsti_log_cont (ctx, "%c", '\\');
-	  if (*p == '\n')
-	    _gsti_log_cont (ctx, "%c", 'n');
-	  else if (*p == '\r')
-	    _gsti_log_cont (ctx, "%c", 'r');
-	  else if (*p == '\f')
-	    _gsti_log_cont (ctx, "%c", 'f');
-	  else if (*p == '\v')
-	    _gsti_log_cont (ctx, "%c", 'v');
-	  else if (*p == '\b')
-	    _gsti_log_cont (ctx, "%c", 'b');
-	  else if (*p == '\\')
-	    _gsti_log_cont (ctx, "%c", '\\');
-	  else if (!*p)
-	    _gsti_log_cont (ctx, "%c", '0');
-	  else
-	    _gsti_log_cont (ctx, "x%02x", *p);
-	}
-      else
-	_gsti_log_cont (ctx, "%c", *p);
+      for (; n; n--, p++)
+        _gsti_log_cont (ctx, "%02X", *p);
+    }
+  else
+    {
+      _gsti_log_cont (ctx, "\"");
+      for (; n; n--, p++)
+        _gsti_log_cont (ctx, "%c", *p);
+      _gsti_log_cont (ctx, "\"");
     }
 }
 
@@ -185,7 +176,7 @@ _gsti_dump_object (gsti_ctx_t ctx,
 	byte *buf = opaque;
 	_gsti_log_debug (ctx, "%s", prefix);
 	for (; len; len--, buf++)
-	  _gsti_log_cont (ctx, "%02X ", *buf);
+	  _gsti_log_cont (ctx, "%02X", *buf);
 	_gsti_log_cont (ctx, "\n");
 	break;
       }

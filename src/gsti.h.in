@@ -44,15 +44,12 @@ extern "C"
 #endif
 
 
-/* The version of this header should match the one of the library It
+/* The version of this header should match the one of the library.  It
    should not be used by a program because gsti_check_version() should
-   reurn the same version.  The purpose of this macro is to let
-   autoconf (using the AM_PATH_GSTI macro) check that this header
-   matches the installed library.
-
-   NOTE: Please do not change the formatting of this line; configure
-   may set it to the correct version.  */
-#define GSTI_VERSION "0.3.0"
+   return the same value.  The purpose of this macro is to let
+   autoconf (using the AM_PATH_GCRYPT macro) check that this header
+   matches the installed library.  */
+#define GSTI_VERSION "@VERSION@"
 
 
 /* I/O subsystem.  For now just a wrapper around the system I/O.  */
@@ -80,7 +77,7 @@ gsti_err_make (gsti_err_source_t source, gsti_err_code_t code)
 /* The user can define GSTI_ERR_SOURCE_DEFAULT before including this
    file to specify a default source for gsti_error.  */
 #ifndef GSTI_ERR_SOURCE_DEFAULT
-#define GSTI_ERR_SOURCE_DEFAULT  GPG_ERR_SOURCE_USER_1
+#define GSTI_ERR_SOURCE_DEFAULT  GPG_ERR_SOURCE_GSTI
 #endif
 
 
@@ -187,7 +184,11 @@ enum gsti_pk_algos
 
 enum gsti_auth_methods
 {
-  GSTI_AUTH_PUBLICKEY = 1
+  GSTI_AUTH_UNKNOWN   = 0,
+  GSTI_AUTH_NONE      = 1,
+  GSTI_AUTH_PUBLICKEY = 2,
+  GSTI_AUTH_PASSWORD  = 3,
+  GSTI_AUTH_HOSTBASED = 4
 };
 
 enum gsti_prefs
@@ -197,11 +198,11 @@ enum gsti_prefs
   GSTI_PREFS_COMPR = 3
 };
 
-enum gsti_auth_ids
+enum gsti_authcb_types
 {
-  GSTI_AUTHID_USER   = 1,
-  GSTI_AUTHID_PUBKEY = 2,
-  GSTI_AUTHID_BANNER = 3,
+  GSTI_AUTHCB_USER      = 1,
+  GSTI_AUTHCB_PUBLICKEY = 2,
+  GSTI_AUTHCB_BANNER    = 3
 };
 
 /* The context type.  */
@@ -235,8 +236,8 @@ typedef gsti_error_t (*gsti_sign_fnc_t) (void *, gcry_sexp_t *result,
                                          gcry_sexp_t data, gcry_sexp_t skey);
 
 
-typedef gsti_error_t (*gsti_auth_cb_t) (void *, int statcode,
-                                        const void * buf, size_t buflen);
+typedef gsti_error_t (*gsti_auth_cb_t) (void *, enum gsti_authcb_types type,
+                                        const void *buf, size_t buflen);
 
 /*-- main.c --*/
 /* general */
@@ -498,3 +499,8 @@ gsti_channel_add_type (gsti_ctx_t ctx, const char *name,
 }
 #endif
 #endif	/* _GSTI_H */
+/*
+@emacs_local_vars_begin@
+@emacs_local_vars_read_only@
+@emacs_local_vars_end@
+*/
